@@ -17,6 +17,11 @@ const LoginPage = () => (
           Sign up
         </Link>
       </p>
+      <p className="text-1xl">
+        <Link to="/forgot-password" className="text-white hover:underline"> Forgotten password?
+        </Link>
+        </p>
+
     </div>
   </div>
 );
