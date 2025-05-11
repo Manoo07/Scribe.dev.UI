@@ -6,6 +6,8 @@ import OverviewPage from "../pages/Dashboard";
 import AssignmentsPage from "../pages/Assignment";
 import ClassroomDetailPage from "../pages/ClassroomDetailPage";
 import MyClassroomsPage from "../pages/Classrooms";
+import ForgotPasswordPage from "../pages/ForgotPasswordPage";
+import ResetPasswordPage from "../pages/ResetPasswordPage";
 
 const AppRoutes = () => (
   <Router>
@@ -13,6 +15,10 @@ const AppRoutes = () => (
       {/* Auth routes */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
+
+
 
       {/* Dashboard routes wrapped in layout */}
       <Route path="/" element={<DashboardLayout />}>
