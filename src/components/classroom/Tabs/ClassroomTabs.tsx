@@ -1,7 +1,9 @@
-// src/components/classroom/ClassroomTabs.tsx
 const tabs = ["Units", "Threads", "Assignments", "Students", "Attendance"];
 
-const ClassroomTabs = ({ activeTab, setActiveTab }: {
+const ClassroomTabs = ({
+  activeTab,
+  setActiveTab,
+}: {
   activeTab: string;
   setActiveTab: (tab: string) => void;
 }) => {

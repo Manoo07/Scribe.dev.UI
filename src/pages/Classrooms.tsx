@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import axios from "axios"; // To make HTTP requests
 
 // Replace with your actual BASE_URL
-const BASE_URL = "http://localhost:3000/api/v1"; 
 
 const MyClassroomsPage = () => {
   const [classrooms, setClassrooms] = useState<any[]>([]); // Store classrooms data
@@ -15,11 +14,14 @@ const MyClassroomsPage = () => {
     const fetchClassrooms = async () => {
       try {
         const token = localStorage.getItem("token");
-        const response = await axios.get("http://localhost:3000/api/v1/classroom", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const response = await axios.get(
+          "http://localhost:3000/api/v1/classroom",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
         setClassrooms(response.data.classrooms);
         setLoading(false);
       } catch (err) {
@@ -50,13 +52,15 @@ const MyClassroomsPage = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {classrooms.map((classroom) => (
           <Link
-            to={`/classrooms/${classroom.id}`}
+            to={`/dashboard/classrooms/${classroom.id}`}
             key={classroom.id}
             className="bg-gray-800 p-4 rounded hover:bg-gray-700 transition"
           >
             <h3 className="text-lg font-bold text-white">{classroom.name}</h3>
             <p className="text-gray-400">Section: {classroom.section.name}</p>
-            <p className="text-gray-400">Faculty: {classroom.faculty.specialization}</p>
+            <p className="text-gray-400">
+              Faculty: {classroom.faculty.specialization}
+            </p>
           </Link>
         ))}
       </div>

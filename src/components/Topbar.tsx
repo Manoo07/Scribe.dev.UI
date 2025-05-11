@@ -5,7 +5,7 @@ const TopBar = () => {
     <header className="bg-gray-800 px-6 py-3 flex items-center justify-between border-b border-gray-700">
       <div className="flex items-center space-x-3">
         <h1 className="text-xl font-bold">YourLogo</h1>
-        <span className="text-gray-400">/ Dashboard</span>
+        <span className="text-gray-400">Dashboard</span>
       </div>
       <div className="flex-1 mx-6">
         <input

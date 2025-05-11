@@ -13,7 +13,7 @@ const DashboardLayout = () => {
       <SideNav collapsed={collapsed} toggleCollapse={toggleCollapse} />
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <TopBar />
+        {/* <TopBar /> */}
         <main className="flex-1 overflow-y-auto p-6 space-y-4">
           <Breadcrumb />
           <Outlet />
