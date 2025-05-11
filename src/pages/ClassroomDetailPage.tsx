@@ -2,12 +2,12 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
 
-import ClassroomTabs from "../components/classroom/ClassroomTabs";
-import UnitsTab from "../components/classroom/UnitsTab";
-import ThreadsTab from "../components/classroom/ThreadsTab";
-import AssignmentsTab from "../components/classroom/AssignmentsTab";
-import StudentsTab from "../components/classroom/StudentsTab";
-import AttendanceTab from "../components/classroom/AttendanceTab";
+import ClassroomTabs from "../components/classroom/Tabs/ClassroomTabs";
+import UnitsTab from "../components/classroom/Tabs/UnitsTab";
+import ThreadsTab from "../components/classroom/Tabs/ThreadsTab";
+import AssignmentsTab from "../components/classroom/Tabs/AssignmentsTab";
+import StudentsTab from "../components/classroom/Tabs/StudentsTab";
+import AttendanceTab from "../components/classroom/Tabs/AttendanceTab";
 
 const ClassroomDetailPage = () => {
   const { id } = useParams();
@@ -19,11 +19,14 @@ const ClassroomDetailPage = () => {
     const fetchClassroom = async () => {
       try {
         const token = localStorage.getItem("token");
-        const response = await axios.get(`http://localhost:3000/api/v1/classroom/${id}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const response = await axios.get(
+          `http://localhost:3000/api/v1/classroom/${id}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
         setClassroom(response.data);
       } catch (error) {
         console.error("Error fetching classroom:", error);
@@ -65,7 +68,9 @@ const ClassroomDetailPage = () => {
       <h1 className="text-xl font-semibold text-white">
         {classroom.name} ({classroom.section?.name})
       </h1>
-      <p className="text-gray-400">Faculty: {classroom.faculty?.specialization}</p>
+      <p className="text-gray-400">
+        Faculty: {classroom.faculty?.specialization}
+      </p>
       <ClassroomTabs activeTab={activeTab} setActiveTab={setActiveTab} />
       {renderTab()}
     </div>
