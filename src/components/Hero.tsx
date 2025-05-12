@@ -64,7 +64,7 @@ const Hero: React.FC = () => {
               data-aos-delay="200"
             >
               <img
-                src="https://images.pexels.com/photos/5212700/pexels-photo-5212700.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2"
+                src="/ClassroomStudents.webp"
                 alt="Students studying together"
                 className="object-cover object-center w-full h-full mix-blend-overlay opacity-75"
               />

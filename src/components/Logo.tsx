@@ -1,5 +1,4 @@
 import React from "react";
-import { BookOpen, PenTool } from "lucide-react";
 
 interface LogoProps {
   darkMode?: boolean;
@@ -7,21 +6,18 @@ interface LogoProps {
 
 const Logo: React.FC<LogoProps> = ({ darkMode = false }) => {
   return (
-    <div className="flex items-center space-x-2">
-      <div className="relative flex items-center justify-center h-8 w-8 bg-blue-600 rounded-md overflow-hidden">
-        <BookOpen
-          size={20}
-          className="text-white absolute"
-          style={{ left: "1px" }}
-        />
-        <PenTool
-          size={18}
-          className="text-white absolute"
-          style={{ right: "1px", top: "5px" }}
+    <div className="flex items-center">
+      <div className="flex items-center justify-center">
+        <img
+          src="/ScribeLogo.png"
+          height={48}
+          width={48}
+          alt="Scribe logo"
+          className="h-12 w-12 object-contain"
         />
       </div>
       <span
-        className={`text-lg md:text-xl font-bold ${
+        className={`text-xl md:text-2xl font-bold ${
           darkMode ? "text-white" : "text-gray-800"
         }`}
       >
