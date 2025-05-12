@@ -3,7 +3,7 @@ import { Mail, Lock } from "lucide-react";
 import Button from "../components/ui/Button";
 import Logo from "../components/Logo";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState("");
@@ -117,12 +117,12 @@ const Login: React.FC = () => {
             </div>
 
             <div className="text-sm">
-              <a
-                href="#"
+              <Link
+                to="/forgot-password"
                 className="font-medium text-blue-400 hover:text-blue-300"
               >
                 Forgot your password?
-              </a>
+              </Link>
             </div>
           </div>
 
