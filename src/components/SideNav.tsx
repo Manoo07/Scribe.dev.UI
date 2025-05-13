@@ -1,6 +1,26 @@
-// src/components/SideNav.tsx
+import { useState } from "react";
 import { NavLink } from "react-router-dom";
-import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Layers,
+  Calendar,
+  MessageSquare,
+  FileText,
+  Users,
+  PlusCircle,
+  Book,
+  Settings,
+  Shield,
+  LogOut,
+} from "lucide-react";
+
+type NavItemProps = {
+  to: string;
+  label: string;
+  icon: React.ReactNode;
+  collapsed: boolean;
+};
 
 const SideNav = ({
   collapsed,
@@ -13,96 +33,137 @@ const SideNav = ({
     <aside
       className={`h-full ${
         collapsed ? "w-20" : "w-64"
-      } bg-gray-850 p-4 border-r border-gray-700 transition-all duration-300`}
+      } bg-gray-900 border-r border-gray-800 transition-all duration-300 ease-in-out flex flex-col`}
     >
-      {/* Collapse toggle button */}
-      <button
-        onClick={toggleCollapse}
-        className="text-gray-400 hover:text-white mb-6"
-      >
-        {collapsed ? <FaChevronRight /> : <FaChevronLeft />}
-      </button>
+      {/* Header with logo and collapse button */}
+      <div className="flex items-center justify-between p-2 border-b border-gray-800">
+        {!collapsed && (
+          <div className="text-xl pl-10 font-bold text-white flex items-center gap-x-1 font-bold text-white">
+            <img
+              src="/ScribeLogo.png"
+              alt="Scribe logo"
+              className="h-8 w-8 object-contain"
+            />
+            <span>Scribe</span>
+          </div>
+        )}
+        <button
+          onClick={toggleCollapse}
+          className={`text-gray-400 hover:text-white p-2 rounded-full hover:bg-gray-800 transition-colors ${
+            collapsed ? "mx-auto" : "ml-auto"
+          }`}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          {collapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+        </button>
+      </div>
 
-      <nav className="space-y-3 text-sm">
+      {/* Navigation links */}
+      <nav className="flex-grow py-4 px-3 space-y-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700">
         <NavItem
           to="/dashboard/classrooms"
-          label="My Classrooms"
+          label="Classrooms"
+          icon={<Layers size={collapsed ? 20 : 18} />}
           collapsed={collapsed}
         />
         <NavItem
-          to="'dashboard/calendar"
+          to="/dashboard/calendar"
           label="Calendar"
+          icon={<Calendar size={collapsed ? 20 : 18} />}
           collapsed={collapsed}
         />
-        <NavItem to="dashboard/threads" label="Threads" collapsed={collapsed} />
         <NavItem
-          to="dashboard/assignments"
+          to="/dashboard/threads"
+          label="Threads"
+          icon={<MessageSquare size={collapsed ? 20 : 18} />}
+          collapsed={collapsed}
+        />
+        <NavItem
+          to="/dashboard/assignments"
           label="Assignments"
+          icon={<FileText size={collapsed ? 20 : 18} />}
           collapsed={collapsed}
         />
         <NavItem
-          to="dashboard/attendance"
+          to="/dashboard/attendance"
           label="Attendance"
+          icon={<Users size={collapsed ? 20 : 18} />}
           collapsed={collapsed}
         />
 
+        {/* Faculty section */}
         {!collapsed && (
-          <>
-            <div className="mt-4 text-gray-400 uppercase text-xs">
-              Faculty Only
-            </div>
-            <NavItem
-              to="/dashboard/create-classroom"
-              label="Create Classroom"
-              collapsed={collapsed}
-            />
-            <NavItem
-              to="dashboard/manage-units"
-              label="Manage Units"
-              collapsed={collapsed}
-            />
-
-            <div className="mt-4 text-gray-400 uppercase text-xs">Admin</div>
-            <NavItem
-              to="dashboard/admin"
-              label="Admin Panel"
-              collapsed={collapsed}
-            />
-            <NavItem
-              to="dashboard/settings"
-              label="Settings"
-              collapsed={collapsed}
-            />
-          </>
+          <div className="pt-4 pb-2 px-2 text-gray-400 uppercase text-xs font-semibold">
+            Faculty Only
+          </div>
         )}
-        <NavItem to="/login" label="Logout" collapsed={collapsed} />
+        {collapsed && <div className="my-4 border-b border-gray-800"></div>}
+
+        <NavItem
+          to="/dashboard/create-classroom"
+          label="Create Class"
+          icon={<PlusCircle size={collapsed ? 20 : 18} />}
+          collapsed={collapsed}
+        />
+        <NavItem
+          to="/dashboard/manage-units"
+          label="Manage Units"
+          icon={<Book size={collapsed ? 20 : 18} />}
+          collapsed={collapsed}
+        />
+
+        {/* Admin section */}
+        {!collapsed && (
+          <div className="pt-4 pb-2 px-2 text-gray-400 uppercase text-xs font-semibold">
+            Admin
+          </div>
+        )}
+        {collapsed && <div className="my-4 border-b border-gray-800"></div>}
+
+        <NavItem
+          to="/dashboard/admin"
+          label="Admin Panel"
+          icon={<Shield size={collapsed ? 20 : 18} />}
+          collapsed={collapsed}
+        />
+        <NavItem
+          to="/dashboard/settings"
+          label="Settings"
+          icon={<Settings size={collapsed ? 20 : 18} />}
+          collapsed={collapsed}
+        />
       </nav>
+
+      {/* Footer with logout */}
+      <div className="border-t border-gray-800 p-3">
+        <NavItem
+          to="/login"
+          label="Logout"
+          icon={<LogOut size={collapsed ? 20 : 18} />}
+          collapsed={collapsed}
+        />
+      </div>
     </aside>
   );
 };
 
-// Helper for nav links
-const NavItem = ({
-  to,
-  label,
-  collapsed,
-}: {
-  to: string;
-  label: string;
-  collapsed: boolean;
-}) => (
+// Enhanced NavItem with icon support and active highlighting
+const NavItem = ({ to, label, icon, collapsed }: NavItemProps) => (
   <NavLink
     to={to}
-    className="block hover:text-indigo-400 text-white"
+    className={({ isActive }) => `
+      flex items-center ${collapsed ? "justify-center" : "px-3"} py-3 rounded-md
+      ${
+        isActive
+          ? "bg-gradient-to-r from-blue-600 to-blue-500 text-white font-medium shadow-md border-l-4 border-blue-300"
+          : "text-gray-300 hover:bg-gray-800 hover:text-white transition-colors duration-200"
+      }
+      ${collapsed ? "mx-auto rounded-full w-12 h-12" : ""}
+    `}
     title={label}
   >
-    {collapsed ? (
-      <span className="block w-6 h-6 bg-gray-700 rounded text-center text-xs leading-6">
-        {label[0]}
-      </span>
-    ) : (
-      label
-    )}
+    <span className={`${collapsed ? "" : "mr-3"}`}>{icon}</span>
+    {!collapsed && <span className="whitespace-nowrap">{label}</span>}
   </NavLink>
 );
 

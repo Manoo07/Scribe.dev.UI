@@ -2,12 +2,10 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios"; // To make HTTP requests
 
-// Replace with your actual BASE_URL
-
 const MyClassroomsPage = () => {
-  const [classrooms, setClassrooms] = useState<any[]>([]); // Store classrooms data
-  const [loading, setLoading] = useState<boolean>(true); // Loading state
-  const [error, setError] = useState<string | null>(null); // Error state
+  const [classrooms, setClassrooms] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Fetch classrooms data when the component mounts
   useEffect(() => {
