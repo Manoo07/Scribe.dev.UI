@@ -1,8 +1,8 @@
-import { useState } from "react";
 import { NavLink } from "react-router-dom";
 import {
   ChevronLeft,
   ChevronRight,
+  LayoutDashboard,
   Layers,
   Calendar,
   MessageSquare,
@@ -22,13 +22,109 @@ type NavItemProps = {
   collapsed: boolean;
 };
 
+type UserRole = "student" | "faculty" | "admin";
+
 const SideNav = ({
   collapsed,
   toggleCollapse,
+  userRole = "admin", // Default to student if no role provided
 }: {
   collapsed: boolean;
   toggleCollapse: () => void;
+  userRole: UserRole;
 }) => {
+  // Common navigation items for all users
+  const commonNavItems = (
+    <>
+      <NavItem
+        to="/dashboard/overview"
+        label="Dashboard"
+        icon={<LayoutDashboard size={collapsed ? 20 : 18} />}
+        collapsed={collapsed}
+      />
+      <NavItem
+        to="/dashboard/classrooms"
+        label="Classrooms"
+        icon={<Layers size={collapsed ? 20 : 18} />}
+        collapsed={collapsed}
+      />
+      <NavItem
+        to="/dashboard/calendar"
+        label="Calendar"
+        icon={<Calendar size={collapsed ? 20 : 18} />}
+        collapsed={collapsed}
+      />
+      <NavItem
+        to="/dashboard/threads"
+        label="Threads"
+        icon={<MessageSquare size={collapsed ? 20 : 18} />}
+        collapsed={collapsed}
+      />
+      <NavItem
+        to="/dashboard/assignments"
+        label="Assignments"
+        icon={<FileText size={collapsed ? 20 : 18} />}
+        collapsed={collapsed}
+      />
+      <NavItem
+        to="/dashboard/attendance"
+        label="Attendance"
+        icon={<Users size={collapsed ? 20 : 18} />}
+        collapsed={collapsed}
+      />
+    </>
+  );
+
+  // Faculty section
+  const facultySection = (userRole === "faculty" || userRole === "admin") && (
+    <>
+      {!collapsed && (
+        <div className="pt-4 pb-2 px-2 text-gray-400 uppercase text-xs font-semibold">
+          Faculty Only
+        </div>
+      )}
+      {collapsed && <div className="my-4 border-b border-gray-800"></div>}
+
+      <NavItem
+        to="/dashboard/create-classroom"
+        label="Create Class"
+        icon={<PlusCircle size={collapsed ? 20 : 18} />}
+        collapsed={collapsed}
+      />
+      <NavItem
+        to="/dashboard/manage-units"
+        label="Manage Units"
+        icon={<Book size={collapsed ? 20 : 18} />}
+        collapsed={collapsed}
+      />
+    </>
+  );
+
+  // Admin section
+  const adminSection = userRole === "student" && (
+    <>
+      {!collapsed && (
+        <div className="pt-4 pb-2 px-2 text-gray-400 uppercase text-xs font-semibold">
+          Admin
+        </div>
+      )}
+      {collapsed && <div className="my-4 border-b border-gray-800"></div>}
+
+      <NavItem
+        to="/dashboard/admin"
+        label="Admin Panel"
+        icon={<Shield size={collapsed ? 20 : 18} />}
+        collapsed={collapsed}
+      />
+      <NavItem
+        to="/dashboard/settings"
+        label="Settings"
+        icon={<Settings size={collapsed ? 20 : 18} />}
+        collapsed={collapsed}
+      />
+    </>
+  );
+
   return (
     <aside
       className={`h-full ${
@@ -38,7 +134,7 @@ const SideNav = ({
       {/* Header with logo and collapse button */}
       <div className="flex items-center justify-between p-2 border-b border-gray-800">
         {!collapsed && (
-          <div className="text-xl pl-10 font-bold text-white flex items-center gap-x-1 font-bold text-white">
+          <div className="text-xl pl-10 font-bold text-white flex items-center gap-x-1">
             <img
               src="/ScribeLogo.png"
               alt="Scribe logo"
@@ -60,78 +156,9 @@ const SideNav = ({
 
       {/* Navigation links */}
       <nav className="flex-grow py-4 px-3 space-y-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700">
-        <NavItem
-          to="/dashboard/classrooms"
-          label="Classrooms"
-          icon={<Layers size={collapsed ? 20 : 18} />}
-          collapsed={collapsed}
-        />
-        <NavItem
-          to="/dashboard/calendar"
-          label="Calendar"
-          icon={<Calendar size={collapsed ? 20 : 18} />}
-          collapsed={collapsed}
-        />
-        <NavItem
-          to="/dashboard/threads"
-          label="Threads"
-          icon={<MessageSquare size={collapsed ? 20 : 18} />}
-          collapsed={collapsed}
-        />
-        <NavItem
-          to="/dashboard/assignments"
-          label="Assignments"
-          icon={<FileText size={collapsed ? 20 : 18} />}
-          collapsed={collapsed}
-        />
-        <NavItem
-          to="/dashboard/attendance"
-          label="Attendance"
-          icon={<Users size={collapsed ? 20 : 18} />}
-          collapsed={collapsed}
-        />
-
-        {/* Faculty section */}
-        {!collapsed && (
-          <div className="pt-4 pb-2 px-2 text-gray-400 uppercase text-xs font-semibold">
-            Faculty Only
-          </div>
-        )}
-        {collapsed && <div className="my-4 border-b border-gray-800"></div>}
-
-        <NavItem
-          to="/dashboard/create-classroom"
-          label="Create Class"
-          icon={<PlusCircle size={collapsed ? 20 : 18} />}
-          collapsed={collapsed}
-        />
-        <NavItem
-          to="/dashboard/manage-units"
-          label="Manage Units"
-          icon={<Book size={collapsed ? 20 : 18} />}
-          collapsed={collapsed}
-        />
-
-        {/* Admin section */}
-        {!collapsed && (
-          <div className="pt-4 pb-2 px-2 text-gray-400 uppercase text-xs font-semibold">
-            Admin
-          </div>
-        )}
-        {collapsed && <div className="my-4 border-b border-gray-800"></div>}
-
-        <NavItem
-          to="/dashboard/admin"
-          label="Admin Panel"
-          icon={<Shield size={collapsed ? 20 : 18} />}
-          collapsed={collapsed}
-        />
-        <NavItem
-          to="/dashboard/settings"
-          label="Settings"
-          icon={<Settings size={collapsed ? 20 : 18} />}
-          collapsed={collapsed}
-        />
+        {commonNavItems}
+        {facultySection}
+        {adminSection}
       </nav>
 
       {/* Footer with logout */}
@@ -161,6 +188,7 @@ const NavItem = ({ to, label, icon, collapsed }: NavItemProps) => (
       ${collapsed ? "mx-auto rounded-full w-12 h-12" : ""}
     `}
     title={label}
+    end={to === "/dashboard"}
   >
     <span className={`${collapsed ? "" : "mr-3"}`}>{icon}</span>
     {!collapsed && <span className="whitespace-nowrap">{label}</span>}
