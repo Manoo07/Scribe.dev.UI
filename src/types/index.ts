@@ -43,3 +43,24 @@ export interface UnitSummary {
     [ContentType.DOCUMENT]: number;
   };
 }
+
+export interface Student {
+  id: string;
+  name: string;
+  email: string;
+  profileImage?: string;
+}
+
+export interface AttendanceRecord {
+  date: string;
+  presentStudents: string[];
+  absentStudents: string[];
+  totalStudents: number;
+}
+
+export interface AttendanceStats {
+  totalDays: number;
+  presentDays: number;
+  absentDays: number;
+  percentage: number;
+}

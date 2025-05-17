@@ -1,51 +1,21 @@
-import { Calendar, BookOpen, Clock, Bell, Users, FileText } from "lucide-react";
+import { Calendar, BookOpen, Clock, Bell, Users, FileText } from 'lucide-react';
 
 const OverviewPage = () => {
   const upcomingAssignments = [
-    {
-      id: 1,
-      title: "Math Quiz",
-      dueDate: "2024-03-20",
-      subject: "Mathematics",
-    },
-    {
-      id: 2,
-      title: "History Essay",
-      dueDate: "2024-03-22",
-      subject: "History",
-    },
-    {
-      id: 3,
-      title: "Science Project",
-      dueDate: "2024-03-25",
-      subject: "Science",
-    },
+    { id: 1, title: 'Math Quiz', dueDate: '2024-03-20', subject: 'Mathematics' },
+    { id: 2, title: 'History Essay', dueDate: '2024-03-22', subject: 'History' },
+    { id: 3, title: 'Science Project', dueDate: '2024-03-25', subject: 'Science' },
   ];
 
   const recentAnnouncements = [
-    {
-      id: 1,
-      title: "Spring Break Schedule",
-      date: "2024-03-15",
-      author: "Principal Smith",
-    },
-    {
-      id: 2,
-      title: "Virtual Science Fair",
-      date: "2024-03-14",
-      author: "Dr. Johnson",
-    },
+    { id: 1, title: 'Spring Break Schedule', date: '2024-03-15', author: 'Principal Smith' },
+    { id: 2, title: 'Virtual Science Fair', date: '2024-03-14', author: 'Dr. Johnson' },
   ];
 
   const todayClasses = [
-    {
-      id: 1,
-      subject: "Mathematics",
-      time: "09:00 AM",
-      teacher: "Mrs. Thompson",
-    },
-    { id: 2, subject: "History", time: "11:00 AM", teacher: "Mr. Anderson" },
-    { id: 3, subject: "Science", time: "02:00 PM", teacher: "Dr. Johnson" },
+    { id: 1, subject: 'Mathematics', time: '09:00 AM', teacher: 'Mrs. Thompson' },
+    { id: 2, subject: 'History', time: '11:00 AM', teacher: 'Mr. Anderson' },
+    { id: 3, subject: 'Science', time: '02:00 PM', teacher: 'Dr. Johnson' },
   ];
 
   return (
@@ -53,12 +23,8 @@ const OverviewPage = () => {
       {/* Welcome Section */}
       <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold text-white">
-            Welcome back, Student!
-          </h1>
-          <p className="text-gray-400">
-            Here's what's happening in your classes today
-          </p>
+          <h1 className="text-xl md:text-2xl font-bold text-white">Welcome back, Student!</h1>
+          <p className="text-gray-400">Here's what's happening in your classes today</p>
         </div>
       </div>
 
@@ -115,29 +81,18 @@ const OverviewPage = () => {
         {/* Today's Schedule */}
         <div className="bg-gray-800 p-4 md:p-6 rounded-lg shadow-sm border border-gray-700">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-white">
-              Today's Schedule
-            </h2>
+            <h2 className="text-lg font-semibold text-white">Today's Schedule</h2>
             <Clock size={20} className="text-gray-400" />
           </div>
           <div className="space-y-4">
             {todayClasses.map((class_) => (
-              <div
-                key={class_.id}
-                className="flex items-center space-x-3 p-3 bg-gray-700 rounded-lg"
-              >
+              <div key={class_.id} className="flex items-center space-x-3 p-3 bg-gray-700 rounded-lg">
                 <div className="flex-shrink-0 w-2 h-2 rounded-full bg-blue-400"></div>
                 <div className="flex-grow min-w-0">
-                  <p className="font-medium text-white truncate">
-                    {class_.subject}
-                  </p>
-                  <p className="text-sm text-gray-300 truncate">
-                    {class_.teacher}
-                  </p>
+                  <p className="font-medium text-white truncate">{class_.subject}</p>
+                  <p className="text-sm text-gray-300 truncate">{class_.teacher}</p>
                 </div>
-                <div className="text-sm text-gray-400 flex-shrink-0">
-                  {class_.time}
-                </div>
+                <div className="text-sm text-gray-400 flex-shrink-0">{class_.time}</div>
               </div>
             ))}
           </div>
@@ -146,28 +101,17 @@ const OverviewPage = () => {
         {/* Upcoming Assignments */}
         <div className="bg-gray-800 p-4 md:p-6 rounded-lg shadow-sm border border-gray-700">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-white">
-              Upcoming Assignments
-            </h2>
+            <h2 className="text-lg font-semibold text-white">Upcoming Assignments</h2>
             <FileText size={20} className="text-gray-400" />
           </div>
           <div className="space-y-4">
             {upcomingAssignments.map((assignment) => (
-              <div
-                key={assignment.id}
-                className="flex items-center space-x-3 p-3 bg-gray-700 rounded-lg"
-              >
+              <div key={assignment.id} className="flex items-center space-x-3 p-3 bg-gray-700 rounded-lg">
                 <div className="flex-grow min-w-0">
-                  <p className="font-medium text-white truncate">
-                    {assignment.title}
-                  </p>
-                  <p className="text-sm text-gray-300 truncate">
-                    {assignment.subject}
-                  </p>
+                  <p className="font-medium text-white truncate">{assignment.title}</p>
+                  <p className="text-sm text-gray-300 truncate">{assignment.subject}</p>
                 </div>
-                <div className="text-sm text-red-400 flex-shrink-0">
-                  Due {assignment.dueDate}
-                </div>
+                <div className="text-sm text-red-400 flex-shrink-0">Due {assignment.dueDate}</div>
               </div>
             ))}
           </div>
@@ -176,21 +120,15 @@ const OverviewPage = () => {
         {/* Recent Announcements */}
         <div className="bg-gray-800 p-4 md:p-6 rounded-lg shadow-sm border border-gray-700">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-white">
-              Recent Announcements
-            </h2>
+            <h2 className="text-lg font-semibold text-white">Recent Announcements</h2>
             <Bell size={20} className="text-gray-400" />
           </div>
           <div className="space-y-4">
             {recentAnnouncements.map((announcement) => (
               <div key={announcement.id} className="p-3 bg-gray-700 rounded-lg">
-                <p className="font-medium text-white truncate">
-                  {announcement.title}
-                </p>
+                <p className="font-medium text-white truncate">{announcement.title}</p>
                 <div className="flex items-center justify-between mt-2">
-                  <p className="text-sm text-gray-300 truncate">
-                    By {announcement.author}
-                  </p>
+                  <p className="text-sm text-gray-300 truncate">By {announcement.author}</p>
                   <p className="text-sm text-gray-400">{announcement.date}</p>
                 </div>
               </div>
