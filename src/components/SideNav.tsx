@@ -1,4 +1,5 @@
-import { NavLink } from "react-router-dom";
+import { useState } from "react";
+import { NavLink, useLocation } from "react-router-dom";
 import {
   ChevronLeft,
   ChevronRight,
@@ -33,97 +34,7 @@ const SideNav = ({
   toggleCollapse: () => void;
   userRole: UserRole;
 }) => {
-  // Common navigation items for all users
-  const commonNavItems = (
-    <>
-      <NavItem
-        to="/dashboard/overview"
-        label="Dashboard"
-        icon={<LayoutDashboard size={collapsed ? 20 : 18} />}
-        collapsed={collapsed}
-      />
-      <NavItem
-        to="/dashboard/classrooms"
-        label="Classrooms"
-        icon={<Layers size={collapsed ? 20 : 18} />}
-        collapsed={collapsed}
-      />
-      <NavItem
-        to="/dashboard/calendar"
-        label="Calendar"
-        icon={<Calendar size={collapsed ? 20 : 18} />}
-        collapsed={collapsed}
-      />
-      <NavItem
-        to="/dashboard/threads"
-        label="Threads"
-        icon={<MessageSquare size={collapsed ? 20 : 18} />}
-        collapsed={collapsed}
-      />
-      <NavItem
-        to="/dashboard/assignments"
-        label="Assignments"
-        icon={<FileText size={collapsed ? 20 : 18} />}
-        collapsed={collapsed}
-      />
-      <NavItem
-        to="/dashboard/attendance"
-        label="Attendance"
-        icon={<Users size={collapsed ? 20 : 18} />}
-        collapsed={collapsed}
-      />
-    </>
-  );
-
-  // Faculty section
-  const facultySection = (userRole === "faculty" || userRole === "admin") && (
-    <>
-      {!collapsed && (
-        <div className="pt-4 pb-2 px-2 text-gray-400 uppercase text-xs font-semibold">
-          Faculty Only
-        </div>
-      )}
-      {collapsed && <div className="my-4 border-b border-gray-800"></div>}
-
-      <NavItem
-        to="/dashboard/create-classroom"
-        label="Create Class"
-        icon={<PlusCircle size={collapsed ? 20 : 18} />}
-        collapsed={collapsed}
-      />
-      <NavItem
-        to="/dashboard/manage-units"
-        label="Manage Units"
-        icon={<Book size={collapsed ? 20 : 18} />}
-        collapsed={collapsed}
-      />
-    </>
-  );
-
-  // Admin section
-  const adminSection = userRole === "student" && (
-    <>
-      {!collapsed && (
-        <div className="pt-4 pb-2 px-2 text-gray-400 uppercase text-xs font-semibold">
-          Admin
-        </div>
-      )}
-      {collapsed && <div className="my-4 border-b border-gray-800"></div>}
-
-      <NavItem
-        to="/dashboard/admin"
-        label="Admin Panel"
-        icon={<Shield size={collapsed ? 20 : 18} />}
-        collapsed={collapsed}
-      />
-      <NavItem
-        to="/dashboard/settings"
-        label="Settings"
-        icon={<Settings size={collapsed ? 20 : 18} />}
-        collapsed={collapsed}
-      />
-    </>
-  );
+  const location = useLocation();
 
   return (
     <aside
@@ -156,9 +67,84 @@ const SideNav = ({
 
       {/* Navigation links */}
       <nav className="flex-grow py-4 px-3 space-y-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700">
-        {commonNavItems}
-        {facultySection}
-        {adminSection}
+        <NavItem
+          to="/dashboard/overview"
+          label="Dashboard"
+          icon={<LayoutDashboard size={collapsed ? 20 : 18} />}
+          collapsed={collapsed}
+        />
+        <NavItem
+          to="/dashboard/classrooms"
+          label="Classrooms"
+          icon={<Layers size={collapsed ? 20 : 18} />}
+          collapsed={collapsed}
+        />
+        <NavItem
+          to="/dashboard/calendar"
+          label="Calendar"
+          icon={<Calendar size={collapsed ? 20 : 18} />}
+          collapsed={collapsed}
+        />
+        <NavItem
+          to="/dashboard/threads"
+          label="Threads"
+          icon={<MessageSquare size={collapsed ? 20 : 18} />}
+          collapsed={collapsed}
+        />
+        <NavItem
+          to="/dashboard/assignments"
+          label="Assignments"
+          icon={<FileText size={collapsed ? 20 : 18} />}
+          collapsed={collapsed}
+        />
+        <NavItem
+          to="/dashboard/attendance"
+          label="Attendance"
+          icon={<Users size={collapsed ? 20 : 18} />}
+          collapsed={collapsed}
+        />
+
+        {/* Faculty section */}
+        {!collapsed && (
+          <div className="pt-4 pb-2 px-2 text-gray-400 uppercase text-xs font-semibold">
+            Faculty Only
+          </div>
+        )}
+        {collapsed && <div className="my-4 border-b border-gray-800"></div>}
+
+        <NavItem
+          to="/dashboard/create-classroom"
+          label="Create Class"
+          icon={<PlusCircle size={collapsed ? 20 : 18} />}
+          collapsed={collapsed}
+        />
+        <NavItem
+          to="/dashboard/manage-units"
+          label="Manage Units"
+          icon={<Book size={collapsed ? 20 : 18} />}
+          collapsed={collapsed}
+        />
+
+        {/* Admin section */}
+        {!collapsed && (
+          <div className="pt-4 pb-2 px-2 text-gray-400 uppercase text-xs font-semibold">
+            Admin
+          </div>
+        )}
+        {collapsed && <div className="my-4 border-b border-gray-800"></div>}
+
+        <NavItem
+          to="/dashboard/admin"
+          label="Admin Panel"
+          icon={<Shield size={collapsed ? 20 : 18} />}
+          collapsed={collapsed}
+        />
+        <NavItem
+          to="/dashboard/settings"
+          label="Settings"
+          icon={<Settings size={collapsed ? 20 : 18} />}
+          collapsed={collapsed}
+        />
       </nav>
 
       {/* Footer with logout */}

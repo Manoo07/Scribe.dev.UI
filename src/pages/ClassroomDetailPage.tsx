@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
@@ -56,23 +57,43 @@ const ClassroomDetailPage = () => {
   };
 
   if (loading) {
-    return <p className="text-gray-400">Loading classroom details...</p>;
+    return (
+      <div className="flex items-center justify-center min-h-[200px]">
+        <div className="p-4 text-gray-400 animate-pulse">
+          Loading classroom details...
+        </div>
+      </div>
+    );
   }
 
   if (!classroom) {
-    return <p className="text-red-500">Failed to load classroom data.</p>;
+    return (
+      <div className="flex items-center justify-center min-h-[200px]">
+        <div className="p-4 text-red-500 bg-gray-800 rounded-lg border border-red-700">
+          Failed to load classroom data.
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-xl font-semibold text-white">
-        {classroom.name} ({classroom.section?.name})
-      </h1>
-      <p className="text-gray-400">
-        Faculty: {classroom.faculty?.specialization}
-      </p>
+    <div className="px-3 py-4 sm:px-4 md:px-6 lg:px-8 max-w-6xl mx-auto">
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-lg sm:text-xl md:text-2xl font-semibold text-white break-words">
+          {classroom.name} {classroom.section?.name && `(${classroom.section.name})`}
+        </h1>
+        <p className="text-sm sm:text-base text-gray-400">
+          {classroom.faculty?.specialization ? (
+            <>Faculty: {classroom.faculty.specialization}</>
+          ) : (
+            "No faculty assigned"
+          )}
+        </p>
+      </div>
+
       <ClassroomTabs activeTab={activeTab} setActiveTab={setActiveTab} />
-      {renderTab()}
+
+      <div className="mt-4 sm:mt-6">{renderTab()}</div>
     </div>
   );
 };
