@@ -12,7 +12,7 @@ const ClassroomTabs = ({
   setActiveTab: (tab: string) => void;
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-
+  
   return (
     <div className="relative">
       {/* Mobile dropdown menu */}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Mail, Lock, User } from "lucide-react";
-import Button from "../components/ui/Button";
+import Button  from "../components/ui/button";
 import Logo from "../components/Logo";
 import axios from "axios";
 
@@ -12,7 +12,7 @@ const Signup: React.FC = () => {
 
   const [collegeId, setCollegeId] = useState("");
   const [departmentId, setDepartmentId] = useState("");
-  const [sectionId, setSectionId] = useState(""); // represents year here
+  const [sectionId, setSectionId] = useState("");
   const [specialization, setSpecialization] = useState("");
   const [role, setRole] = useState("STUDENT");
 

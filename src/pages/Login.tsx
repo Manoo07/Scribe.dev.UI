@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
-import Button from "../components/ui/Button";
+import Button from "../components/ui/button";
 import Logo from "../components/Logo";
 import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
@@ -23,9 +23,10 @@ const Login: React.FC = () => {
         }
       );
 
-      const { token } = response.data;
+      const { token, role } = response.data;
 
       localStorage.setItem("token", token);
+      localStorage.setItem("role", role);
       console.log("Login successful");
       navigate("/dashboard/overview");
     } catch (error) {
