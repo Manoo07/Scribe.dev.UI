@@ -19,7 +19,6 @@ interface AttendanceTabProps {
 
 const AttendanceTab = ({
   classroomId,
-  userRole,
   userId = "1",
 }: AttendanceTabProps) => {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -27,6 +26,7 @@ const AttendanceTab = ({
   const [attendanceData, setAttendanceData] = useState<
     Record<string, { present: number; total: number }>
   >({});
+  const userRole = localStorage.getItem('role');
 
   useEffect(() => {
     // Prepare data for calendar attendance indicators

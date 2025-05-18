@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import {
   ChevronLeft,
   ChevronRight,
@@ -14,6 +13,8 @@ import {
   Settings,
   Shield,
   LogOut,
+  Megaphone,
+  Bell
 } from "lucide-react";
 
 type NavItemProps = {
@@ -23,18 +24,16 @@ type NavItemProps = {
   collapsed: boolean;
 };
 
-type UserRole = "student" | "faculty" | "admin";
+type UserRole = "STUDENT" | "FACULTY" | "ADMIN";
 
 const SideNav = ({
   collapsed,
   toggleCollapse,
-  userRole = "admin", // Default to student if no role provided
 }: {
   collapsed: boolean;
   toggleCollapse: () => void;
-  userRole: UserRole;
 }) => {
-  const location = useLocation();
+  const userRole = localStorage.getItem("role") as UserRole;
 
   return (
     <aside
@@ -80,9 +79,9 @@ const SideNav = ({
           collapsed={collapsed}
         />
         <NavItem
-          to="/dashboard/calendar"
-          label="Calendar"
-          icon={<Calendar size={collapsed ? 20 : 18} />}
+          to="/dashboard/announcements"
+          label="Announcements"
+          icon={<Bell size={collapsed ? 20 : 18} />}
           collapsed={collapsed}
         />
         <NavItem
@@ -104,47 +103,55 @@ const SideNav = ({
           collapsed={collapsed}
         />
 
-        {/* Faculty section */}
-        {!collapsed && (
-          <div className="pt-4 pb-2 px-2 text-gray-400 uppercase text-xs font-semibold">
-            Faculty Only
-          </div>
+        {/* Faculty section - only visible if userRole is FACULTY or ADMIN */}
+        {(userRole === "FACULTY" || userRole === "ADMIN") && (
+          <>
+            {!collapsed && (
+              <div className="pt-4 pb-2 px-2 text-gray-400 uppercase text-xs font-semibold">
+                Faculty Only
+              </div>
+            )}
+            {collapsed && <div className="my-4 border-b border-gray-800"></div>}
+
+            <NavItem
+              to="/dashboard/create-classroom"
+              label="Create Class"
+              icon={<PlusCircle size={collapsed ? 20 : 18} />}
+              collapsed={collapsed}
+            />
+            <NavItem
+              to="/dashboard/manage-units"
+              label="Manage Units"
+              icon={<Book size={collapsed ? 20 : 18} />}
+              collapsed={collapsed}
+            />
+          </>
         )}
-        {collapsed && <div className="my-4 border-b border-gray-800"></div>}
 
-        <NavItem
-          to="/dashboard/create-classroom"
-          label="Create Class"
-          icon={<PlusCircle size={collapsed ? 20 : 18} />}
-          collapsed={collapsed}
-        />
-        <NavItem
-          to="/dashboard/manage-units"
-          label="Manage Units"
-          icon={<Book size={collapsed ? 20 : 18} />}
-          collapsed={collapsed}
-        />
+        {/* Admin section - only visible if userRole is ADMIN */}
+        {userRole === "ADMIN" && (
+          <>
+            {!collapsed && (
+              <div className="pt-4 pb-2 px-2 text-gray-400 uppercase text-xs font-semibold">
+                Admin
+              </div>
+            )}
+            {collapsed && <div className="my-4 border-b border-gray-800"></div>}
 
-        {/* Admin section */}
-        {!collapsed && (
-          <div className="pt-4 pb-2 px-2 text-gray-400 uppercase text-xs font-semibold">
-            Admin
-          </div>
+            <NavItem
+              to="/dashboard/admin"
+              label="Admin Panel"
+              icon={<Shield size={collapsed ? 20 : 18} />}
+              collapsed={collapsed}
+            />
+            <NavItem
+              to="/dashboard/settings"
+              label="Settings"
+              icon={<Settings size={collapsed ? 20 : 18} />}
+              collapsed={collapsed}
+            />
+          </>
         )}
-        {collapsed && <div className="my-4 border-b border-gray-800"></div>}
-
-        <NavItem
-          to="/dashboard/admin"
-          label="Admin Panel"
-          icon={<Shield size={collapsed ? 20 : 18} />}
-          collapsed={collapsed}
-        />
-        <NavItem
-          to="/dashboard/settings"
-          label="Settings"
-          icon={<Settings size={collapsed ? 20 : 18} />}
-          collapsed={collapsed}
-        />
       </nav>
 
       {/* Footer with logout */}
