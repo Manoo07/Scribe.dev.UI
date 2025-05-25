@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
-import Button from "../components/ui/button";
+import Button from "../components/ui/Button";
 import Logo from "../components/Logo";
 import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";

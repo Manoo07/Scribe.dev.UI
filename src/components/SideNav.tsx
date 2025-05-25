@@ -4,7 +4,6 @@ import {
   ChevronRight,
   LayoutDashboard,
   Layers,
-  Calendar,
   MessageSquare,
   FileText,
   Users,
@@ -13,8 +12,7 @@ import {
   Settings,
   Shield,
   LogOut,
-  Megaphone,
-  Bell
+  Bell,
 } from "lucide-react";
 
 type NavItemProps = {

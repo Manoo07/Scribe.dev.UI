@@ -17,6 +17,7 @@ import ResetPasswordPage from "../pages/ResetPasswordPage";
 import MainLayout from "../layouts/MainLayout";
 import Hero from "../components/Hero";
 import Features from "../components/Features";
+import Announcements from "../pages/Announcements";
 
 const AppRoutes = () => {
   const isAuthenticated = !!localStorage.getItem("token");
@@ -56,6 +57,7 @@ const AppRoutes = () => {
             <Route path="assignments" element={<AssignmentsPage />} />
             <Route path="classrooms" element={<MyClassroomsPage />} />
             <Route path="classrooms/:id" element={<ClassroomDetailPage />} />
+            <Route path="announcements" element={<Announcements />} />
           </Route>
         )}
 
