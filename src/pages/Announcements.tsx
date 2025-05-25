@@ -72,7 +72,7 @@ const Announcements = () => {
             Announcements
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
-            {userRole === "STUDENT"
+            {userRole == "STUDENT"
               ? "Stay updated with classroom and college announcements"
               : "Create and manage announcements for your students"}
           </p>
