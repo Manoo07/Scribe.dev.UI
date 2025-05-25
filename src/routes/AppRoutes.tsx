@@ -18,6 +18,8 @@ import MainLayout from "../layouts/MainLayout";
 import Hero from "../components/Hero";
 import Features from "../components/Features";
 import Announcements from "../pages/Announcements";
+import AttendanceDashboard from "../components/attendance/AttendanceDashboard";
+import ThreadsTab from "../components/threads/ThreadsTab";
 
 const AppRoutes = () => {
   const isAuthenticated = !!localStorage.getItem("token");
@@ -58,6 +60,11 @@ const AppRoutes = () => {
             <Route path="classrooms" element={<MyClassroomsPage />} />
             <Route path="classrooms/:id" element={<ClassroomDetailPage />} />
             <Route path="announcements" element={<Announcements />} />
+            <Route path="attendance" element={<AttendanceDashboard />} />
+            <Route
+              path="threads"
+              element={<ThreadsTab classroomId={""} units={[]} />}
+            />
           </Route>
         )}
 

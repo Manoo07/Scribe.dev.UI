@@ -68,7 +68,7 @@ const AnnouncementCard = ({
   return (
     <>
       <Card
-        className={`group transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-0 shadow-sm bg-white/80 backdrop-blur-sm dark:bg-gray-900/80 cursor-pointer ${
+        className={`w-full max-w-md sm:max-w-full mx-auto sm:mx-0 group transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 border border-gray-200 dark:border-gray-800 shadow-sm bg-white/90 backdrop-blur-sm dark:bg-gray-900/80 cursor-pointer ${
           isMyAnnouncement ? "ring-1 ring-blue-200 dark:ring-blue-800" : ""
         }`}
         onClick={() => setIsDetailModalOpen(true)}
@@ -126,7 +126,7 @@ const AnnouncementCard = ({
           </div>
         </CardHeader>
 
-        <CardContent className="pt-0 pb-3">
+        <CardContent className="pt-1 pb-4 px-4">
           <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed line-clamp-2 mb-3">
             {announcement.content}
           </p>
@@ -152,7 +152,7 @@ const AnnouncementCard = ({
 
       {/* Detailed Announcement Modal */}
       <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900">
+        <DialogContent className="w-full max-w-xl max-h-[85vh] overflow-y-auto bg-white dark:bg-gray-900 px-6 py-5 rounded-xl">
           <DialogHeader className="pb-4 border-b border-gray-100 dark:border-gray-800">
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-start space-x-4 min-w-0 flex-1">
