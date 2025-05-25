@@ -1,5 +1,3 @@
-import React from "react";
-
 const ThreadsTab = ({ classroomId }: { classroomId: string }) => {
   return (
     <div className="space-y-4">
