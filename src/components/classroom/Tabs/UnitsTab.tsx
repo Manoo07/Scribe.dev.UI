@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import UnitsList from '../../UnitList';
-import UnitDetail from '../../UnitDetails';
-import ContentUploader from '../.././ContentUploader';
-import { Unit } from '../../../types/index';
-import { getUnits } from '../../../services/api';
-import { ClipboardList } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import UnitsList from "../../UnitList";
+import UnitDetail from "../../UnitDetails";
+import ContentUploader from "../.././ContentUploader";
+import { Unit } from "../../../types/index";
+import { getUnits } from "../../../services/api";
+import { ClipboardList } from "lucide-react";
 
 interface VirtualClassroomProps {
   classroomId: string;
@@ -28,8 +28,8 @@ const VirtualClassroom: React.FC<VirtualClassroomProps> = ({ classroomId }) => {
       setUnits(data);
       setError(null);
     } catch (err) {
-      console.error('Failed to fetch units:', err);
-      setError('Failed to load units. Please try again.');
+      console.error("Failed to fetch units:", err);
+      setError("Failed to load units. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -52,7 +52,7 @@ const VirtualClassroom: React.FC<VirtualClassroomProps> = ({ classroomId }) => {
     setIsUploaderOpen(false);
   };
 
-  const activeUnit = units.find(unit => unit.id === activeUnitId);
+  const activeUnit = units.find((unit) => unit.id === activeUnitId);
 
   if (loading) {
     return (
@@ -69,10 +69,7 @@ const VirtualClassroom: React.FC<VirtualClassroomProps> = ({ classroomId }) => {
           {Array(6)
             .fill(0)
             .map((_, index) => (
-              <div
-                key={index}
-                className="bg-gray-800 rounded-lg p-4 space-y-3"
-              >
+              <div key={index} className="bg-gray-800 rounded-lg p-4 space-y-3">
                 <div className="h-4 bg-gray-700 rounded w-3/4" />
                 <div className="h-3 bg-gray-700 rounded w-2/4" />
                 <div className="h-3 bg-gray-700 rounded w-1/4" />
@@ -89,8 +86,8 @@ const VirtualClassroom: React.FC<VirtualClassroomProps> = ({ classroomId }) => {
         <div className="bg-red-900/20 border border-red-500 p-6 rounded-lg max-w-md">
           <h2 className="text-red-400 text-xl font-bold mb-2">Error</h2>
           <p className="text-white mb-4">{error}</p>
-          <button 
-            onClick={fetchUnits} 
+          <button
+            onClick={fetchUnits}
             className="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded transition-colors"
           >
             Try Again
@@ -105,31 +102,36 @@ const VirtualClassroom: React.FC<VirtualClassroomProps> = ({ classroomId }) => {
       <header className="mb-8">
         <div className="flex items-center gap-3 mb-2">
           <ClipboardList size={28} className="text-blue-500" />
-          <h1 className="text-3xl font-bold text-white">Mathematics Virtual Classroom</h1>
+          <h1 className="text-3xl font-bold text-white">
+            Mathematics Virtual Classroom
+          </h1>
         </div>
-        <p className="text-gray-400">Manage your units and educational materials</p>
+        <p className="text-gray-400">
+          Manage your units and educational materials
+        </p>
       </header>
 
       {activeUnit && !isUploaderOpen ? (
-        <UnitDetail 
-          unit={activeUnit} 
-          onBack={handleBackToUnits} 
+        <UnitDetail
+          unit={activeUnit}
+          onBack={handleBackToUnits}
           onAddContent={() => setIsUploaderOpen(true)}
           onRefresh={fetchUnits}
         />
       ) : activeUnit && isUploaderOpen ? (
-        <ContentUploader 
-          unit={activeUnit} 
-          onClose={handleCloseUploader} 
+        <ContentUploader
+          unit={activeUnit}
+          onClose={handleCloseUploader}
           onSuccess={() => {
             fetchUnits();
             setIsUploaderOpen(false);
-          }} 
+          }}
         />
       ) : (
-        <UnitsList 
-          units={units} 
-          onUnitSelect={handleUnitSelect} 
+        <UnitsList
+          units={units}
+          classroomId={classroomId}
+          onUnitSelect={handleUnitSelect}
           onUnitEdit={handleOpenUploader}
           onRefresh={fetchUnits}
         />

@@ -7,6 +7,7 @@ import CreateUnitModal from "./CreateUnitModal";
 
 interface UnitsListProps {
   units: Unit[];
+  classroomId: string;
   onUnitSelect: (unitId: string) => void;
   onUnitEdit: (unitId: string) => void;
   onRefresh: () => void;
@@ -14,6 +15,7 @@ interface UnitsListProps {
 
 const UnitsList: React.FC<UnitsListProps> = ({
   units,
+  classroomId,
   onUnitSelect,
   onUnitEdit,
   onRefresh,
@@ -147,7 +149,7 @@ const UnitsList: React.FC<UnitsListProps> = ({
 
       {isCreateModalOpen && (
         <CreateUnitModal
-          classroomId={units[0]?.classroomId || ""}
+          classroomId={classroomId}
           onClose={() => setIsCreateModalOpen(false)}
           onSuccess={() => {
             setIsCreateModalOpen(false);

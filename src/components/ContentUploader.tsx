@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Unit, ContentType } from "../types";
 import { FileText, Link2, Video, File, Upload, X } from "lucide-react";
-import { createContent, uploadFile } from "../services/api";
+import { createContent } from "../services/api";
 import { marked } from "marked";
 
 interface ContentUploaderProps {
@@ -62,7 +62,7 @@ const ContentUploader: React.FC<ContentUploaderProps> = ({
           if (!files.length) {
             throw new Error("No file selected");
           }
-          await Promise.all(files.map((file) => uploadFile(unit.id, file)));
+          await createContent(unit.id, ContentType.DOCUMENT, files[0]);
           break;
       }
 

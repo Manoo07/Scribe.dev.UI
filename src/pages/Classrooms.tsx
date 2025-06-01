@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
-import { Trash2 } from "lucide-react";
+import { Trash2, Edit3 } from "lucide-react";
 
 import { useUserContext } from "../context/UserContext";
 import CreateClassroomForm from "../components/classroom/CreateClassroomForm";
+import EditClassroomForm from "../components/classroom/EditClassroomForm";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,19 +23,27 @@ const MyClassroomsPage = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState<boolean>(false);
+  const [showEditForm, setShowEditForm] = useState<boolean>(false);
   const [classroomToDelete, setClassroomToDelete] = useState<any | null>(null);
+  const [classroomToEdit, setClassroomToEdit] = useState<any | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [processingClassroomId, setProcessingClassroomId] = useState<string | null>(null);
+  const [processingClassroomId, setProcessingClassroomId] = useState<
+    string | null
+  >(null);
   const { userRole } = useUserContext();
   const { toast } = useToast();
-  const modalRef = useRef<HTMLDivElement>(null);
+  const createModalRef = useRef<HTMLDivElement>(null);
+  const editModalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchClassrooms = async () => {
       try {
         const token = localStorage.getItem("token");
-        console.log("Fetching classrooms with token:", token ? "Token exists" : "No token");
-        
+        console.log(
+          "Fetching classrooms with token:",
+          token ? "Token exists" : "No token"
+        );
+
         const response = await axios.get(
           "http://localhost:3000/api/v1/classroom",
           {
@@ -43,10 +52,10 @@ const MyClassroomsPage = () => {
             },
           }
         );
-        
+
         console.log("API Response:", response.data);
         console.log("Classrooms received:", response.data.classrooms);
-        
+
         setClassrooms(response.data.classrooms || []);
         setLoading(false);
       } catch (err) {
@@ -59,26 +68,46 @@ const MyClassroomsPage = () => {
     fetchClassrooms();
   }, []);
 
-  // Handle click outside to close modal
+  // Handle click outside to close modals
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+      if (
+        createModalRef.current &&
+        !createModalRef.current.contains(event.target as Node)
+      ) {
         setShowCreateForm(false);
+      }
+      if (
+        editModalRef.current &&
+        !editModalRef.current.contains(event.target as Node)
+      ) {
+        setShowEditForm(false);
+        setClassroomToEdit(null);
       }
     };
 
-    if (showCreateForm) {
-      document.addEventListener('mousedown', handleClickOutside);
+    if (showCreateForm || showEditForm) {
+      document.addEventListener("mousedown", handleClickOutside);
     }
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [showCreateForm]);
+  }, [showCreateForm, showEditForm]);
 
   const handleAddClassroom = () => {
     if (userRole === "FACULTY") {
       setShowCreateForm(true);
+    }
+  };
+
+  const handleEditClassroom = (event: React.MouseEvent, classroom: any) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (userRole === "FACULTY") {
+      setClassroomToEdit(classroom);
+      setShowEditForm(true);
     }
   };
 
@@ -88,7 +117,7 @@ const MyClassroomsPage = () => {
       try {
         const token = localStorage.getItem("token");
         console.log("Refreshing classrooms after creation...");
-        
+
         const response = await axios.get(
           "http://localhost:3000/api/v1/classroom",
           {
@@ -97,7 +126,7 @@ const MyClassroomsPage = () => {
             },
           }
         );
-        
+
         console.log("Refreshed classrooms:", response.data.classrooms);
         setClassrooms(response.data.classrooms || []);
       } catch (err) {
@@ -106,13 +135,30 @@ const MyClassroomsPage = () => {
     };
 
     fetchClassrooms();
-    setShowCreateForm(false); // Close the form after creation
+    setShowCreateForm(false);
+  };
+
+  const handleClassroomUpdated = (updatedClassroom: any) => {
+    // Update the specific classroom in the state
+    setClassrooms((prevClassrooms) =>
+      prevClassrooms.map((classroom) =>
+        classroom.id === updatedClassroom.id ? updatedClassroom : classroom
+      )
+    );
+
+    setShowEditForm(false);
+    setClassroomToEdit(null);
+
+    toast({
+      title: "Success",
+      description: "Classroom updated successfully",
+    });
   };
 
   const confirmDeleteClassroom = (event: React.MouseEvent, classroom: any) => {
-    event.preventDefault(); // Prevent navigation to classroom detail
+    event.preventDefault();
     event.stopPropagation();
-    
+
     setClassroomToDelete(classroom);
     setDialogOpen(true);
   };
@@ -125,7 +171,7 @@ const MyClassroomsPage = () => {
       setDialogOpen(false);
 
       const token = localStorage.getItem("token");
-      
+
       await axios.delete(
         `http://localhost:3000/api/v1/classroom/${classroomToDelete.id}`,
         {
@@ -135,9 +181,10 @@ const MyClassroomsPage = () => {
         }
       );
 
-      // Remove the deleted classroom from the state
-      setClassrooms(prevClassrooms => 
-        prevClassrooms.filter(classroom => classroom.id !== classroomToDelete.id)
+      setClassrooms((prevClassrooms) =>
+        prevClassrooms.filter(
+          (classroom) => classroom.id !== classroomToDelete.id
+        )
       );
 
       toast({
@@ -146,7 +193,6 @@ const MyClassroomsPage = () => {
       });
 
       console.log("Classroom deleted successfully");
-
     } catch (err) {
       console.error("Error deleting classroom:", err);
       toast({
@@ -166,7 +212,11 @@ const MyClassroomsPage = () => {
   };
 
   return (
-    <div className={`p-6 md:p-8 transition-opacity duration-300 ${showCreateForm ? 'opacity-70' : 'opacity-100'}`}>
+    <div
+      className={`p-6 md:p-8 transition-opacity duration-300 ${
+        showCreateForm || showEditForm ? "opacity-70" : "opacity-100"
+      }`}
+    >
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-white">My Classrooms</h2>
         {userRole === "FACULTY" && (
@@ -220,9 +270,14 @@ const MyClassroomsPage = () => {
                     to={`/dashboard/classrooms/${classroom.id}`}
                     className="block"
                   >
-                    <h3 className="text-xl font-semibold text-white mb-1 pr-8">
+                    <h3 className="text-xl font-semibold text-white mb-1 pr-16">
                       {classroom.name}
                     </h3>
+                    {classroom.description && (
+                      <p className="text-gray-300 text-sm mb-2 pr-16">
+                        {classroom.description}
+                      </p>
+                    )}
                     <p className="text-gray-400 text-sm">
                       Section: {classroom.section?.name || "N/A"}
                     </p>
@@ -230,21 +285,30 @@ const MyClassroomsPage = () => {
                       Faculty: {classroom.faculty?.specialization || "N/A"}
                     </p>
                   </Link>
-                  
+
                   {userRole === "FACULTY" && (
-                    <button
-                      onClick={(e) => confirmDeleteClassroom(e, classroom)}
-                      disabled={processingClassroomId === classroom.id}
-                      className="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-400 hover:bg-gray-700 rounded-lg transition opacity-0 group-hover:opacity-100 disabled:opacity-50"
-                      title="Delete classroom"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      {processingClassroomId === classroom.id && (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-400"></div>
-                        </div>
-                      )}
-                    </button>
+                    <div className="absolute top-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={(e) => handleEditClassroom(e, classroom)}
+                        className="p-2 text-gray-400 hover:text-blue-400 hover:bg-gray-700 rounded-lg transition"
+                        title="Edit classroom"
+                      >
+                        <Edit3 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={(e) => confirmDeleteClassroom(e, classroom)}
+                        disabled={processingClassroomId === classroom.id}
+                        className="p-2 text-gray-400 hover:text-red-400 hover:bg-gray-700 rounded-lg transition disabled:opacity-50"
+                        title="Delete classroom"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        {processingClassroomId === classroom.id && (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-400"></div>
+                          </div>
+                        )}
+                      </button>
+                    </div>
                   )}
                 </div>
               ))}
@@ -254,10 +318,21 @@ const MyClassroomsPage = () => {
       )}
 
       <CreateClassroomForm
-        ref={modalRef}
+        ref={createModalRef}
         isOpen={showCreateForm}
         onClose={() => setShowCreateForm(false)}
         onClassroomCreated={handleClassroomCreated}
+      />
+
+      <EditClassroomForm
+        ref={editModalRef}
+        isOpen={showEditForm}
+        classroom={classroomToEdit}
+        onClose={() => {
+          setShowEditForm(false);
+          setClassroomToEdit(null);
+        }}
+        onClassroomUpdated={handleClassroomUpdated}
       />
 
       {/* Confirmation Dialog */}
@@ -266,12 +341,13 @@ const MyClassroomsPage = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Classroom</AlertDialogTitle>
             <AlertDialogDescription className="text-gray-400">
-              Are you sure you want to delete the classroom "{classroomToDelete?.name}"? 
-              This action cannot be undone and will permanently remove all associated data.
+              Are you sure you want to delete the classroom "
+              {classroomToDelete?.name}"? This action cannot be undone and will
+              permanently remove all associated data.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel 
+            <AlertDialogCancel
               className="bg-gray-700 text-white hover:bg-gray-600"
               onClick={handleDialogCancel}
             >
