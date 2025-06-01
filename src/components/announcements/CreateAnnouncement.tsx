@@ -1,18 +1,5 @@
 import React, { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
-import { Button } from "../ui/button";
-import { Input } from "../ui/input";
-import { Textarea } from "../ui/textarea";
-import { Label } from "../ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../ui/select";
-import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
-import { Users, Building, CheckCircle } from "lucide-react";
+import { X, Users, Building, CheckCircle } from "lucide-react";
 
 interface CreateAnnouncementModalProps {
   isOpen: boolean;
@@ -33,13 +20,19 @@ const CreateAnnouncementModal = ({
     classroom: "CS101",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.title.trim() || !formData.content.trim()) return;
+    if (!formData.title.trim() || !formData.content.trim()) {
+      setError("Please fill in all required fields");
+      return;
+    }
 
     setIsSubmitting(true);
+    setError(null);
+    
     try {
       await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API
       onSubmit({
@@ -57,214 +50,203 @@ const CreateAnnouncementModal = ({
       onClose();
     } catch (error) {
       console.error(error);
+      setError("Failed to create announcement");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleClose = () => {
-    if (!isSubmitting) onClose();
+    if (!isSubmitting) {
+      setFormData({
+        title: "",
+        content: "",
+        type: "classroom",
+        priority: "medium",
+        classroom: "CS101",
+      });
+      setError(null);
+      onClose();
+    }
   };
 
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  if (!isOpen) return null;
+
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto p-0 bg-white dark:bg-gray-900 rounded-xl shadow-xl">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b border-gray-100 dark:border-gray-800">
-          <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white">
-            Create New Announcement
-          </DialogTitle>
-        </DialogHeader>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-gray-800 rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto relative">
+        <button
+          onClick={handleClose}
+          className="absolute top-4 right-4 text-gray-400 hover:text-white transition"
+          disabled={isSubmitting}
+        >
+          <X size={20} />
+        </button>
 
-        <div className="px-6 py-6">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Title */}
-            <div className="space-y-2">
-              <Label
-                htmlFor="title"
-                className="text-sm font-medium text-gray-700 dark:text-gray-300"
-              >
-                Title <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="title"
-                value={formData.title}
-                onChange={(e) =>
-                  setFormData({ ...formData, title: e.target.value })
-                }
-                placeholder="Enter announcement title..."
-                className="w-full dark:bg-gray-800 dark:text-white dark:border-gray-700"
-                disabled={isSubmitting}
-              />
-            </div>
+        <h3 className="text-xl font-bold text-white mb-6">Create New Announcement</h3>
 
-            {/* Content */}
-            <div className="space-y-2">
-              <Label
-                htmlFor="content"
-                className="text-sm font-medium text-gray-700 dark:text-gray-300"
-              >
-                Content <span className="text-red-500">*</span>
-              </Label>
-              <Textarea
-                id="content"
-                value={formData.content}
-                onChange={(e) =>
-                  setFormData({ ...formData, content: e.target.value })
-                }
-                placeholder="Write your announcement content here..."
-                className="w-full min-h-32 resize-none dark:bg-gray-800 dark:text-white dark:border-gray-700"
-                disabled={isSubmitting}
-              />
-            </div>
+        {error && (
+          <div className="bg-red-500/10 border border-red-500 text-red-500 px-4 py-3 rounded-lg mb-4">
+            {error}
+          </div>
+        )}
 
-            {/* Type Selection */}
-            <div className="space-y-3">
-              <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Announcement Type
-              </Label>
-              <RadioGroup
-                value={formData.type}
-                onValueChange={(value: "classroom" | "college") =>
-                  setFormData({ ...formData, type: value })
-                }
-                className="flex flex-wrap gap-6"
-                disabled={isSubmitting}
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="classroom" id="classroom" />
-                  <Label
-                    htmlFor="classroom"
-                    className="flex items-center space-x-2 cursor-pointer text-gray-700 dark:text-gray-300"
-                  >
-                    <Users size={16} className="text-blue-600" />
-                    <span>Classroom</span>
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="college" id="college" />
-                  <Label
-                    htmlFor="college"
-                    className="flex items-center space-x-2 cursor-pointer text-gray-700 dark:text-gray-300"
-                  >
-                    <Building size={16} className="text-purple-600" />
-                    <span>College-wide</span>
-                  </Label>
-                </div>
-              </RadioGroup>
-            </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Title */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Title <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              name="title"
+              value={formData.title}
+              onChange={handleInputChange}
+              placeholder="Enter announcement title..."
+              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              disabled={isSubmitting}
+              required
+            />
+          </div>
 
-            {/* Classroom Selection */}
-            {formData.type === "classroom" && (
-              <div className="space-y-2">
-                <Label
-                  htmlFor="classroom-select"
-                  className="text-sm font-medium text-gray-700 dark:text-gray-300"
-                >
-                  Select Classroom
-                </Label>
-                <Select
-                  value={formData.classroom}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, classroom: value })
-                  }
+          {/* Content */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Content <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              name="content"
+              value={formData.content}
+              onChange={handleInputChange}
+              placeholder="Write your announcement content here..."
+              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 min-h-32 resize-none"
+              disabled={isSubmitting}
+              required
+            />
+          </div>
+
+          {/* Type Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Announcement Type
+            </label>
+            <div className="flex flex-wrap gap-6">
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="type"
+                  value="classroom"
+                  checked={formData.type === "classroom"}
+                  onChange={handleInputChange}
+                  className="w-4 h-4 text-indigo-600 bg-gray-700 border-gray-600 focus:ring-indigo-500"
                   disabled={isSubmitting}
-                >
-                  <SelectTrigger className="dark:bg-gray-800 dark:text-white dark:border-gray-700">
-                    <SelectValue placeholder="Choose a classroom" />
-                  </SelectTrigger>
-                  <SelectContent className="dark:bg-gray-800 dark:text-white">
-                    <SelectItem value="CS101">
-                      CS101 - Introduction to Programming
-                    </SelectItem>
-                    <SelectItem value="CS201">
-                      CS201 - Data Structures
-                    </SelectItem>
-                    <SelectItem value="CS301">CS301 - Algorithms</SelectItem>
-                    <SelectItem value="MATH101">
-                      MATH101 - Calculus I
-                    </SelectItem>
-                    <SelectItem value="ENG101">
-                      ENG101 - English Composition
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {/* Priority Selection */}
-            <div className="space-y-2">
-              <Label
-                htmlFor="priority"
-                className="text-sm font-medium text-gray-700 dark:text-gray-300"
-              >
-                Priority Level
-              </Label>
-              <Select
-                value={formData.priority}
-                onValueChange={(value: "low" | "medium" | "high") =>
-                  setFormData({ ...formData, priority: value })
-                }
-                disabled={isSubmitting}
-              >
-                <SelectTrigger className="dark:bg-gray-800 dark:text-white dark:border-gray-700">
-                  <SelectValue placeholder="Select priority" />
-                </SelectTrigger>
-                <SelectContent className="dark:bg-gray-800 dark:text-white">
-                  <SelectItem value="low">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span>Low Priority</span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="medium">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                      <span>Medium Priority</span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="high">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                      <span>High Priority</span>
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+                />
+                <Users size={16} className="text-blue-500" />
+                <span className="text-gray-300">Classroom</span>
+              </label>
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="type"
+                  value="college"
+                  checked={formData.type === "college"}
+                  onChange={handleInputChange}
+                  className="w-4 h-4 text-indigo-600 bg-gray-700 border-gray-600 focus:ring-indigo-500"
+                  disabled={isSubmitting}
+                />
+                <Building size={16} className="text-purple-500" />
+                <span className="text-gray-300">College-wide</span>
+              </label>
             </div>
+          </div>
 
-            {/* Action Buttons */}
-            <div className="flex justify-end space-x-3 pt-4 border-t border-gray-100 dark:border-gray-800">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleClose}
-                disabled={isSubmitting}
-                className="dark:border-gray-600 dark:text-gray-300"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+          {/* Classroom Selection */}
+          {formData.type === "classroom" && (
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Select Classroom
+              </label>
+              <select
+                name="classroom"
+                value={formData.classroom}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                    Creating...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle size={16} className="mr-2" />
-                    Create Announcement
-                  </>
-                )}
-              </Button>
+                <option value="CS101">CS101 - Introduction to Programming</option>
+                <option value="CS201">CS201 - Data Structures</option>
+                <option value="CS301">CS301 - Algorithms</option>
+                <option value="MATH101">MATH101 - Calculus I</option>
+                <option value="ENG101">ENG101 - English Composition</option>
+              </select>
             </div>
-          </form>
-        </div>
-      </DialogContent>
-    </Dialog>
+          )}
+
+          {/* Priority Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Priority Level
+            </label>
+            <select
+              name="priority"
+              value={formData.priority}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              disabled={isSubmitting}
+            >
+              <option value="low">
+                🟢 Low Priority
+              </option>
+              <option value="medium">
+                🟡 Medium Priority
+              </option>
+              <option value="high">
+                🔴 High Priority
+              </option>
+            </select>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex gap-3 mt-6">
+            <button
+              type="button"
+              onClick={handleClose}
+              disabled={isSubmitting}
+              className="flex-1 px-4 py-2 bg-gray-600 hover:bg-gray-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition flex items-center justify-center"
+            >
+              {isSubmitting ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <CheckCircle size={16} className="mr-2" />
+                  Create Announcement
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 };
 

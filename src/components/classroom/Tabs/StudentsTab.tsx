@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { Search, UserPlus, UserMinus } from "lucide-react";
-import Button from "../../ui/Button";
+import Button from "../../ui/button";
 import { Input } from "../../ui/input";
 import { Card, CardContent } from "../../ui/card";
 import {

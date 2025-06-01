@@ -1,6 +1,6 @@
 import { use, useState } from "react";
 import { PlusCircle, Megaphone, Users, Building, User } from "lucide-react";
-import { Button } from "../components/ui/button";
+import Button  from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import CreateAnnouncementModal from "../components/announcements/CreateAnnouncement";
 import AnnouncementCard from "../components/announcements/AnnouncementCard";
