@@ -1,6 +1,6 @@
 import React from "react";
 import { ContentType } from "../types";
-import { FileText, Link2, Video, File } from "lucide-react";
+import { FileText, Link2, Video, File, Edit3, Eye } from "lucide-react";
 
 interface UnitCardProps {
   id: string;
@@ -31,19 +31,34 @@ const UnitCard: React.FC<UnitCardProps> = ({
   );
 
   return (
-    <div className="bg-gray-800 rounded-lg overflow-hidden shadow-md border border-gray-700 transition-all hover:shadow-lg hover:shadow-blue-900/10 hover:border-gray-600">
+    <div className="bg-gray-800 rounded-lg overflow-hidden shadow-md border border-gray-700 transition-all hover:shadow-lg hover:shadow-blue-900/10 hover:border-gray-600 group">
       <div className="p-5">
-        <h3 className="text-xl font-semibold text-white mb-2 line-clamp-1">
-          {name}
-        </h3>
-        <p className="text-gray-400 text-sm mb-4 line-clamp-2">{description}</p>
+        <div className="flex items-start justify-between mb-2">
+          <h3 className="text-xl font-semibold text-white line-clamp-1 pr-2 flex-1">
+            {name}
+          </h3>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit();
+            }}
+            className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 text-gray-400 hover:text-blue-400 hover:bg-gray-700 rounded-md"
+            title="Edit unit"
+          >
+            <Edit3 size={16} />
+          </button>
+        </div>
+
+        <p className="text-gray-400 text-sm mb-4 line-clamp-2 min-h-[2.5rem]">
+          {description}
+        </p>
 
         <div className="mb-4 flex items-center gap-1.5 text-gray-500 text-xs">
           <span>Updated</span>
           <span className="text-gray-400">{lastUpdated}</span>
         </div>
 
-        <div className="flex gap-2 mb-4">
+        <div className="flex flex-wrap gap-2 mb-4 min-h-[1.75rem]">
           {contentsCount[ContentType.NOTE] > 0 && (
             <div className="bg-emerald-900/30 text-emerald-400 px-2 py-1 rounded text-xs flex items-center gap-1">
               <FileText size={12} />
@@ -79,18 +94,26 @@ const UnitCard: React.FC<UnitCardProps> = ({
           )}
         </div>
 
-        <div className="flex justify-between gap-2">
+        <div className="flex gap-2">
           <button
-            className="text-sm px-3 py-1.5 border border-gray-600 rounded-md text-gray-300 hover:bg-gray-700 transition-colors"
-            onClick={onEdit}
+            className="flex-1 text-sm px-3 py-2 border border-gray-600 rounded-md text-gray-300 hover:bg-gray-700 hover:border-gray-500 transition-all flex items-center justify-center gap-2"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit();
+            }}
           >
-            Edit
+            <Edit3 size={14} />
+            <span>Edit</span>
           </button>
           <button
-            className="bg-blue-600 hover:bg-blue-500 text-white text-sm px-4 py-1.5 rounded-md transition-colors"
-            onClick={onView}
+            className="flex-1 bg-blue-600 hover:bg-blue-500 text-white text-sm px-4 py-2 rounded-md transition-colors flex items-center justify-center gap-2"
+            onClick={(e) => {
+              e.stopPropagation();
+              onView();
+            }}
           >
-            View Materials
+            <Eye size={14} />
+            <span>View</span>
           </button>
         </div>
       </div>
