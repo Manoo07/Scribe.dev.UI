@@ -1,16 +1,40 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
+import { Trash2 } from "lucide-react";
+
+import { useUserContext } from "../context/UserContext";
+import CreateClassroomForm from "../components/classroom/CreateClassroomForm";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "../components/ui/alert-dialog";
+import { useToast } from "../hooks/use-toast";
 
 const MyClassroomsPage = () => {
   const [classrooms, setClassrooms] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [showCreateForm, setShowCreateForm] = useState<boolean>(false);
+  const [classroomToDelete, setClassroomToDelete] = useState<any | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [processingClassroomId, setProcessingClassroomId] = useState<string | null>(null);
+  const { userRole } = useUserContext();
+  const { toast } = useToast();
+  const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchClassrooms = async () => {
       try {
         const token = localStorage.getItem("token");
+        console.log("Fetching classrooms with token:", token ? "Token exists" : "No token");
+        
         const response = await axios.get(
           "http://localhost:3000/api/v1/classroom",
           {
@@ -19,9 +43,14 @@ const MyClassroomsPage = () => {
             },
           }
         );
-        setClassrooms(response.data.classrooms);
+        
+        console.log("API Response:", response.data);
+        console.log("Classrooms received:", response.data.classrooms);
+        
+        setClassrooms(response.data.classrooms || []);
         setLoading(false);
       } catch (err) {
+        console.error("Error fetching classrooms:", err);
         setError("Failed to fetch classrooms");
         setLoading(false);
       }
@@ -30,13 +59,124 @@ const MyClassroomsPage = () => {
     fetchClassrooms();
   }, []);
 
+  // Handle click outside to close modal
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+        setShowCreateForm(false);
+      }
+    };
+
+    if (showCreateForm) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showCreateForm]);
+
+  const handleAddClassroom = () => {
+    if (userRole === "FACULTY") {
+      setShowCreateForm(true);
+    }
+  };
+
+  const handleClassroomCreated = () => {
+    // Refresh the classrooms list
+    const fetchClassrooms = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        console.log("Refreshing classrooms after creation...");
+        
+        const response = await axios.get(
+          "http://localhost:3000/api/v1/classroom",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        
+        console.log("Refreshed classrooms:", response.data.classrooms);
+        setClassrooms(response.data.classrooms || []);
+      } catch (err) {
+        console.error("Failed to refresh classrooms:", err);
+      }
+    };
+
+    fetchClassrooms();
+    setShowCreateForm(false); // Close the form after creation
+  };
+
+  const confirmDeleteClassroom = (event: React.MouseEvent, classroom: any) => {
+    event.preventDefault(); // Prevent navigation to classroom detail
+    event.stopPropagation();
+    
+    setClassroomToDelete(classroom);
+    setDialogOpen(true);
+  };
+
+  const handleDeleteClassroom = async () => {
+    if (!classroomToDelete) return;
+
+    try {
+      setProcessingClassroomId(classroomToDelete.id);
+      setDialogOpen(false);
+
+      const token = localStorage.getItem("token");
+      
+      await axios.delete(
+        `http://localhost:3000/api/v1/classroom/${classroomToDelete.id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      // Remove the deleted classroom from the state
+      setClassrooms(prevClassrooms => 
+        prevClassrooms.filter(classroom => classroom.id !== classroomToDelete.id)
+      );
+
+      toast({
+        title: "Success",
+        description: "Classroom deleted successfully",
+      });
+
+      console.log("Classroom deleted successfully");
+
+    } catch (err) {
+      console.error("Error deleting classroom:", err);
+      toast({
+        title: "Error",
+        description: "Failed to delete classroom. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessingClassroomId(null);
+      setClassroomToDelete(null);
+    }
+  };
+
+  const handleDialogCancel = () => {
+    setDialogOpen(false);
+    setClassroomToDelete(null);
+  };
+
   return (
-    <div className="p-6 md:p-8">
+    <div className={`p-6 md:p-8 transition-opacity duration-300 ${showCreateForm ? 'opacity-70' : 'opacity-100'}`}>
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-white">My Classrooms</h2>
-        <button className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm shadow transition">
-          + Add Classroom
-        </button>
+        {userRole === "FACULTY" && (
+          <button
+            onClick={handleAddClassroom}
+            className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm shadow transition"
+          >
+            + Add Classroom
+          </button>
+        )}
       </div>
 
       {loading && (
@@ -59,26 +199,93 @@ const MyClassroomsPage = () => {
       {error && <p className="text-red-500 mb-4">{error}</p>}
 
       {!loading && !error && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {classrooms.map((classroom) => (
-            <Link
-              to={`/dashboard/classrooms/${classroom.id}`}
-              key={classroom.id}
-              className="bg-gray-800 hover:bg-gray-700 transition p-5 rounded-xl shadow-md"
-            >
-              <h3 className="text-xl font-semibold text-white mb-1">
-                {classroom.name}
-              </h3>
-              <p className="text-gray-400 text-sm">
-                Section: {classroom.section.name}
-              </p>
-              <p className="text-gray-400 text-sm">
-                Faculty: {classroom.faculty.specialization}
-              </p>
-            </Link>
-          ))}
-        </div>
+        <>
+          {classrooms.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-400 text-lg mb-4">No classrooms found</p>
+              {userRole === "FACULTY" && (
+                <p className="text-gray-500">
+                  Click "Add Classroom" to create your first classroom
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {classrooms.map((classroom) => (
+                <div
+                  key={classroom.id}
+                  className="bg-gray-800 hover:bg-gray-700 transition p-5 rounded-xl shadow-md relative group"
+                >
+                  <Link
+                    to={`/dashboard/classrooms/${classroom.id}`}
+                    className="block"
+                  >
+                    <h3 className="text-xl font-semibold text-white mb-1 pr-8">
+                      {classroom.name}
+                    </h3>
+                    <p className="text-gray-400 text-sm">
+                      Section: {classroom.section?.name || "N/A"}
+                    </p>
+                    <p className="text-gray-400 text-sm">
+                      Faculty: {classroom.faculty?.specialization || "N/A"}
+                    </p>
+                  </Link>
+                  
+                  {userRole === "FACULTY" && (
+                    <button
+                      onClick={(e) => confirmDeleteClassroom(e, classroom)}
+                      disabled={processingClassroomId === classroom.id}
+                      className="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-400 hover:bg-gray-700 rounded-lg transition opacity-0 group-hover:opacity-100 disabled:opacity-50"
+                      title="Delete classroom"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      {processingClassroomId === classroom.id && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-400"></div>
+                        </div>
+                      )}
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
+
+      <CreateClassroomForm
+        ref={modalRef}
+        isOpen={showCreateForm}
+        onClose={() => setShowCreateForm(false)}
+        onClassroomCreated={handleClassroomCreated}
+      />
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <AlertDialogContent className="bg-gray-800 border-gray-700 text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Classroom</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400">
+              Are you sure you want to delete the classroom "{classroomToDelete?.name}"? 
+              This action cannot be undone and will permanently remove all associated data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel 
+              className="bg-gray-700 text-white hover:bg-gray-600"
+              onClick={handleDialogCancel}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={handleDeleteClassroom}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

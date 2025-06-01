@@ -1,14 +1,17 @@
 import React, { useState } from "react";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
-import Button from "../components/ui/Button";
+import Button from "../components/ui/button";
 import Logo from "../components/Logo";
 import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
+import { useUserContext } from "../context/UserContext";
+import { UserRole } from "../types/attendance";
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const { setUserRole } = useUserContext();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -27,6 +30,7 @@ const Login: React.FC = () => {
 
       localStorage.setItem("token", token);
       localStorage.setItem("role", role);
+      setUserRole(role as UserRole);
       console.log("Login successful");
       navigate("/dashboard/overview");
     } catch (error) {

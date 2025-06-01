@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Mail, Lock, User } from "lucide-react";
-import Button from "../components/ui/Button";
+import Button from "../components/ui/button";
 import Logo from "../components/Logo";
 import axios from "axios";
 
