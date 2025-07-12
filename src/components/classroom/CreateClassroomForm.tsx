@@ -37,11 +37,10 @@ interface CreateClassroomFormProps {
   onClassroomCreated: () => void;
 }
 
-const CreateClassroomForm = forwardRef<HTMLDivElement, CreateClassroomFormProps>(({
-  isOpen,
-  onClose,
-  onClassroomCreated,
-}, ref) => {
+const CreateClassroomForm = forwardRef<
+  HTMLDivElement,
+  CreateClassroomFormProps
+>(({ isOpen, onClose, onClassroomCreated }, ref) => {
   const [formData, setFormData] = useState({
     name: "",
     departmentId: "",
@@ -66,7 +65,7 @@ const CreateClassroomForm = forwardRef<HTMLDivElement, CreateClassroomFormProps>
     if (formData.departmentId) {
       fetchYears(formData.departmentId);
       // Reset year selection when department changes
-      setFormData(prev => ({ ...prev, yearId: "" }));
+      setFormData((prev) => ({ ...prev, yearId: "" }));
     } else {
       setYears([]);
     }
@@ -128,7 +127,7 @@ const CreateClassroomForm = forwardRef<HTMLDivElement, CreateClassroomFormProps>
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.name || !formData.departmentId || !formData.yearId) {
       setError("Please fill in all fields");
       return;
@@ -139,27 +138,23 @@ const CreateClassroomForm = forwardRef<HTMLDivElement, CreateClassroomFormProps>
 
     try {
       const token = localStorage.getItem("token");
-      
+
       // Send the form data with departmentId and yearId
       const payload = {
         name: formData.name,
         departmentId: formData.departmentId,
         yearId: formData.yearId,
       };
-      
+
       console.log("Creating classroom with payload:", payload);
-      
-      await axios.post(
-        "http://localhost:3000/api/v1/classroom",
-        payload,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-      
+
+      await axios.post("http://localhost:3000/api/v1/classroom", payload, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
       setFormData({ name: "", departmentId: "", yearId: "" });
       onClassroomCreated();
       onClose();
@@ -182,7 +177,10 @@ const CreateClassroomForm = forwardRef<HTMLDivElement, CreateClassroomFormProps>
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div ref={ref} className="bg-gray-800 rounded-xl p-6 w-full max-w-md relative">
+      <div
+        ref={ref}
+        className="bg-gray-800 rounded-xl p-6 w-full max-w-md relative"
+      >
         <button
           onClick={handleClose}
           className="absolute top-4 right-4 text-gray-400 hover:text-white transition"
@@ -190,7 +188,9 @@ const CreateClassroomForm = forwardRef<HTMLDivElement, CreateClassroomFormProps>
           <X size={20} />
         </button>
 
-        <h3 className="text-xl font-bold text-white mb-6">Create New Classroom</h3>
+        <h3 className="text-xl font-bold text-white mb-6">
+          Create New Classroom
+        </h3>
 
         {error && (
           <div className="bg-red-500/10 border border-red-500 text-red-500 px-4 py-3 rounded-lg mb-4">
@@ -227,7 +227,9 @@ const CreateClassroomForm = forwardRef<HTMLDivElement, CreateClassroomFormProps>
               disabled={loadingDepartments}
             >
               <option value="">
-                {loadingDepartments ? "Loading departments..." : "Select Department"}
+                {loadingDepartments
+                  ? "Loading departments..."
+                  : "Select Department"}
               </option>
               {departments.map((dept) => (
                 <option key={dept.id} value={dept.id}>
@@ -250,12 +252,11 @@ const CreateClassroomForm = forwardRef<HTMLDivElement, CreateClassroomFormProps>
               disabled={!formData.departmentId || loadingYears}
             >
               <option value="">
-                {!formData.departmentId 
+                {!formData.departmentId
                   ? "Select department first"
-                  : loadingYears 
-                  ? "Loading years..." 
-                  : "Select Year"
-                }
+                  : loadingYears
+                  ? "Loading years..."
+                  : "Select Year"}
               </option>
               {years.map((year) => (
                 <option key={year.id} value={year.id}>

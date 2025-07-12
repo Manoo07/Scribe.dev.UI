@@ -6,6 +6,7 @@ import {
 } from "react-router-dom";
 import LoginPage from "../pages/Login";
 import SignupPage from "../pages/Signup";
+import LogoutPage from "../pages/Logout";
 import DashboardLayout from "../layouts/DashboardLayout";
 import OverviewPage from "../pages/Dashboard";
 import AssignmentsPage from "../pages/Assignment";
@@ -45,6 +46,7 @@ const AppRoutes = () => {
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/logout" element={<LogoutPage />} />
 
         {/* Redirect /dashboard to /dashboard/overview */}
         <Route

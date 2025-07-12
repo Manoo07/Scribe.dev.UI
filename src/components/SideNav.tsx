@@ -154,12 +154,18 @@ const SideNav = ({
 
       {/* Footer with logout */}
       <div className="border-t border-gray-800 p-3">
-        <NavItem
-          to="/login"
-          label="Logout"
-          icon={<LogOut size={collapsed ? 20 : 18} />}
-          collapsed={collapsed}
-        />
+        <NavLink
+          to="/logout"
+          className={`
+            flex items-center ${collapsed ? "justify-center" : "px-3"} py-3 rounded-md
+            text-gray-300 hover:bg-gray-800 hover:text-white transition-colors duration-200
+            ${collapsed ? "mx-auto rounded-full w-12 h-12" : ""}
+          `}
+          title="Logout"
+        >
+          <span className={`${collapsed ? "" : "mr-3"}`}><LogOut size={collapsed ? 20 : 18} /></span>
+          {!collapsed && <span className="whitespace-nowrap">Logout</span>}
+        </NavLink>
       </div>
     </aside>
   );
