@@ -1,9 +1,9 @@
-import React, { useState } from "react";
-import { Mail, Lock, Eye, EyeOff } from "lucide-react";
-import Button from "../components/ui/button";
-import Logo from "../components/Logo";
 import axios from "axios";
+import { Eye, EyeOff, Lock, Mail } from "lucide-react";
+import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import Logo from "../components/Logo";
+import Button from "../components/ui/button";
 import { useUserContext } from "../context/UserContext";
 import { UserRole } from "../types/attendance";
 
@@ -32,7 +32,7 @@ const Login: React.FC = () => {
       localStorage.setItem("role", role);
       setUserRole(role as UserRole);
       console.log("Login successful");
-      navigate("/dashboard/overview");
+      navigate("/dashboard");
     } catch (error) {
       console.error("Login failed", error);
       alert("Login failed. Please check your credentials.");
