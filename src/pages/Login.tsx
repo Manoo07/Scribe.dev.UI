@@ -39,6 +39,10 @@ const Login: React.FC = () => {
     }
   };
 
+  const handleGoogleLogin = () => {
+    window.location.href = "http://localhost:3000/auth/google";
+  };
+
   return (
     <div className="min-h-screen bg-gray-900 flex items-center justify-center px-4 py-12">
       <div className="max-w-md w-full space-y-8 bg-gray-800 p-8 rounded-xl shadow-2xl">
@@ -148,6 +152,27 @@ const Login: React.FC = () => {
             Sign in
           </Button>
         </form>
+
+        <div className="flex items-center my-4">
+          <div className="flex-grow h-px bg-gray-600" />
+          <span className="px-2 text-sm text-gray-400">or</span>
+          <div className="flex-grow h-px bg-gray-600" />
+        </div>
+
+        <Button
+          type="button"
+          size="lg"
+          fullWidth
+          onClick={handleGoogleLogin}
+          className="flex items-center justify-center gap-2 bg-white text-black"
+        >
+          <img
+            src="https://developers.google.com/identity/images/g-logo.png"
+            alt="Google"
+            className="h-5 w-5"
+          />
+          Sign in with Google
+        </Button>
       </div>
     </div>
   );
