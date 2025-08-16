@@ -1,14 +1,14 @@
-
+import axios from "axios";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import axios from "axios";
 
-import ClassroomTabs from "../components/classroom/Tabs/ClassroomTabs";
-import UnitsTab from "../components/classroom/Tabs/UnitsTab";
-import ThreadsTab from "../components/classroom/Tabs/ThreadsTab";
 import AssignmentsTab from "../components/classroom/Tabs/AssignmentsTab";
-import StudentsTab from "../components/classroom/Tabs/StudentsTab";
 import AttendanceTab from "../components/classroom/Tabs/AttendanceTab";
+import ClassroomTabs from "../components/classroom/Tabs/ClassroomTabs";
+import StudentsTab from "../components/classroom/Tabs/StudentsTab";
+import ThreadsTab from "../components/classroom/Tabs/ThreadsTab";
+import UnitsTab from "../components/classroom/Tabs/UnitsTab";
+import { ClassroomProvider } from "../context/ClassroomContext";
 
 const ClassroomDetailPage = () => {
   const { id } = useParams();
@@ -77,24 +77,27 @@ const ClassroomDetailPage = () => {
   }
 
   return (
-    <div className="px-3 py-4 sm:px-4 md:px-6 lg:px-8 max-w-6xl mx-auto">
-      <div className="mb-4 sm:mb-6">
-        <h1 className="text-lg sm:text-xl md:text-2xl font-semibold text-white break-words">
-          {classroom.name} {classroom.section?.name && `(${classroom.section.name})`}
-        </h1>
-        <p className="text-sm sm:text-base text-gray-400">
-          {classroom.faculty?.specialization ? (
-            <>Faculty: {classroom.faculty.specialization}</>
-          ) : (
-            "No faculty assigned"
-          )}
-        </p>
+    <ClassroomProvider classroomId={id!}>
+      <div className="px-3 py-4 sm:px-4 md:px-6 lg:px-8 max-w-6xl mx-auto">
+        <div className="mb-4 sm:mb-6">
+          <h1 className="text-lg sm:text-xl md:text-2xl font-semibold text-white break-words">
+            {classroom.name}{" "}
+            {classroom.section?.name && `(${classroom.section.name})`}
+          </h1>
+          <p className="text-sm sm:text-base text-gray-400">
+            {classroom.faculty?.specialization ? (
+              <>Faculty: {classroom.faculty.specialization}</>
+            ) : (
+              "No faculty assigned"
+            )}
+          </p>
+        </div>
+
+        <ClassroomTabs activeTab={activeTab} setActiveTab={setActiveTab} />
+
+        <div className="mt-4 sm:mt-6">{renderTab()}</div>
       </div>
-
-      <ClassroomTabs activeTab={activeTab} setActiveTab={setActiveTab} />
-
-      <div className="mt-4 sm:mt-6">{renderTab()}</div>
-    </div>
+    </ClassroomProvider>
   );
 };
 

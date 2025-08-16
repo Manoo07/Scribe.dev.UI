@@ -1,6 +1,14 @@
 import axios from "axios";
-import { Check, Search, UserMinus, UserPlus, Users } from "lucide-react";
+import {
+  Check,
+  RefreshCw,
+  Search,
+  UserMinus,
+  UserPlus,
+  Users,
+} from "lucide-react";
 import { useEffect, useState } from "react";
+import { useClassroomContext } from "../../../context/ClassroomContext";
 import { useToast } from "../../../hooks/use-toast";
 import {
   AlertDialog,
@@ -32,10 +40,7 @@ interface Student {
 }
 
 const StudentsTab = ({ classroomId }: { classroomId: string }) => {
-  const [students, setStudents] = useState<Student[]>([]);
-  const [availableStudents, setAvailableStudents] = useState<Student[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [loading, setLoading] = useState(true);
   const [processingStudentId, setProcessingStudentId] = useState<string | null>(
     null
   );
@@ -55,40 +60,37 @@ const StudentsTab = ({ classroomId }: { classroomId: string }) => {
 
   const { toast } = useToast();
 
+  // Use classroom context for students data
+  const {
+    studentsData,
+    fetchStudentsData,
+    refreshStudentsData,
+    setUpdating,
+    updateStudentsAfterAdd,
+    updateStudentsAfterRemove,
+    updateStudentsAfterBulkAdd,
+    updateStudentsAfterBulkRemove,
+  } = useClassroomContext();
+
+  const {
+    enrolledStudents: students,
+    availableStudents,
+    loading,
+  } = studentsData;
+
   // Get user role from localStorage (or context if you prefer)
   const userRole = (localStorage.getItem("role") || "STUDENT").toUpperCase();
 
-  const fetchStudentsData = async () => {
-    setLoading(true);
-    try {
-      const token = localStorage.getItem("token");
-
-      const enrolledRes = await axios.get(
-        `http://localhost:3000/api/v1/classroom/enrolled-students/${classroomId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setStudents(enrolledRes.data || []);
-
-      const availableRes = await axios.get(
-        `http://localhost:3000/api/v1/classroom/eligible-students/${classroomId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setAvailableStudents(availableRes.data || []);
-    } catch (error) {
-      console.error("Error fetching student data:", error);
+  // Fetch students data on component mount
+  useEffect(() => {
+    fetchStudentsData(classroomId).catch(() => {
       toast({
         title: "Error",
         description: "Failed to fetch students. Please try again.",
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchStudentsData();
-  }, [classroomId]);
+    });
+  }, [classroomId]); // Removed fetchStudentsData and toast from dependencies
 
   // Clear selections when data changes
   useEffect(() => {
@@ -107,12 +109,16 @@ const StudentsTab = ({ classroomId }: { classroomId: string }) => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
+      // Find the student from available students and update context
+      const addedStudent = availableStudents.find((s) => s.userId === userId);
+      if (addedStudent) {
+        updateStudentsAfterAdd(addedStudent);
+      }
+
       toast({
         title: "Success",
         description: "Student added to the classroom",
       });
-
-      await fetchStudentsData();
     } catch (error) {
       console.error("Failed to add student:", error);
       toast({
@@ -145,12 +151,13 @@ const StudentsTab = ({ classroomId }: { classroomId: string }) => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
+      // Update context with removed student
+      updateStudentsAfterRemove(studentToRemove.userId);
+
       toast({
         title: "Success",
         description: "Student removed from the classroom",
       });
-
-      await fetchStudentsData();
     } catch (error) {
       console.error("Failed to remove student:", error);
       toast({
@@ -170,24 +177,31 @@ const StudentsTab = ({ classroomId }: { classroomId: string }) => {
 
     setBulkProcessing(true);
     setBulkDialogOpen(false);
+    setUpdating(true);
 
     try {
       const token = localStorage.getItem("token");
+      const userIds = Array.from(selectedAvailableStudents);
+
       await axios.post(
         `http://localhost:3000/api/v1/classroom/bulk-join`,
         {
           classroomId,
-          userIds: Array.from(selectedAvailableStudents),
+          userIds,
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+
+      // Find the added students and update context
+      const addedStudents = availableStudents.filter((student) =>
+        userIds.includes(student.userId)
+      );
+      updateStudentsAfterBulkAdd(addedStudents);
 
       toast({
         title: "Success",
         description: `${selectedAvailableStudents.size} students added to the classroom`,
       });
-
-      await fetchStudentsData();
     } catch (error) {
       console.error("Failed to add students:", error);
       toast({
@@ -195,6 +209,7 @@ const StudentsTab = ({ classroomId }: { classroomId: string }) => {
         description: "Failed to add some students to the classroom",
         variant: "destructive",
       });
+      setUpdating(false);
     } finally {
       setBulkProcessing(false);
       setSelectedAvailableStudents(new Set());
@@ -206,24 +221,28 @@ const StudentsTab = ({ classroomId }: { classroomId: string }) => {
 
     setBulkProcessing(true);
     setBulkDialogOpen(false);
+    setUpdating(true);
 
     try {
       const token = localStorage.getItem("token");
+      const userIds = Array.from(selectedEnrolledStudents);
+
       await axios.post(
         `http://localhost:3000/api/v1/classroom/bulk-leave`,
         {
           classroomId,
-          userIds: Array.from(selectedEnrolledStudents),
+          userIds,
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+
+      // Update context with removed students
+      updateStudentsAfterBulkRemove(userIds);
 
       toast({
         title: "Success",
         description: `${selectedEnrolledStudents.size} students removed from the classroom`,
       });
-
-      await fetchStudentsData();
     } catch (error) {
       console.error("Failed to remove students:", error);
       toast({
@@ -231,6 +250,7 @@ const StudentsTab = ({ classroomId }: { classroomId: string }) => {
         description: "Failed to remove some students from the classroom",
         variant: "destructive",
       });
+      setUpdating(false);
     } finally {
       setBulkProcessing(false);
       setSelectedEnrolledStudents(new Set());
@@ -292,12 +312,28 @@ const StudentsTab = ({ classroomId }: { classroomId: string }) => {
   const canShowBulkActions = userRole === "FACULTY" || userRole === "ADMIN";
 
   return (
-    <div className="space-y-6 min-h-screen bg-[#121827] text-white p-8">
+    <div className="space-y-6 min-h-screen bg-[#121827] text-white p-8 relative">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Students Management</h1>
-        <div className="flex items-center space-x-2 text-sm text-gray-400">
-          <Users className="h-4 w-4" />
-          <span>{students.length} enrolled</span>
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2 text-sm text-gray-400">
+            <Users className="h-4 w-4" />
+            <span>{students.length} enrolled</span>
+          </div>
+          {canShowBulkActions && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refreshStudentsData(classroomId)}
+              disabled={loading}
+              className="border-[#2d3748] hover:bg-[#1a2235] text-white"
+            >
+              <RefreshCw
+                className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`}
+              />
+              Refresh
+            </Button>
+          )}
         </div>
       </div>
 
@@ -668,6 +704,40 @@ const StudentsTab = ({ classroomId }: { classroomId: string }) => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+      )}
+
+      {/* Loader Overlay for Bulk Update */}
+      {studentsData.updating && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+          <div className="flex flex-col items-center bg-[#1a2235]/90 p-8 rounded-xl border border-[#2d3748]/50 shadow-2xl">
+            <svg
+              className="animate-spin h-12 w-12 text-blue-400 mb-4"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              ></circle>
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+              ></path>
+            </svg>
+            <span className="text-white text-lg font-semibold">
+              Updating students...
+            </span>
+            <span className="text-gray-400 text-sm mt-2">
+              Please wait while we process your request
+            </span>
+          </div>
+        </div>
       )}
     </div>
   );

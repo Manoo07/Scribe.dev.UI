@@ -1,4 +1,4 @@
-import { Calendar, BookOpen, Clock, Bell, Users, FileText } from 'lucide-react';
+import { Bell, BookOpen, Calendar, Clock, FileText, Users } from 'lucide-react';
 
 const OverviewPage = () => {
   const upcomingAssignments = [
