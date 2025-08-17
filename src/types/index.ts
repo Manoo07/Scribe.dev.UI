@@ -19,6 +19,7 @@ export interface Unit {
   id: string;
   name: string;
   classroomId: string;
+  description?: string;
   educationalContents: EducationalContent[];
   createdAt: string;
   updatedAt: string;

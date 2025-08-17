@@ -1,6 +1,19 @@
 import React, { useState } from "react";
 import UnitCard from "./UnitCard";
+import { deleteUnit } from "../services/api";
 import { Unit, ContentType } from "../types";
+import { useToast } from "../hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from "./ui/alert-dialog";
 import { formatDistanceToNow } from "../utils/dateUtils";
 import { Plus, Filter } from "lucide-react";
 import CreateUnitModal from "./CreateUnitModal";
@@ -21,10 +34,48 @@ const UnitsList: React.FC<UnitsListProps> = ({
   onRefresh,
 }) => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [deletingUnitId, setDeletingUnitId] = useState<string | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [localUnits, setLocalUnits] = useState<Unit[]>(units);
+  const { toast } = useToast();
+
+  // Keep localUnits in sync with props.units if they change externally
+  React.useEffect(() => {
+    setLocalUnits(units);
+  }, [units]);
+
+  const handleDeleteUnit = (unitId: string) => {
+    setPendingDeleteId(unitId);
+    setIsDialogOpen(true);
+  };
+
+  const confirmDeleteUnit = async () => {
+    if (!pendingDeleteId) return;
+    setDeletingUnitId(pendingDeleteId);
+    try {
+      await deleteUnit(pendingDeleteId);
+      setLocalUnits((prev) => prev.filter((u) => u.id !== pendingDeleteId));
+      toast({
+        title: "Success",
+        description: "Unit deleted successfully",
+      });
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Failed to delete unit. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingUnitId(null);
+      setPendingDeleteId(null);
+      setIsDialogOpen(false);
+    }
+  };
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<ContentType | "ALL">("ALL");
 
-  const processedUnits = units.map((unit) => {
+  const processedUnits = localUnits.map((unit) => {
     const contentsCount = {
       [ContentType.NOTE]: 0,
       [ContentType.LINK]: 0,
@@ -38,7 +89,7 @@ const UnitsList: React.FC<UnitsListProps> = ({
       }
     });
 
-    // Get the most recent content for description
+    // Always display the unit description (if present), otherwise fallback to NOTE content, otherwise fallback to default
     const sortedContents = [...unit.educationalContents].sort(
       (a, b) =>
         new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
@@ -48,12 +99,17 @@ const UnitsList: React.FC<UnitsListProps> = ({
       (content) => content.type === ContentType.NOTE
     );
 
+    let displayDescription = "No description provided.";
+    if (unit.description && unit.description.trim() !== "") {
+      displayDescription = unit.description;
+    } else if (noteContent?.content) {
+      displayDescription = noteContent.content.split("\n")[0]?.slice(0, 100);
+    }
+
     return {
       id: unit.id,
       name: unit.name,
-      description:
-        noteContent?.content.split("\n")[0]?.slice(0, 100) ||
-        "No description provided.",
+      description: displayDescription,
       lastUpdated: unit.updatedAt
         ? formatDistanceToNow(new Date(unit.updatedAt))
         : "N/A",
@@ -142,8 +198,39 @@ const UnitsList: React.FC<UnitsListProps> = ({
               contentsCount={unit.contentsCount}
               onEdit={() => onUnitEdit(unit.id)}
               onView={() => onUnitSelect(unit.id)}
+              onDelete={() => handleDeleteUnit(unit.id)}
+              isDeleting={deletingUnitId === unit.id}
             />
           ))}
+
+          <AlertDialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <AlertDialogContent className="bg-gray-800 border-gray-700 text-white">
+              <AlertDialogHeader>
+                <AlertDialogTitle className="text-white">Are you sure you want to delete the unit?</AlertDialogTitle>
+                <AlertDialogDescription className="text-gray-400">
+                  This action cannot be undone and will permanently remove all associated data.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel
+                  className="bg-gray-700 text-white hover:bg-gray-600"
+                  onClick={() => {
+                    setIsDialogOpen(false);
+                    setPendingDeleteId(null);
+                  }}
+                >
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                  onClick={confirmDeleteUnit}
+                  disabled={deletingUnitId !== null}
+                >
+                  {deletingUnitId ? "Deleting..." : "Delete"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       )}
 

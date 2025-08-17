@@ -1,11 +1,8 @@
 import React, { useState } from "react";
-import { X, Plus, Trash2 } from "lucide-react";
-import { createUnit } from "../services/api";
-
-interface EducationalContent {
-  contentType: "DOCUMENT" | "NOTE" | "LINK" | "VIDEO";
-  url: string;
-}
+import { X } from "lucide-react";
+import { createUnit, createContent } from "../services/api";
+import { ContentType } from "../types";
+import { marked } from "marked";
 
 interface CreateUnitModalProps {
   classroomId: string;
@@ -20,57 +17,52 @@ const CreateUnitModal: React.FC<CreateUnitModalProps> = ({
 }) => {
   const [unitName, setUnitName] = useState("");
   const [description, setDescription] = useState("");
-  const [educationalContents, setEducationalContents] = useState<
-    EducationalContent[]
-  >([]);
+  const [contentType, setContentType] = useState<ContentType | undefined>(undefined);
+  const [noteContent, setNoteContent] = useState("");
+  const [linkUrl, setLinkUrl] = useState("");
+  const [videoUrl, setVideoUrl] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
+  const [showPreview, setShowPreview] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   console.log("Classroom ID", classroomId);
 
-  const addEducationalContent = () => {
-    setEducationalContents([
-      ...educationalContents,
-      { contentType: "NOTE", url: "" },
-    ]);
-  };
 
-  const removeEducationalContent = (index: number) => {
-    setEducationalContents(educationalContents.filter((_, i) => i !== index));
-  };
-
-  const updateEducationalContent = (
-    index: number,
-    field: keyof EducationalContent,
-    value: string
-  ) => {
-    const updated = educationalContents.map((content, i) =>
-      i === index ? { ...content, [field]: value } : content
-    );
-    setEducationalContents(updated);
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setFiles(Array.from(e.target.files));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!unitName.trim()) return;
-
-    // Filter out educational contents with empty URLs
-    const validEducationalContents = educationalContents.filter((content) =>
-      content.url.trim()
-    );
-
     setIsSubmitting(true);
     setError(null);
-
     try {
-      const unitData = {
+      // Create the unit first
+      const unitData: any = {
         name: unitName.trim(),
         classroomId,
-        description: description.trim(),
-        educationalContents: validEducationalContents,
       };
+      if (description.trim() !== "") {
+        unitData.description = description.trim();
+      }
+      const createdUnit = await createUnit(unitData);
 
-      await createUnit(unitData);
+      // Only create content if something is provided
+      if (contentType) {
+        if (contentType === ContentType.NOTE && noteContent.trim()) {
+          await createContent(createdUnit.id, ContentType.NOTE, noteContent);
+        } else if (contentType === ContentType.LINK && linkUrl.trim()) {
+          await createContent(createdUnit.id, ContentType.LINK, linkUrl);
+        } else if (contentType === ContentType.VIDEO && videoUrl.trim()) {
+          await createContent(createdUnit.id, ContentType.VIDEO, videoUrl);
+        } else if (contentType === ContentType.DOCUMENT && files.length > 0) {
+          await createContent(createdUnit.id, ContentType.DOCUMENT, files[0]);
+        }
+      }
       onSuccess();
     } catch (err) {
       console.error("Failed to create unit:", err);
@@ -130,91 +122,155 @@ const CreateUnitModal: React.FC<CreateUnitModalProps> = ({
           </div>
 
           <div className="mb-6">
-            <div className="flex items-center justify-between mb-3">
-              <label className="block text-gray-300">
-                Educational Contents (Optional)
-              </label>
-              <button
-                type="button"
-                onClick={addEducationalContent}
-                className="bg-gray-700 hover:bg-gray-600 text-white px-3 py-1 rounded-lg flex items-center gap-2 transition-colors text-sm"
-              >
-                <Plus size={16} />
-                Add Content
-              </button>
+            <label className="block text-gray-300 mb-2">Content Type</label>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 mb-4">
+              {Object.values(ContentType).map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  className={`flex items-center justify-center gap-2 p-3 rounded-lg border ${
+                    contentType === type
+                      ? "bg-blue-600 border-blue-500 text-white"
+                      : "bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600"
+                  } transition-colors`}
+                  onClick={() => setContentType(type)}
+                >
+                  {type === ContentType.NOTE && <span>📝 Note</span>}
+                  {type === ContentType.LINK && <span>🔗 Link</span>}
+                  {type === ContentType.VIDEO && <span>🎬 Video</span>}
+                  {type === ContentType.DOCUMENT && <span>📄 Document</span>}
+                </button>
+              ))}
             </div>
 
-            {educationalContents.length === 0 ? (
-              <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-4 text-center">
-                <p className="text-gray-400 text-sm mb-2">
-                  No educational contents added
-                </p>
-                <p className="text-gray-500 text-xs">
-                  You can add documents, notes, links, or videos to this unit
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {educationalContents.map((content, index) => (
-                  <div
-                    key={index}
-                    className="bg-gray-700/50 border border-gray-600 rounded-lg p-3"
+            {/* Content Inputs */}
+            {contentType === ContentType.NOTE && (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label htmlFor="noteContent" className="block text-gray-300">
+                    Note Content (Markdown supported)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowPreview(!showPreview)}
+                    className="text-blue-400 hover:text-blue-300 text-sm"
                   >
-                    <div className="flex gap-3 items-start">
-                      <div className="flex-1">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                          <div>
-                            <label className="block text-gray-400 text-xs mb-1">
-                              Type
-                            </label>
-                            <select
-                              className="w-full bg-gray-600 border border-gray-500 rounded px-2 py-1 text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                              value={content.contentType}
-                              onChange={(e) =>
-                                updateEducationalContent(
-                                  index,
-                                  "contentType",
-                                  e.target.value
-                                )
-                              }
-                            >
-                              <option value="NOTE">Note</option>
-                              <option value="DOCUMENT">Document</option>
-                              <option value="LINK">Link</option>
-                              <option value="VIDEO">Video</option>
-                            </select>
-                          </div>
-                          <div className="md:col-span-2">
-                            <label className="block text-gray-400 text-xs mb-1">
-                              URL
-                            </label>
-                            <input
-                              type="url"
-                              className="w-full bg-gray-600 border border-gray-500 rounded px-2 py-1 text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                              placeholder="https://example.com/resource"
-                              value={content.url}
-                              onChange={(e) =>
-                                updateEducationalContent(
-                                  index,
-                                  "url",
-                                  e.target.value
-                                )
-                              }
-                            />
-                          </div>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => removeEducationalContent(index)}
-                        className="text-red-400 hover:text-red-300 transition-colors mt-5"
-                        aria-label="Remove content"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
+                    {showPreview ? "Hide Preview" : "Show Preview"}
+                  </button>
+                </div>
+                <div className={`${showPreview ? "grid grid-cols-2 gap-4" : ""}`}>
+                  <div>
+                    <textarea
+                      id="noteContent"
+                      rows={8}
+                      className="w-full bg-gray-700 border border-gray-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="# Title\nYour note content here..."
+                      value={noteContent}
+                      onChange={(e) => setNoteContent(e.target.value)}
+                    />
                   </div>
-                ))}
+                  {showPreview && (
+                    <div className="bg-gray-700 border border-gray-600 rounded-lg p-3">
+                      <div
+                        className="prose prose-invert max-w-none"
+                        dangerouslySetInnerHTML={{
+                          __html: marked(noteContent || "*Preview will appear here*")
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {contentType === ContentType.LINK && (
+              <div>
+                <label htmlFor="linkUrl" className="block text-gray-300 mb-2">
+                  Link URL
+                </label>
+                <input
+                  id="linkUrl"
+                  type="url"
+                  className="w-full bg-gray-700 border border-gray-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="https://example.com"
+                  value={linkUrl}
+                  onChange={(e) => setLinkUrl(e.target.value)}
+                />
+              </div>
+            )}
+
+            {contentType === ContentType.VIDEO && (
+              <div>
+                <label htmlFor="videoUrl" className="block text-gray-300 mb-2">
+                  Video URL (YouTube, Vimeo, etc.)
+                </label>
+                <input
+                  id="videoUrl"
+                  type="url"
+                  className="w-full bg-gray-700 border border-gray-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="https://youtube.com/watch?v=..."
+                  value={videoUrl}
+                  onChange={(e) => setVideoUrl(e.target.value)}
+                />
+              </div>
+            )}
+
+            {contentType === ContentType.DOCUMENT && (
+              <div>
+                <label htmlFor="document" className="block text-gray-300 mb-2">
+                  Upload Document
+                </label>
+                <div className="relative">
+                  <div
+                    className={`border-2 border-dashed rounded-lg p-6 text-center ${
+                      files.length
+                        ? "border-blue-500 bg-blue-900/10"
+                        : "border-gray-600"
+                    }`}
+                  >
+                    {files.length ? (
+                      <div>
+                        <p className="text-white mb-2">
+                          {files.length} file(s) selected:
+                        </p>
+                        <ul className="text-gray-300 mb-4">
+                          {Array.from(files).map((file, i) => (
+                            <li key={i} className="truncate">
+                              {file.name} ({(file.size / 1024).toFixed(1)} KB)
+                            </li>
+                          ))}
+                        </ul>
+                        <button
+                          type="button"
+                          onClick={() => setFiles([])}
+                          className="text-blue-400 hover:text-blue-300 underline"
+                        >
+                          Choose different files
+                        </button>
+                      </div>
+                    ) : (
+                      <div>
+                        <span role="img" aria-label="upload" className="mx-auto text-gray-400 mb-2">⬆️</span>
+                        <p className="text-gray-300 mb-2">
+                          Drag and drop files here, or click to browse
+                        </p>
+                        <p className="text-gray-400 text-sm">
+                          PDF, Word, Excel, PowerPoint, etc.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  <input
+                    id="document"
+                    type="file"
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    onChange={handleFileChange}
+                    multiple
+                    style={{
+                      display: contentType === ContentType.DOCUMENT ? "block" : "none",
+                    }}
+                  />
+                </div>
               </div>
             )}
           </div>

@@ -45,7 +45,7 @@ export const getUnits = async (classroomId: string): Promise<Unit[]> => {
 export const createUnit = async (data: {
   name: string;
   classroomId: string;
-  description: string;
+  description?: string;
   educationalContents?: {
     contentType: "DOCUMENT" | "NOTE" | "VIDEO" | "LINK";
     url: string;
@@ -70,10 +70,11 @@ export const createUnit = async (data: {
 // Update a unit
 export const updateUnit = async (
   unitId: string,
-  name: string
+  name: string,
+  description?: string
 ): Promise<Unit> => {
   try {
-    const response = await api.put(`/units/${unitId}`, { name });
+    const response = await api.put(`/unit/${unitId}`, { name, description });
     return response.data;
   } catch (error) {
     console.error("Error updating unit:", error);
@@ -84,7 +85,7 @@ export const updateUnit = async (
 // Delete a unit
 export const deleteUnit = async (unitId: string): Promise<void> => {
   try {
-    await api.delete(`/units/${unitId}`);
+    await api.delete(`/unit/${unitId}`);
   } catch (error) {
     console.error("Error deleting unit:", error);
     throw error;
