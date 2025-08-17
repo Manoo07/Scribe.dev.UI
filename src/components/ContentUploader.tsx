@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Unit, ContentType } from "../types";
 import { FileText, Link2, Video, File, Upload, X } from "lucide-react";
-import { createContent } from "../services/api";
+import { createContent, updateUnit } from "../services/api";
 import { marked } from "marked";
 
 interface ContentUploaderProps {
@@ -10,12 +10,35 @@ interface ContentUploaderProps {
   onSuccess: () => void;
 }
 
+const contentTypeOptions = [
+  {
+    value: ContentType.NOTE,
+    label: "Note",
+    icon: <FileText size={18} />,
+  },
+  {
+    value: ContentType.LINK,
+    label: "Link",
+    icon: <Link2 size={18} />,
+  },
+  {
+    value: ContentType.VIDEO,
+    label: "Video",
+    icon: <Video size={18} />,
+  },
+  {
+    value: ContentType.DOCUMENT,
+    label: "Document",
+    icon: <File size={18} />,
+  },
+];
+
 const ContentUploader: React.FC<ContentUploaderProps> = ({
   unit,
   onClose,
   onSuccess,
 }) => {
-  const [contentType, setContentType] = useState<ContentType>(ContentType.NOTE);
+  const [contentType, setContentType] = useState<ContentType | undefined>(undefined);
   const [noteContent, setNoteContent] = useState("");
   const [linkUrl, setLinkUrl] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
@@ -23,6 +46,8 @@ const ContentUploader: React.FC<ContentUploaderProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [unitName, setUnitName] = useState(unit.name);
+  const [unitDescription, setUnitDescription] = useState((unit as any).description || "");
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -34,38 +59,24 @@ const ContentUploader: React.FC<ContentUploaderProps> = ({
     e.preventDefault();
     setIsSubmitting(true);
     setError(null);
-
     try {
-      switch (contentType) {
-        case ContentType.NOTE:
-          if (!noteContent.trim()) {
-            throw new Error("Note content cannot be empty");
-          }
-          await createContent(unit.id, ContentType.NOTE, noteContent);
-          break;
-
-        case ContentType.LINK:
-          if (!linkUrl.trim()) {
-            throw new Error("Link URL cannot be empty");
-          }
-          await createContent(unit.id, ContentType.LINK, linkUrl);
-          break;
-
-        case ContentType.VIDEO:
-          if (!videoUrl.trim()) {
-            throw new Error("Video URL cannot be empty");
-          }
-          await createContent(unit.id, ContentType.VIDEO, videoUrl);
-          break;
-
-        case ContentType.DOCUMENT:
-          if (!files.length) {
-            throw new Error("No file selected");
-          }
-          await createContent(unit.id, ContentType.DOCUMENT, files[0]);
-          break;
+      if (unitName !== unit.name || unitDescription !== (unit as any).description) {
+        await updateUnit(unit.id, unitName, unitDescription);
       }
-
+      // Only create content if something is provided
+      // Only call createContent if content is provided (content is optional)
+      if (contentType) {
+        if (contentType === ContentType.NOTE && noteContent.trim()) {
+          await createContent(unit.id, ContentType.NOTE, noteContent);
+        } else if (contentType === ContentType.LINK && linkUrl.trim()) {
+          await createContent(unit.id, ContentType.LINK, linkUrl);
+        } else if (contentType === ContentType.VIDEO && videoUrl.trim()) {
+          await createContent(unit.id, ContentType.VIDEO, videoUrl);
+        } else if (contentType === ContentType.DOCUMENT && files.length > 0) {
+          await createContent(unit.id, ContentType.DOCUMENT, files[0]);
+        }
+      }
+      setIsSubmitting(false);
       onSuccess();
     } catch (err) {
       console.error("Upload failed:", err);
@@ -75,17 +86,6 @@ const ContentUploader: React.FC<ContentUploaderProps> = ({
       setIsSubmitting(false);
     }
   };
-
-  const contentTypeOptions = [
-    { value: ContentType.NOTE, label: "Note", icon: <FileText size={18} /> },
-    { value: ContentType.LINK, label: "Link", icon: <Link2 size={18} /> },
-    { value: ContentType.VIDEO, label: "Video", icon: <Video size={18} /> },
-    {
-      value: ContentType.DOCUMENT,
-      label: "Document",
-      icon: <File size={18} />,
-    },
-  ];
 
   return (
     <div className="bg-gray-800 rounded-lg border border-gray-700 shadow-lg">
@@ -103,6 +103,33 @@ const ContentUploader: React.FC<ContentUploaderProps> = ({
       </div>
 
       <form onSubmit={handleSubmit} className="p-4">
+        <div className="mb-6">
+          <label htmlFor="unitName" className="block text-gray-300 mb-2">
+            Unit Name <span className="text-red-400">*</span>
+          </label>
+          <input
+            id="unitName"
+            type="text"
+            className="w-full bg-gray-700 border border-gray-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="e.g., Introduction to Calculus"
+            value={unitName}
+            onChange={e => setUnitName(e.target.value)}
+            required
+          />
+        </div>
+        <div className="mb-6">
+          <label htmlFor="unitDescription" className="block text-gray-300 mb-2">
+            Description
+          </label>
+          <textarea
+            id="unitDescription"
+            className="w-full bg-gray-700 border border-gray-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-vertical"
+            placeholder="Brief description of the unit (optional)"
+            rows={3}
+            value={unitDescription}
+            onChange={e => setUnitDescription(e.target.value)}
+          />
+        </div>
         <div className="mb-6">
           <label className="block text-gray-300 mb-2">Content Type</label>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

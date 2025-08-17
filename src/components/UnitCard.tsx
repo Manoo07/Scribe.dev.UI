@@ -1,20 +1,17 @@
 import React from "react";
 import { ContentType } from "../types";
-import { FileText, Link2, Video, File, Edit3, Eye } from "lucide-react";
+import { FileText, Link2, Video, File, Edit3, Eye, Trash2 } from "lucide-react";
 
 interface UnitCardProps {
   id: string;
   name: string;
   description: string;
   lastUpdated: string;
-  contentsCount: {
-    [ContentType.NOTE]: number;
-    [ContentType.LINK]: number;
-    [ContentType.VIDEO]: number;
-    [ContentType.DOCUMENT]: number;
-  };
+  contentsCount: Record<ContentType, number>;
   onEdit: () => void;
   onView: () => void;
+  onDelete: () => void;
+  isDeleting?: boolean;
 }
 
 const UnitCard: React.FC<UnitCardProps> = ({
@@ -24,6 +21,8 @@ const UnitCard: React.FC<UnitCardProps> = ({
   contentsCount,
   onEdit,
   onView,
+  onDelete,
+  isDeleting,
 }) => {
   const totalContents = Object.values(contentsCount).reduce(
     (sum, count) => sum + count,
@@ -33,20 +32,38 @@ const UnitCard: React.FC<UnitCardProps> = ({
   return (
     <div className="bg-gray-800 rounded-lg overflow-hidden shadow-md border border-gray-700 transition-all hover:shadow-lg hover:shadow-blue-900/10 hover:border-gray-600 group">
       <div className="p-5">
-        <div className="flex items-start justify-between mb-2">
+        <div className="flex items-start justify-between mb-2 gap-2">
           <h3 className="text-xl font-semibold text-white line-clamp-1 pr-2 flex-1">
             {name}
           </h3>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit();
-            }}
-            className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 text-gray-400 hover:text-blue-400 hover:bg-gray-700 rounded-md"
-            title="Edit unit"
-          >
-            <Edit3 size={16} />
-          </button>
+          <div className="flex gap-1">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit();
+              }}
+              className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 text-gray-400 hover:text-blue-400 hover:bg-gray-700 rounded-md"
+              title="Edit unit"
+            >
+              <Edit3 size={16} />
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
+              className="relative opacity-0 group-hover:opacity-100 transition-opacity p-1.5 text-gray-400 hover:text-red-400 hover:bg-gray-700 rounded-md disabled:opacity-50"
+              title="Delete unit"
+              disabled={isDeleting}
+            >
+              <Trash2 size={16} />
+              {isDeleting && (
+                <span className="absolute inset-0 flex items-center justify-center">
+                  <span className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-400"></span>
+                </span>
+              )}
+            </button>
+          </div>
         </div>
 
         <p className="text-gray-400 text-sm mb-4 line-clamp-2 min-h-[2.5rem]">
