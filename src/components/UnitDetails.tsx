@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import AddContentOnlyModal from "./AddContentOnlyModal";
 import { Unit, ContentType, EducationalContent } from "../types";
 import ContentItem from "./ContentItem";
 import { ArrowLeft, Plus, FileText, Link2, Video, File } from "lucide-react";
@@ -18,6 +19,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({
   onRefresh,
 }) => {
   const [activeTab, setActiveTab] = useState<ContentType | "ALL">("ALL");
+  const [showAddContent, setShowAddContent] = useState(false);
 
   const tabs = [
     { id: "ALL", label: "All", icon: null },
@@ -117,12 +119,22 @@ const UnitDetail: React.FC<UnitDetailProps> = ({
         </div>
 
         <button
-          onClick={onAddContent}
+          onClick={() => setShowAddContent(true)}
           className="w-full bg-blue-600 hover:bg-blue-500 text-white rounded-lg py-2 flex items-center justify-center gap-2 transition-colors"
         >
           <Plus size={18} />
           Add Content
         </button>
+        {showAddContent && (
+          <AddContentOnlyModal
+            unit={unit}
+            onClose={() => setShowAddContent(false)}
+            onSuccess={() => {
+              setShowAddContent(false);
+              onRefresh();
+            }}
+          />
+        )}
       </div>
 
       <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">

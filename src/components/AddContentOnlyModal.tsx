@@ -1,22 +1,20 @@
 import React, { useState } from "react";
 import { X, FileText, Link2, Video, File, Upload } from "lucide-react";
-import { createUnit, createContent } from "../services/api";
-import { ContentType } from "../types";
+import { createContent } from "../services/api";
+import { ContentType, Unit } from "../types";
 import { marked } from "marked";
 
-interface CreateUnitModalProps {
-  classroomId: string;
+interface AddContentOnlyModalProps {
+  unit: Unit;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-const CreateUnitModal: React.FC<CreateUnitModalProps> = ({
-  classroomId,
+const AddContentOnlyModal: React.FC<AddContentOnlyModalProps> = ({
+  unit,
   onClose,
   onSuccess,
 }) => {
-  const [unitName, setUnitName] = useState("");
-  const [description, setDescription] = useState("");
   const [contentType, setContentType] = useState<ContentType | undefined>(undefined);
   const [noteContent, setNoteContent] = useState("");
   const [linkUrl, setLinkUrl] = useState("");
@@ -26,9 +24,6 @@ const CreateUnitModal: React.FC<CreateUnitModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  console.log("Classroom ID", classroomId);
-
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       setFiles(Array.from(e.target.files));
@@ -37,36 +32,23 @@ const CreateUnitModal: React.FC<CreateUnitModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!unitName.trim()) return;
     setIsSubmitting(true);
     setError(null);
     try {
-      // Create the unit first
-      const unitData: any = {
-        name: unitName.trim(),
-        classroomId,
-      };
-      if (description.trim() !== "") {
-        unitData.description = description.trim();
-      }
-      const createdUnit = await createUnit(unitData);
-
-      // Only create content if something is provided
       if (contentType) {
         if (contentType === ContentType.NOTE && noteContent.trim()) {
-          await createContent(createdUnit.id, ContentType.NOTE, noteContent);
+          await createContent(unit.id, ContentType.NOTE, noteContent);
         } else if (contentType === ContentType.LINK && linkUrl.trim()) {
-          await createContent(createdUnit.id, ContentType.LINK, linkUrl);
+          await createContent(unit.id, ContentType.LINK, linkUrl);
         } else if (contentType === ContentType.VIDEO && videoUrl.trim()) {
-          await createContent(createdUnit.id, ContentType.VIDEO, videoUrl);
+          await createContent(unit.id, ContentType.VIDEO, videoUrl);
         } else if (contentType === ContentType.DOCUMENT && files.length > 0) {
-          await createContent(createdUnit.id, ContentType.DOCUMENT, files[0]);
+          await createContent(unit.id, ContentType.DOCUMENT, files[0]);
         }
       }
       onSuccess();
     } catch (err) {
-      console.error("Failed to create unit:", err);
-      setError("Failed to create unit. Please try again.");
+      setError("Failed to add content. Please try again.");
       setIsSubmitting(false);
     }
   };
@@ -75,7 +57,7 @@ const CreateUnitModal: React.FC<CreateUnitModalProps> = ({
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
       <div className="bg-gray-800 rounded-lg shadow-lg w-full max-w-2xl border border-gray-700 animate-fadeIn max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between border-b border-gray-700 p-4">
-          <h3 className="text-xl font-semibold text-white">Create New Unit</h3>
+          <h3 className="text-xl font-semibold text-white">Add Content to "{unit.name}"</h3>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-white transition-colors"
@@ -84,47 +66,12 @@ const CreateUnitModal: React.FC<CreateUnitModalProps> = ({
             <X size={20} />
           </button>
         </div>
-
         <form onSubmit={handleSubmit} className="p-4">
           {error && (
             <div className="mb-4 p-3 bg-red-900/30 border border-red-500 rounded-lg text-red-400">
               {error}
             </div>
           )}
-
-          <div className="mb-6">
-            <label htmlFor="unitName" className="block text-gray-300 mb-2">
-              Unit Name <span className="text-red-400">*</span>
-            </label>
-            <input
-              id="unitName"
-              type="text"
-              className="w-full bg-gray-700 border border-gray-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="e.g., Introduction to Calculus"
-              value={unitName}
-              onChange={(e) => setUnitName(e.target.value)}
-              required
-            />
-          </div>
-
-          <div className="mb-6">
-            <label htmlFor="description" className="block text-gray-300 mb-2">
-              Description
-            </label>
-            <textarea
-              id="description"
-              className="w-full bg-gray-700 border border-gray-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-vertical"
-              placeholder="Brief description of the unit (optional)"
-              rows={3}
-              maxLength={500}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
-            <div className="text-right text-xs text-gray-400 mt-1">
-              {description.length}/500 characters
-            </div>
-          </div>
-
           <div className="mb-6">
             <label className="block text-gray-300 mb-2">Content Type</label>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 mb-4">
@@ -146,7 +93,6 @@ const CreateUnitModal: React.FC<CreateUnitModalProps> = ({
                 </button>
               ))}
             </div>
-
             {/* Content Inputs */}
             {contentType === ContentType.NOTE && (
               <div>
@@ -186,7 +132,6 @@ const CreateUnitModal: React.FC<CreateUnitModalProps> = ({
                 </div>
               </div>
             )}
-
             {contentType === ContentType.LINK && (
               <div>
                 <label htmlFor="linkUrl" className="block text-gray-300 mb-2">
@@ -202,7 +147,6 @@ const CreateUnitModal: React.FC<CreateUnitModalProps> = ({
                 />
               </div>
             )}
-
             {contentType === ContentType.VIDEO && (
               <div>
                 <label htmlFor="videoUrl" className="block text-gray-300 mb-2">
@@ -218,7 +162,6 @@ const CreateUnitModal: React.FC<CreateUnitModalProps> = ({
                 />
               </div>
             )}
-
             {contentType === ContentType.DOCUMENT && (
               <div>
                 <label htmlFor="document" className="block text-gray-300 mb-2">
@@ -278,7 +221,6 @@ const CreateUnitModal: React.FC<CreateUnitModalProps> = ({
               </div>
             )}
           </div>
-
           <div className="flex justify-end gap-3">
             <button
               type="button"
@@ -291,9 +233,9 @@ const CreateUnitModal: React.FC<CreateUnitModalProps> = ({
             <button
               type="submit"
               className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:hover:bg-blue-600"
-              disabled={isSubmitting || !unitName.trim()}
+              disabled={isSubmitting}
             >
-              {isSubmitting ? "Creating..." : "Create Unit"}
+              {isSubmitting ? "Saving..." : "Save Content"}
             </button>
           </div>
         </form>
@@ -302,4 +244,4 @@ const CreateUnitModal: React.FC<CreateUnitModalProps> = ({
   );
 };
 
-export default CreateUnitModal;
+export default AddContentOnlyModal;
