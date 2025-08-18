@@ -91,7 +91,7 @@ const ContentUploader: React.FC<ContentUploaderProps> = ({
     <div className="bg-gray-800 rounded-lg border border-gray-700 shadow-lg">
       <div className="flex items-center justify-between border-b border-gray-700 p-4">
         <h3 className="text-xl font-semibold text-white">
-          Add Content to "{unit.name}"
+         Edit "{unit.name}"
         </h3>
         <button
           onClick={onClose}
