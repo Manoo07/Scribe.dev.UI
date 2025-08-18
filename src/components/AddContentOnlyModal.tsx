@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { X, FileText, Link2, Video, File } from "lucide-react";
+import { X, FileText, Link2, Video, File, Upload } from "lucide-react";
 import { createContent } from "../services/api";
 import { ContentType, Unit } from "../types";
 import { marked } from "marked";
@@ -197,7 +197,7 @@ const AddContentOnlyModal: React.FC<AddContentOnlyModalProps> = ({
                       </div>
                     ) : (
                       <div>
-                        <span role="img" aria-label="upload" className="mx-auto text-gray-400 mb-2">⬆️</span>
+                        <Upload size={24} className="mx-auto text-gray-400 mb-2" />
                         <p className="text-gray-300 mb-2">
                           Drag and drop files here, or click to browse
                         </p>
