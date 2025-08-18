@@ -116,9 +116,13 @@ const CreateUnitModal: React.FC<CreateUnitModalProps> = ({
               className="w-full bg-gray-700 border border-gray-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-vertical"
               placeholder="Brief description of the unit (optional)"
               rows={3}
+              maxLength={500}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
+            <div className="text-right text-xs text-gray-400 mt-1">
+              {description.length}/500 characters
+            </div>
           </div>
 
           <div className="mb-6">
