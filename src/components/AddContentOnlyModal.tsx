@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { X } from "lucide-react";
+import { X, FileText, Link2, Video, File } from "lucide-react";
 import { createContent } from "../services/api";
 import { ContentType, Unit } from "../types";
 import { marked } from "marked";
@@ -86,10 +86,10 @@ const AddContentOnlyModal: React.FC<AddContentOnlyModalProps> = ({
                   } transition-colors`}
                   onClick={() => setContentType(type)}
                 >
-                  {type === ContentType.NOTE && <span>📝 Note</span>}
-                  {type === ContentType.LINK && <span>🔗 Link</span>}
-                  {type === ContentType.VIDEO && <span>🎬 Video</span>}
-                  {type === ContentType.DOCUMENT && <span>📄 Document</span>}
+                  {type === ContentType.NOTE && <><FileText size={18} /> Note</>}
+                  {type === ContentType.LINK && <><Link2 size={18} /> Link</>}
+                  {type === ContentType.VIDEO && <><Video size={18} /> Video</>}
+                  {type === ContentType.DOCUMENT && <><File size={18} /> Document</>}
                 </button>
               ))}
             </div>
