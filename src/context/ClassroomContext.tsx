@@ -22,7 +22,7 @@ interface StudentsData {
   loading: boolean;
   updating: boolean;
   lastFetched: number | null;
-  fetchedClassroomId: string | null; // Track which classroom this data belongs to
+  fetchedClassroomId: string | null;
 }
 
 interface ClassroomContextType {

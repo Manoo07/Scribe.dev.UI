@@ -44,13 +44,21 @@ const ClassroomDetailPage = () => {
       case "Units":
         return <UnitsTab classroomId={id!} />;
       case "Threads":
-        return <ThreadsTab classroomId={id!} />;
+        return (
+          <ThreadsTab
+            classroomId={id!}
+            classroomName={classroom.name}
+            units={classroom.units || []}
+          />
+        );
       case "Assignments":
         return <AssignmentsTab classroomId={id!} />;
       case "Students":
         return <StudentsTab classroomId={id!} />;
       case "Attendance":
-        return <AttendanceTab classroomId={id!} />;
+        return (
+          <AttendanceTab classroomId={id!} userRole="faculty" userId="1" />
+        );
       default:
         return null;
     }

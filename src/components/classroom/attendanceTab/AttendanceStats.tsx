@@ -1,26 +1,33 @@
-
-import React, { useState, useEffect } from "react";
-import { getOverallAttendanceStats } from "../../../services/attendanceService";
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer,
+import { CalendarCheck, ChevronDown, ChevronUp, Users } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
   Cell,
-  TooltipProps
+  ResponsiveContainer,
+  Tooltip,
+  TooltipProps,
+  XAxis,
+  YAxis,
 } from "recharts";
-import { ChevronUp, ChevronDown, CalendarCheck, Users } from "lucide-react";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "../../ui/hover-card";
+import { getOverallAttendanceStats } from "../../../services/attendanceService";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "../../ui/hover-card";
 
 interface AttendanceStatsProps {
   classroomId: string;
 }
 
 // Custom tooltip component for better hover display
-const CustomTooltip = ({ active, payload, label }: TooltipProps<number, string>) => {
+const CustomTooltip = ({
+  active,
+  payload,
+  label,
+}: TooltipProps<number, string>) => {
   if (active && payload && payload.length) {
     return (
       <div className="custom-tooltip bg-gray-900 border border-gray-700 rounded-lg shadow-lg p-3 backdrop-blur-sm">
@@ -46,30 +53,37 @@ const getAttendanceLevel = (percentage: number) => {
 };
 
 const AttendanceStats = ({ classroomId }: AttendanceStatsProps) => {
-  const [chartData, setChartData] = useState<{ name: string; percentage: number }[]>([]);
+  const [chartData, setChartData] = useState<
+    { name: string; percentage: number }[]
+  >([]);
   const [average, setAverage] = useState(0);
   const [trend, setTrend] = useState<"up" | "down" | "neutral">("neutral");
 
   useEffect(() => {
     const stats = getOverallAttendanceStats(classroomId);
-    
+
     const formattedData = Object.entries(stats).map(([date, percentage]) => ({
       name: date,
-      percentage
+      percentage,
     }));
-    
+
     setChartData(formattedData);
-    
+
     // Calculate average
     if (formattedData.length > 0) {
-      const total = formattedData.reduce((sum, item) => sum + item.percentage, 0);
+      const total = formattedData.reduce(
+        (sum, item) => sum + item.percentage,
+        0
+      );
       setAverage(Math.round(total / formattedData.length));
 
       // Calculate trend
       if (formattedData.length >= 2) {
         const lastDay = formattedData[0].percentage;
         const prevDay = formattedData[1].percentage;
-        setTrend(lastDay > prevDay ? "up" : lastDay < prevDay ? "down" : "neutral");
+        setTrend(
+          lastDay > prevDay ? "up" : lastDay < prevDay ? "down" : "neutral"
+        );
       }
     }
   }, [classroomId]);
@@ -98,23 +112,25 @@ const AttendanceStats = ({ classroomId }: AttendanceStatsProps) => {
       <h3 className="text-xl font-semibold text-white mb-6">
         Attendance Overview
       </h3>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <div className="bg-gray-700 p-6 rounded-lg text-center border border-gray-600">
           <div className="flex items-center justify-center mb-3">
             <CalendarCheck className="h-6 w-6 text-blue-400" />
           </div>
-          <div className="text-4xl font-bold text-white mb-2">
-            {average}%
-          </div>
+          <div className="text-4xl font-bold text-white mb-2">{average}%</div>
           <div className="text-gray-400">Average Attendance</div>
           <div className="mt-2 flex items-center justify-center">
             {renderAttendanceLevel(average)}
-            {trend === "up" && <ChevronUp className="ml-1 h-4 w-4 text-green-500" />}
-            {trend === "down" && <ChevronDown className="ml-1 h-4 w-4 text-red-500" />}
+            {trend === "up" && (
+              <ChevronUp className="ml-1 h-4 w-4 text-green-500" />
+            )}
+            {trend === "down" && (
+              <ChevronDown className="ml-1 h-4 w-4 text-red-500" />
+            )}
           </div>
         </div>
-        
+
         <div className="bg-gray-700 p-6 rounded-lg text-center border border-gray-600">
           <div className="flex items-center justify-center mb-3">
             <Users className="h-6 w-6 text-green-400" />
@@ -123,7 +139,10 @@ const AttendanceStats = ({ classroomId }: AttendanceStatsProps) => {
             <HoverCardTrigger asChild>
               <div className="cursor-pointer transition-transform hover:scale-105">
                 <div className="text-4xl font-bold mb-2 text-green-400">
-                  {chartData.length > 0 ? Math.max(...chartData.map(d => d.percentage)) : 0}%
+                  {chartData.length > 0
+                    ? Math.max(...chartData.map((d) => d.percentage))
+                    : 0}
+                  %
                 </div>
                 <div className="text-gray-400">Highest Attendance</div>
               </div>
@@ -132,16 +151,22 @@ const AttendanceStats = ({ classroomId }: AttendanceStatsProps) => {
               <div className="flex justify-between">
                 <p className="font-medium">Highest Day</p>
                 <span className="text-green-400 font-bold">
-                  {chartData.length > 0 ? 
-                    chartData.find(d => d.percentage === Math.max(...chartData.map(item => item.percentage)))?.name : 
-                    "N/A"}
+                  {chartData.length > 0
+                    ? chartData.find(
+                        (d) =>
+                          d.percentage ===
+                          Math.max(...chartData.map((item) => item.percentage))
+                      )?.name
+                    : "N/A"}
                 </span>
               </div>
-              <p className="text-sm text-gray-400 mt-2">This was the day with the best attendance rate in this class.</p>
+              <p className="text-sm text-gray-400 mt-2">
+                This was the day with the best attendance rate in this class.
+              </p>
             </HoverCardContent>
           </HoverCard>
         </div>
-        
+
         <div className="bg-gray-700 p-6 rounded-lg text-center border border-gray-600">
           <div className="flex items-center justify-center mb-3">
             <Users className="h-6 w-6 text-yellow-400" />
@@ -150,7 +175,10 @@ const AttendanceStats = ({ classroomId }: AttendanceStatsProps) => {
             <HoverCardTrigger asChild>
               <div className="cursor-pointer transition-transform hover:scale-105">
                 <div className="text-4xl font-bold mb-2 text-yellow-400">
-                  {chartData.length > 0 ? Math.min(...chartData.map(d => d.percentage)) : 0}%
+                  {chartData.length > 0
+                    ? Math.min(...chartData.map((d) => d.percentage))
+                    : 0}
+                  %
                 </div>
                 <div className="text-gray-400">Lowest Attendance</div>
               </div>
@@ -159,52 +187,64 @@ const AttendanceStats = ({ classroomId }: AttendanceStatsProps) => {
               <div className="flex justify-between">
                 <p className="font-medium">Lowest Day</p>
                 <span className="text-yellow-400 font-bold">
-                  {chartData.length > 0 ? 
-                    chartData.find(d => d.percentage === Math.min(...chartData.map(item => item.percentage)))?.name : 
-                    "N/A"}
+                  {chartData.length > 0
+                    ? chartData.find(
+                        (d) =>
+                          d.percentage ===
+                          Math.min(...chartData.map((item) => item.percentage))
+                      )?.name
+                    : "N/A"}
                 </span>
               </div>
-              <p className="text-sm text-gray-400 mt-2">This was the day with the lowest attendance rate in this class.</p>
+              <p className="text-sm text-gray-400 mt-2">
+                This was the day with the lowest attendance rate in this class.
+              </p>
             </HoverCardContent>
           </HoverCard>
         </div>
       </div>
-      
+
       <div className="h-72 mt-8 rounded-lg bg-gray-900/50 p-4 border border-gray-700">
-        <h4 className="text-white font-medium mb-4">Last 7 Days Attendance Trend</h4>
+        <h4 className="text-white font-medium mb-4">
+          Last 7 Days Attendance Trend
+        </h4>
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart 
-            data={chartData} 
+          <BarChart
+            data={chartData}
             margin={{ top: 20, right: 10, left: 0, bottom: 5 }}
             barGap={8}
             barCategoryGap={16}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="#374151" vertical={false} />
-            <XAxis 
-              dataKey="name" 
-              tick={{ fill: '#9CA3AF' }} 
-              axisLine={{ stroke: '#4B5563' }} 
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke="#374151"
+              vertical={false}
             />
-            <YAxis 
-              domain={[0, 100]} 
-              tick={{ fill: '#9CA3AF' }} 
-              axisLine={{ stroke: '#4B5563' }}
-              tickFormatter={(value) => `${value}%`} 
+            <XAxis
+              dataKey="name"
+              tick={{ fill: "#9CA3AF" }}
+              axisLine={{ stroke: "#4B5563" }}
             />
-            <Tooltip 
+            <YAxis
+              domain={[0, 100]}
+              tick={{ fill: "#9CA3AF" }}
+              axisLine={{ stroke: "#4B5563" }}
+              tickFormatter={(value) => `${value}%`}
+            />
+            <Tooltip
               content={<CustomTooltip />}
-              cursor={{ fill: 'rgba(59, 130, 246, 0.1)' }}
+              cursor={{ fill: "rgba(59, 130, 246, 0.1)" }}
             />
-            <Bar 
-              dataKey="percentage" 
+            <Bar
+              dataKey="percentage"
               name="Attendance"
               radius={[6, 6, 0, 0]}
               animationDuration={1000}
             >
               {chartData.map((entry, index) => (
-                <Cell 
-                  key={`cell-${index}`} 
-                  fill={getBarColor(entry.percentage)} 
+                <Cell
+                  key={`cell-${index}`}
+                  fill={getBarColor(entry.percentage)}
                   className="hover:opacity-80 transition-opacity"
                 />
               ))}

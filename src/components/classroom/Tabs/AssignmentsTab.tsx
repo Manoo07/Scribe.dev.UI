@@ -1,6 +1,4 @@
-import React from "react";
-
-const AssignmentsTab = ({ classroomId }: { classroomId: string }) => {
+const AssignmentsTab = ({}: { classroomId: string }) => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">

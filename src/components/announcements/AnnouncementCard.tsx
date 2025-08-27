@@ -1,10 +1,10 @@
-import { Card, CardContent, CardHeader } from "../ui/card";
-import { Badge } from "../ui/badge";
-import { Avatar, AvatarFallback } from "../ui/avatar";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
-import { Users, Building, Clock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { Building, Clock, Users } from "lucide-react";
 import { useState } from "react";
+import { Avatar, AvatarFallback } from "../ui/avatar";
+import { Badge } from "../ui/badge";
+import { Card, CardContent, CardHeader } from "../ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 
 interface Announcement {
   id: string;
@@ -27,8 +27,8 @@ interface AnnouncementCardProps {
 const AnnouncementCard = ({
   announcement,
   currentUserId,
-  userRole,
-}: AnnouncementCardProps) => {
+}: // userRole,
+AnnouncementCardProps) => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const isMyAnnouncement = announcement.authorId === currentUserId;
 

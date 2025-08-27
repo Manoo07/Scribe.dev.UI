@@ -1,15 +1,11 @@
-import React, { useState, useEffect } from "react";
-import {
-  getStudentsForClassroom,
-  getAttendanceRecords,
-} from "../../../services/attendanceService";
+import { BarChartIcon, Calendar } from "lucide-react";
+import { useEffect, useState } from "react";
+import { getAttendanceRecords } from "../../../services/attendanceService";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../ui/tabs";
 import AttendanceCalendar from "../attendanceTab/AttendanceCalander";
 import AttendanceForm from "../attendanceTab/AttendanceForm";
 import AttendanceStats from "../attendanceTab/AttendanceStats";
 import StudentAttendanceView from "../attendanceTab/StudentAttendanceView";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../ui/tabs";
-import { Separator } from "../../ui/seperator";
-import { Calendar, BarChartIcon } from "lucide-react";
 
 interface AttendanceTabProps {
   classroomId: string;
@@ -17,13 +13,16 @@ interface AttendanceTabProps {
   userId: string;
 }
 
-const AttendanceTab = ({ classroomId, userId = "1" }: AttendanceTabProps) => {
+const AttendanceTab = ({
+  classroomId,
+  userRole,
+  userId = "1",
+}: AttendanceTabProps) => {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [attendanceData, setAttendanceData] = useState<
     Record<string, { present: number; total: number }>
   >({});
-  const userRole = localStorage.getItem("role");
 
   useEffect(() => {
     // Prepare data for calendar attendance indicators

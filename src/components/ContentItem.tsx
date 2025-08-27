@@ -1,21 +1,21 @@
-import React, { useState, useEffect } from "react";
-import { EducationalContent, ContentType } from "../types";
 import {
+  CheckCircle,
+  Download,
+  Edit3,
+  ExternalLink,
+  File,
   FileText,
   Link2,
-  Video,
-  File,
-  ExternalLink,
-  Download,
-  Trash2,
-  CheckCircle,
-  Edit3,
   Save,
+  Trash2,
+  Video,
   X,
 } from "lucide-react";
-import { formatDate } from "../utils/dateUtils";
 import { marked } from "marked";
+import React, { useState } from "react";
 import { deleteContent, updateContent } from "../services/api";
+import { ContentType, EducationalContent } from "../types";
+import { formatDate } from "../utils/dateUtils";
 
 interface ContentItemProps {
   content: EducationalContent;

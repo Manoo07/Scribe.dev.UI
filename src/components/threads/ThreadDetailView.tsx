@@ -1,20 +1,19 @@
-import React, { useState, useEffect } from "react";
-import ReactMarkdown from "react-markdown";
 import {
   ArrowLeft,
-  MessageCircle,
-  Clock,
-  User,
   CheckCircle,
-  Brain,
-  Tag,
-  Send,
-  ThumbsUp,
-  MoreVertical,
-  Eye,
+  Clock,
   Edit,
+  Eye,
+  MessageCircle,
+  MoreVertical,
+  Send,
+  Tag,
+  ThumbsUp,
+  User,
 } from "lucide-react";
-import { Thread, ThreadReply } from "../../types/thread";
+import React, { useEffect, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import { Thread, ThreadReply } from "./threadTypes";
 
 interface ThreadDetailViewProps {
   threadId: string;
@@ -35,11 +34,14 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
     // Mock data for demonstration
     const mockThread: Thread = {
       id: threadId,
+      threadType: "classroom",
       title: "How to solve quadratic equations with complex roots?",
       content:
         "I'm struggling with understanding how to handle quadratic equations when the discriminant is negative. Can someone explain the process step by step? I've been working on this problem: x² + 2x + 5 = 0, and I keep getting confused when I reach the square root of a negative number.",
       authorId: "student1",
       authorName: "Alice Johnson",
+      classroomId: "classroom1",
+      classroomName: "Advanced Mathematics",
       unitId: "unit1",
       unitName: "Algebra Fundamentals",
       createdAt: "2024-01-15T10:30:00Z",
@@ -220,7 +222,9 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
               <span>{formatTimeAgo(thread.createdAt)}</span>
             </div>
             <span className="bg-blue-600/20 text-blue-400 px-2 py-1 rounded text-xs">
-              {thread.unitName}
+              {thread.threadType === "classroom"
+                ? thread.unitName
+                : thread.category}
             </span>
             <div className="flex items-center gap-1">
               <MessageCircle className="w-4 h-4" />

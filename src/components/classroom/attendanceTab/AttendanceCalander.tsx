@@ -1,13 +1,12 @@
-import React, { useState, useEffect } from "react";
-import { format, addMonths, subMonths } from "date-fns";
+import { addMonths, subMonths } from "date-fns";
 import {
-  Calendar,
   CalendarCheck,
   CalendarX,
   ChevronLeft,
   ChevronRight,
   CircleHelp,
 } from "lucide-react";
+import React, { useEffect, useState } from "react";
 import { cn } from "../../../lib/utils";
 import {
   Tooltip,
@@ -24,7 +23,7 @@ interface AttendanceCalendarProps {
 }
 
 const AttendanceCalendar = ({
-  classroomId,
+  // classroomId,
   onSelectDate,
   attendanceData,
   selectedMonth,
@@ -57,7 +56,9 @@ const AttendanceCalendar = ({
 
   const navigateMonth = (direction: "prev" | "next") => {
     setCurrentViewDate((prevDate) => {
-      return direction === "prev" ? subMonths(prevDate, 1) : addMonths(prevDate, 1);
+      return direction === "prev"
+        ? subMonths(prevDate, 1)
+        : addMonths(prevDate, 1);
     });
   };
 
@@ -145,11 +146,11 @@ const AttendanceCalendar = ({
         ))}
 
         {/* Empty cells for days before the 1st of the month */}
-        {Array.from({ length: new Date(currentYear, currentMonth, 1).getDay() }).map(
-          (_, i) => (
-            <div key={`empty-${i}`} className="p-1"></div>
-          )
-        )}
+        {Array.from({
+          length: new Date(currentYear, currentMonth, 1).getDay(),
+        }).map((_, i) => (
+          <div key={`empty-${i}`} className="p-1"></div>
+        ))}
 
         {/* Actual days */}
         {Array.from({ length: daysInMonth }).map((_, i) => {

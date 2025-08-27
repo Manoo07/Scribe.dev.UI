@@ -1,5 +1,6 @@
 import axios from "axios";
-import { Unit, ContentType } from "../types";
+import { LikeRequest, LikeResponse } from "../components/threads/threadTypes";
+import { ContentType, Unit } from "../types";
 import { mockUnits } from "./mockData";
 
 // Base URL for API requests
@@ -162,6 +163,66 @@ export const updateContent = async (
     await api.put(`/educational-content/${contentId}`, payload);
   } catch (error) {
     console.error("Error updating content:", error);
+    throw error;
+  }
+};
+
+// ============= LIKES API =============
+
+// Like a thread or reply
+export const createLike = async (
+  likeData: LikeRequest
+): Promise<LikeResponse> => {
+  try {
+    const response = await api.post("/likes", likeData);
+    return response.data;
+  } catch (error) {
+    console.error("Error creating like:", error);
+    throw error;
+  }
+};
+
+// Unlike a thread or reply
+export const deleteLike = async (likeId: string): Promise<void> => {
+  try {
+    await api.delete(`/likes/${likeId}`);
+  } catch (error) {
+    console.error("Error deleting like:", error);
+    throw error;
+  }
+};
+
+// Get likes for a specific thread
+export const getThreadLikes = async (threadId: string): Promise<Like[]> => {
+  try {
+    const response = await api.get(`/threads/${threadId}/likes`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching thread likes:", error);
+    throw error;
+  }
+};
+
+// Get likes for a specific reply
+export const getReplyLikes = async (replyId: string): Promise<Like[]> => {
+  try {
+    const response = await api.get(`/replies/${replyId}/likes`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching reply likes:", error);
+    throw error;
+  }
+};
+
+// Toggle like (like if not liked, unlike if already liked)
+export const toggleLike = async (
+  likeData: LikeRequest
+): Promise<{ liked: boolean; likesCount: number; likeId?: string }> => {
+  try {
+    const response = await api.post("/likes/toggle", likeData);
+    return response.data;
+  } catch (error) {
+    console.error("Error toggling like:", error);
     throw error;
   }
 };

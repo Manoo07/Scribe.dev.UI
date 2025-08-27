@@ -1,8 +1,11 @@
 import {
+  BookOpen,
   Brain,
   CheckCircle,
   Clock,
+  Globe,
   MessageCircle,
+  Pin,
   Reply,
   Tag,
   User,
@@ -11,12 +14,17 @@ import React from "react";
 import ReactMarkdown from "react-markdown";
 import { Thread } from "./threadTypes";
 
-interface ThreadCardProps {
+interface EnhancedThreadCardProps {
   thread: Thread;
   onClick?: () => void;
+  showClassroomInfo?: boolean;
 }
 
-const ThreadCard: React.FC<ThreadCardProps> = ({ thread, onClick }) => {
+const EnhancedThreadCard: React.FC<EnhancedThreadCardProps> = ({
+  thread,
+  onClick,
+  showClassroomInfo = true,
+}) => {
   const formatTimeAgo = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -31,6 +39,30 @@ const ThreadCard: React.FC<ThreadCardProps> = ({ thread, onClick }) => {
     return date.toLocaleDateString();
   };
 
+  const getThreadTypeIcon = () => {
+    if (thread.threadType === "generic") {
+      return <Globe className="w-4 h-4 text-blue-400" />;
+    }
+    return <BookOpen className="w-4 h-4 text-green-400" />;
+  };
+
+  const getThreadTypeLabel = () => {
+    if (thread.threadType === "generic") {
+      return (
+        <span className="bg-blue-600/20 text-blue-400 px-2 py-1 rounded text-xs flex items-center gap-1">
+          <Globe className="w-3 h-3" />
+          {thread.category}
+        </span>
+      );
+    }
+    return (
+      <span className="bg-green-600/20 text-green-400 px-2 py-1 rounded text-xs flex items-center gap-1">
+        <BookOpen className="w-3 h-3" />
+        {thread.unitName}
+      </span>
+    );
+  };
+
   return (
     <div
       className="bg-gray-800 border border-gray-700 rounded-lg p-6 hover:border-gray-600 transition-colors cursor-pointer"
@@ -40,15 +72,20 @@ const ThreadCard: React.FC<ThreadCardProps> = ({ thread, onClick }) => {
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-2">
+            {getThreadTypeIcon()}
             <h3 className="text-lg font-medium text-white hover:text-blue-400 transition-colors">
               {thread.title}
             </h3>
             {thread.isResolved && (
               <CheckCircle className="w-5 h-5 text-green-400" />
             )}
+            {thread.threadType === "generic" &&
+              thread.visibility === "public" && (
+                <Pin className="w-4 h-4 text-yellow-400" />
+              )}
           </div>
 
-          <div className="flex items-center gap-3 text-sm text-gray-400">
+          <div className="flex items-center gap-3 text-sm text-gray-400 flex-wrap">
             <div className="flex items-center gap-1">
               <User className="w-4 h-4" />
               <span>{thread.authorName}</span>
@@ -57,11 +94,16 @@ const ThreadCard: React.FC<ThreadCardProps> = ({ thread, onClick }) => {
               <Clock className="w-4 h-4" />
               <span>{formatTimeAgo(thread.createdAt)}</span>
             </div>
-            <span className="bg-blue-600/20 text-blue-400 px-2 py-1 rounded text-xs">
-              {thread.threadType === "classroom"
-                ? thread.unitName
-                : thread.category}
-            </span>
+
+            {/* Thread type specific info */}
+            {getThreadTypeLabel()}
+
+            {/* Show classroom info for classroom threads when requested */}
+            {showClassroomInfo && thread.threadType === "classroom" && (
+              <span className="bg-purple-600/20 text-purple-400 px-2 py-1 rounded text-xs">
+                {thread.classroomName}
+              </span>
+            )}
           </div>
         </div>
 
@@ -180,4 +222,4 @@ const ThreadCard: React.FC<ThreadCardProps> = ({ thread, onClick }) => {
   );
 };
 
-export default ThreadCard;
+export default EnhancedThreadCard;

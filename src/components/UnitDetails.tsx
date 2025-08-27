@@ -1,8 +1,8 @@
+import { ArrowLeft, File, FileText, Link2, Plus, Video } from "lucide-react";
 import React, { useState } from "react";
-import { Unit, ContentType, EducationalContent } from "../types";
-import ContentItem from "./ContentItem";
-import { ArrowLeft, Plus, FileText, Link2, Video, File } from "lucide-react";
+import { ContentType, Unit } from "../types";
 import { formatDate } from "../utils/dateUtils";
+import ContentItem from "./ContentItem";
 
 interface UnitDetailProps {
   unit: Unit;

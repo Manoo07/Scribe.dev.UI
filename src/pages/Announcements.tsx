@@ -1,9 +1,9 @@
-import { use, useState } from "react";
-import { PlusCircle, Megaphone, Users, Building, User } from "lucide-react";
-import Button  from "../components/ui/button";
-import { Card, CardContent } from "../components/ui/card";
-import CreateAnnouncementModal from "../components/announcements/CreateAnnouncement";
+import { Building, Megaphone, PlusCircle, User, Users } from "lucide-react";
+import { useState } from "react";
 import AnnouncementCard from "../components/announcements/AnnouncementCard";
+import CreateAnnouncementModal from "../components/announcements/CreateAnnouncement";
+import Button from "../components/ui/button";
+import { Card, CardContent } from "../components/ui/card";
 import { mockAnnouncements } from "../data/mockAnnouncement";
 
 type UserRole = "STUDENT" | "FACULTY" | "ADMIN";
@@ -16,7 +16,7 @@ const Announcements = () => {
   >("all");
 
   // const userRole = (localStorage.getItem("role") as UserRole) || "STUDENT";
-  const userRole = "FACULTY";
+  const userRole = (localStorage.getItem("role") as UserRole) || "STUDENT";
   console.log("userRole", userRole);
   const userId = localStorage.getItem("userId") || "user1";
   const userClassroom = localStorage.getItem("classroom") || "CS101";

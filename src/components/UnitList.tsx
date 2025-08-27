@@ -1,22 +1,21 @@
+import { Plus } from "lucide-react";
 import React, { useState } from "react";
-import UnitCard from "./UnitCard";
-import { deleteUnit } from "../services/api";
-import { Unit, ContentType } from "../types";
 import { useToast } from "../hooks/use-toast";
+import { deleteUnit } from "../services/api";
+import { ContentType, Unit } from "../types";
+import { formatDistanceToNow } from "../utils/dateUtils";
+import CreateUnitModal from "./CreateUnitModal";
 import {
   AlertDialog,
-  AlertDialogTrigger,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogFooter,
-  AlertDialogTitle,
-  AlertDialogDescription,
   AlertDialogAction,
   AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from "./ui/alert-dialog";
-import { formatDistanceToNow } from "../utils/dateUtils";
-import { Plus, Filter } from "lucide-react";
-import CreateUnitModal from "./CreateUnitModal";
+import UnitCard from "./UnitCard";
 
 interface UnitsListProps {
   units: Unit[];
@@ -206,9 +205,12 @@ const UnitsList: React.FC<UnitsListProps> = ({
           <AlertDialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <AlertDialogContent className="bg-gray-800 border-gray-700 text-white">
               <AlertDialogHeader>
-                <AlertDialogTitle className="text-white">Are you sure you want to delete the unit?</AlertDialogTitle>
+                <AlertDialogTitle className="text-white">
+                  Are you sure you want to delete the unit?
+                </AlertDialogTitle>
                 <AlertDialogDescription className="text-gray-400">
-                  This action cannot be undone and will permanently remove all associated data.
+                  This action cannot be undone and will permanently remove all
+                  associated data.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>

@@ -1,8 +1,7 @@
 import { useState } from "react";
-import TopBar from "../components/Topbar";
-import SideNav from "../components/SideNav";
-import Breadcrumb from "../components/Breadcrumb";
 import { Outlet } from "react-router-dom";
+import Breadcrumb from "../components/Breadcrumb";
+import SideNav from "../components/SideNav";
 
 const DashboardLayout = () => {
   const [collapsed, setCollapsed] = useState(false);

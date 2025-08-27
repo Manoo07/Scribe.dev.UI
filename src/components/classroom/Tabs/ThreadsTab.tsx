@@ -1,20 +1,25 @@
-const ThreadsTab = ({ classroomId }: { classroomId: string }) => {
-  return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h2 className="text-lg font-semibold text-white">Discussion Threads</h2>
-        <button className="bg-indigo-600 px-3 py-1 rounded text-sm hover:bg-indigo-500">
-          + New Thread
-        </button>
-      </div>
-      <div className="space-y-2">
-        <div className="bg-gray-800 p-4 rounded">
-          <h3 className="text-white">Thread Title</h3>
-          <p className="text-gray-300">Thread preview, comments, likes...</p>
-        </div>
-      </div>
-    </div>
-  );
+import React from "react";
+import ThreadsManager from "../../threads/ThreadManager";
+
+interface ThreadsTabProps {
+  classroomId: string;
+  classroomName?: string;
+  units?: Array<{ id: string; name: string }>;
+}
+
+const ThreadsTab: React.FC<ThreadsTabProps> = ({
+  classroomId,
+  classroomName = "Classroom",
+  units = [],
+}) => {
+  // Prepare classroom data for the ThreadsManager
+  const classroomData = {
+    id: classroomId,
+    name: classroomName,
+    units: units,
+  };
+
+  return <ThreadsManager context="classroom" classroomData={classroomData} />;
 };
 
 export default ThreadsTab;
