@@ -36,45 +36,78 @@ const ThreadsManager: React.FC<ThreadsManagerProps> = ({
   const [selectedUnit, setSelectedUnit] = useState<string>("all");
   const pageSize = 10;
 
+  // Filter state with proper API mapping
+  const [currentFilters, setCurrentFilters] = useState({
+    sortBy: "mostRecent", // Default to mostRecent
+    limit: 20, // Default limit
+  });
+
   // Track if data needs refresh
   const [lastRefreshTime, setLastRefreshTime] = useState<number>(Date.now());
   const [hasChanges, setHasChanges] = useState<boolean>(false);
 
+  // Filter mapping function to convert UI values to API values
+  const mapFiltersToAPI = useCallback((filters: any) => {
+    const apiFilters = { ...filters };
+
+    // Use your exact API values
+    switch (filters.sortBy) {
+      case "mostRecent":
+        apiFilters.sortBy = "mostRecent";
+        apiFilters.limit = 20;
+        break;
+      case "mostReplied":
+        apiFilters.sortBy = "mostReplied";
+        apiFilters.limit = 15;
+        break;
+      case "mostLiked":
+        apiFilters.sortBy = "mostLiked";
+        apiFilters.limit = 10;
+        break;
+      case "alphabetical":
+        apiFilters.sortBy = "alphabetical";
+        apiFilters.limit = 25;
+        break;
+      default:
+        apiFilters.sortBy = "mostRecent";
+        apiFilters.limit = 20;
+        break;
+    }
+
+    console.log("🔄 Filter mapping:", { uiFilters: filters, apiFilters });
+    return apiFilters;
+  }, []);
+
   // Fetch threads from API
   const fetchData = useCallback(async () => {
-    console.log("🔄 fetchData called with:", {
-      context,
-      classroomId: classroomData?.id,
-      selectedUnit,
-      page,
-      pageSize,
-    });
-
     setIsLoading(true);
     setError(null);
     try {
       let data;
+
+      // Map current filters to API format
+      const apiFilters = mapFiltersToAPI(currentFilters);
+
       if (context === "classroom" && classroomData?.id) {
         if (selectedUnit && selectedUnit !== "all") {
           // Fetch threads for specific unit within classroom
-          console.log("🔄 Fetching unit threads for:", selectedUnit);
+
           data = await fetchUnitThreads(selectedUnit, page, pageSize);
         } else {
-          // Fetch all threads for the classroom
-          console.log("🔄 Fetching classroom threads for:", classroomData.id);
-          data = await fetchClassroomThreads(classroomData.id, page, pageSize);
+          // Fetch all threads for the classroom with current filters
+
+          data = await fetchClassroomThreads(
+            classroomData.id,
+            page,
+            pageSize,
+            apiFilters
+          );
         }
       } else {
-        // Fetch global threads
-        console.log("🔄 Fetching global threads");
-        data = await fetchThreads(page, pageSize);
-      }
+        // Fetch global threads with current filters
 
-      console.log("✅ Data fetched successfully:", {
-        threadsCount: data.threads?.length || 0,
-        hasNext: data.pagination?.hasNext || false,
-        total: data.pagination?.total || 0,
-      });
+        data = await fetchThreads(page, pageSize, apiFilters);
+      }
 
       setThreads(data.threads || []);
       setHasNext(data.pagination?.hasNext || false);
@@ -93,9 +126,104 @@ const ThreadsManager: React.FC<ThreadsManagerProps> = ({
       });
     } finally {
       setIsLoading(false);
-      console.log("🔄 fetchData completed, loading state set to false");
     }
-  }, [context, classroomData?.id, page, selectedUnit, pageSize, toast]);
+  }, [
+    context,
+    classroomData?.id,
+    page,
+    selectedUnit,
+    pageSize,
+    currentFilters,
+    mapFiltersToAPI,
+    toast,
+  ]);
+
+  // Fetch data with filters
+  const fetchDataWithFilters = useCallback(
+    async (filters: any) => {
+      console.log("🔄 fetchDataWithFilters called with:", filters);
+      setIsLoading(true);
+      setError(null);
+      try {
+        let data;
+
+        if (context === "classroom" && classroomData?.id) {
+          if (selectedUnit && selectedUnit !== "all") {
+            // Fetch threads for specific unit within classroom
+            console.log("🔄 Fetching unit threads for:", selectedUnit);
+            data = await fetchUnitThreads(selectedUnit, page, pageSize);
+          } else {
+            // Fetch all threads for the classroom with filters
+            console.log("🔄 Fetching classroom threads with filters:", {
+              classroomId: classroomData.id,
+              filters,
+              page,
+              pageSize,
+            });
+            data = await fetchClassroomThreads(
+              classroomData.id,
+              page,
+              pageSize,
+              filters
+            );
+          }
+        } else {
+          // Fetch global threads with filters
+          console.log("🔄 Fetching global threads with filters:", {
+            filters,
+            page,
+            pageSize,
+          });
+          data = await fetchThreads(page, pageSize, filters);
+        }
+
+        setThreads(data.threads || []);
+        setHasNext(data.pagination?.hasNext || false);
+        setTotal(data.pagination?.total || 0);
+      } catch (err: any) {
+        const errorMessage =
+          err?.response?.data?.message ||
+          err?.message ||
+          "Failed to fetch threads";
+        setError(errorMessage);
+        setThreads([]);
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [context, classroomData?.id, page, selectedUnit, pageSize, toast]
+  );
+
+  // Handle filter changes from ThreadList
+  const handleFiltersChange = useCallback(
+    (filters: { sortBy: string }) => {
+      console.log("🔄 Filter change received:", filters);
+
+      // Create the complete filter object
+      const newFilters = {
+        ...currentFilters,
+        ...filters,
+      };
+
+      console.log("🔄 Complete filters object:", newFilters);
+
+      // Update the current filters state
+      setCurrentFilters(newFilters);
+
+      // Reset to first page when filters change
+      setPage(1);
+
+      // Map UI filters to API filters and trigger data refresh
+      const apiFilters = mapFiltersToAPI(newFilters);
+      fetchDataWithFilters(apiFilters);
+    },
+    [fetchDataWithFilters, currentFilters, mapFiltersToAPI]
+  );
 
   useEffect(() => {
     fetchData();
@@ -168,17 +296,11 @@ const ThreadsManager: React.FC<ThreadsManagerProps> = ({
   };
 
   const handleBackToList = () => {
-    console.log("🔄 Going back to threads list, hasChanges:", hasChanges);
-
     // Always refresh data when going back to ensure we have the latest information
     // This handles cases where changes might not have been properly tracked
     if (hasChanges) {
-      console.log("📝 Changes detected, performing smart refresh");
       handleSmartRefresh();
     } else {
-      console.log(
-        "🔄 No changes detected, but refreshing anyway to ensure data consistency"
-      );
       fetchData();
     }
 
@@ -191,27 +313,38 @@ const ThreadsManager: React.FC<ThreadsManagerProps> = ({
 
   // Smart refresh that only fetches data when there are changes
   const handleSmartRefresh = useCallback(async () => {
-    console.log("🔄 handleSmartRefresh called, hasChanges:", hasChanges);
-
     // If no changes detected, don't make API call
     if (!hasChanges) {
-      console.log("🔄 No changes detected, skipping API call");
       return;
     }
 
-    console.log("🔄 Changes detected, refreshing data...");
     setHasChanges(false);
-    console.log("🔄 Fetching updated data...");
+
     await fetchData();
-    console.log("🔄 Data refresh completed");
   }, [hasChanges, fetchData]);
 
   // Mark that changes have occurred (called by child components)
   const markChangesOccurred = useCallback(() => {
-    console.log("📝 markChangesOccurred called - setting hasChanges to true");
     setHasChanges(true);
-    console.log("📝 Changes marked - data needs refresh");
   }, []);
+
+  // Handle thread like toggle updates
+  const handleThreadLikeToggle = useCallback(
+    (threadId: string, newLikeCount: number, isLiked: boolean) => {
+      // Update the thread in the local threads array
+      setThreads((prevThreads) =>
+        prevThreads.map((thread) =>
+          thread.id === threadId
+            ? { ...thread, likesCount: newLikeCount, isLikedByMe: isLiked }
+            : thread
+        )
+      );
+
+      // Mark that changes occurred
+      markChangesOccurred();
+    },
+    [markChangesOccurred]
+  );
 
   const handlePageChange = (newPage: number) => {
     setPage(newPage);
@@ -245,6 +378,8 @@ const ThreadsManager: React.FC<ThreadsManagerProps> = ({
         onRefresh={handleRefresh}
         isCreating={isCreating}
         onChangesOccurred={markChangesOccurred}
+        onFiltersChange={handleFiltersChange} // Pass the new handler
+        onThreadLikeToggle={handleThreadLikeToggle}
       />
 
       {/* Pagination Controls */}

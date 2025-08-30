@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
-import { getCurrentUser } from "../services/api";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import { getCurrentUser } from "../services/api";
 
 interface UseOwnershipReturn {
   currentUserId: string | null;
@@ -12,52 +12,55 @@ interface UseOwnershipReturn {
 
 export const useOwnership = (): UseOwnershipReturn => {
   const { user: authUser, fetchFreshUserData } = useAuth();
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(() => {
+    // Try to get from localStorage first to avoid unnecessary API calls
+    const storedUserId = localStorage.getItem("userId");
+    if (storedUserId) {
+      console.log("✅ Got user ID from localStorage:", storedUserId);
+      return storedUserId;
+    }
+    return null;
+  });
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchCurrentUser = useCallback(async () => {
+    // Don't fetch if we already have a user ID
+    if (currentUserId) {
+      return;
+    }
+
     try {
-      console.log("🔄 fetchCurrentUser called");
       setIsLoading(true);
       setError(null);
 
       // First try to get from auth context
       if (authUser?.id) {
-        console.log("✅ Got user ID from auth context:", authUser.id);
         setCurrentUserId(authUser.id);
+        localStorage.setItem("userId", authUser.id);
         setIsLoading(false);
         return;
       }
-
-      console.log("⚠️ No user ID in auth context, trying to fetch fresh data");
 
       // If not in auth context, try to fetch fresh data
       try {
         const freshUser = await fetchFreshUserData();
         if (freshUser?.id) {
-          console.log("✅ Got user ID from fresh data:", freshUser.id);
           setCurrentUserId(freshUser.id);
+          localStorage.setItem("userId", freshUser.id);
           setIsLoading(false);
           return;
         }
       } catch (fetchError) {
-        console.log(
-          "⚠️ Failed to fetch fresh user data, trying direct API call"
-        );
+        // Silent fallback to direct API call
       }
-
-      console.log("🔄 Trying direct API call to getCurrentUser");
 
       // Last resort: direct API call
       const userData = await getCurrentUser();
       if (userData?.id) {
-        console.log("✅ Got user ID from direct API call:", userData.id);
         setCurrentUserId(userData.id);
-        // Update localStorage for future use
         localStorage.setItem("userId", userData.id);
       } else {
-        console.error("❌ No user ID in API response");
         setError("Failed to get user ID from API response");
       }
     } catch (err: any) {
@@ -70,31 +73,15 @@ export const useOwnership = (): UseOwnershipReturn => {
     } finally {
       setIsLoading(false);
     }
-  }, [authUser?.id, fetchFreshUserData]);
+  }, [authUser?.id, fetchFreshUserData, currentUserId]);
 
   const isOwner = useCallback(
     (createdBy: string): boolean => {
-      console.log("🔐 isOwner check:", {
-        currentUserId,
-        createdBy,
-        hasCurrentUserId: !!currentUserId,
-        hasCreatedBy: !!createdBy,
-        isMatch: currentUserId === createdBy,
-      });
-
       if (!currentUserId || !createdBy) {
-        console.warn("⚠️ Missing data for ownership check:", {
-          currentUserId,
-          createdBy,
-        });
         return false;
       }
 
-      const result = currentUserId === createdBy;
-      console.log(
-        `✅ Ownership check result: ${result} (${currentUserId} === ${createdBy})`
-      );
-      return result;
+      return currentUserId === createdBy;
     },
     [currentUserId]
   );
@@ -104,8 +91,11 @@ export const useOwnership = (): UseOwnershipReturn => {
   }, [fetchCurrentUser]);
 
   useEffect(() => {
-    fetchCurrentUser();
-  }, [fetchCurrentUser]);
+    // Only fetch if we don't have a user ID
+    if (!currentUserId) {
+      fetchCurrentUser();
+    }
+  }, [fetchCurrentUser, currentUserId]);
 
   return {
     currentUserId,

@@ -1,13 +1,13 @@
 import React, {
   createContext,
-  useState,
+  useCallback,
   useContext,
   useEffect,
-  useCallback,
+  useState,
 } from "react";
-import { getUserFromToken, validateToken } from "../utils/authUtils";
-import { getCurrentUser } from "../services/api";
 import SessionExpiryModal from "../components/SessionExpiryModal";
+import { getCurrentUser } from "../services/api";
+import { getUserFromToken, validateToken } from "../utils/authUtils";
 
 export type UserRole = "STUDENT" | "FACULTY" | "ADMIN";
 
@@ -222,6 +222,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
     return () => clearInterval(interval);
   }, [user, clearAuth]);
+
+  // Listen for authentication errors from API interceptor
+  useEffect(() => {
+    const handleAuthError = (event: CustomEvent) => {
+      console.log("🔐 Auth error event received:", event.detail);
+      handleSessionExpiry(event.detail.message);
+    };
+
+    window.addEventListener("auth-error", handleAuthError as EventListener);
+
+    return () => {
+      window.removeEventListener(
+        "auth-error",
+        handleAuthError as EventListener
+      );
+    };
+  }, [handleSessionExpiry]);
 
   const value: AuthContextType = {
     user,

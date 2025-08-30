@@ -52,11 +52,12 @@ const ReplyCard: React.FC<ReplyCardProps> = ({
   onDeleteReply,
 }) => {
   const { toast } = useToast();
-  const { isOwner, currentUserId } = useOwnership();
+  const { isOwner, currentUserId, isLoading } = useOwnership();
   const { user } = useAuth();
   const [isLiking, setIsLiking] = useState(false);
   const [isAccepting, setIsAccepting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isUpdatingReply, setIsUpdatingReply] = useState(false);
@@ -72,56 +73,32 @@ const ReplyCard: React.FC<ReplyCardProps> = ({
   // Check if current user owns this reply
   const isReplyOwner = isOwner(reply.user.id);
 
+  // Only show owner options when ownership is confirmed (not loading)
+  const canShowOwnerOptions = isReplyOwner && !isLoading;
+
   // Function to enter edit mode
   const handleEnterEditMode = () => {
     if (!isReplyOwner) {
       console.warn("⚠️ Cannot edit: Not the owner");
       return;
     }
-
-    console.log("🔄 Entering edit mode for reply:", reply.id);
     setIsEditing(true);
     setEditContent(reply.content); // Reset to original content
   };
 
   // Function to exit edit mode
   const handleExitEditMode = () => {
-    console.log("🔄 Exiting edit mode for reply:", reply.id);
     setIsEditing(false);
     setEditContent(reply.content); // Reset to original content
   };
 
-  // Debug ownership check
-  console.log("🔐 Ownership Check Debug:", {
-    replyId: reply.id,
-    replyUserId: reply.user.id,
-    replyUserName: reply.user.name,
-    currentUserId: currentUserId,
-    isReplyOwner: isReplyOwner,
-    comparison: currentUserId === reply.user.id,
-    authContext: {
-      hasUser: !!user,
-      userId: user?.id,
-    },
-    editingState: {
-      isEditing,
-      isUpdatingReply,
-    },
-  });
-
   // Sync localIsAccepted with prop changes from parent
   useEffect(() => {
-    console.log(
-      `🔄 ReplyCard ${reply.id}: syncing localIsAccepted from ${localIsAccepted} to ${reply.isAccepted}`
-    );
     setLocalIsAccepted(reply.isAccepted);
   }, [reply.isAccepted, reply.id]); // Removed localIsAccepted from dependencies to prevent infinite loop
 
   // Sync local like state with prop changes from parent
   useEffect(() => {
-    console.log(
-      `🔄 ReplyCard ${reply.id}: syncing like state - likesCount: ${reply.likesCount} -> ${localLikeCount}, isLiked: ${reply.isLikedByMe} -> ${localIsLiked}`
-    );
     setLocalLikeCount(reply.likesCount);
     setLocalIsLiked(reply.isLikedByMe);
   }, [reply.likesCount, reply.isLikedByMe, reply.id]);
@@ -130,9 +107,6 @@ const ReplyCard: React.FC<ReplyCardProps> = ({
   useEffect(() => {
     return () => {
       if (isEditing) {
-        console.log(
-          `🔄 ReplyCard ${reply.id}: cleaning up editing state on unmount`
-        );
         setIsEditing(false);
         setIsUpdatingReply(false);
       }
@@ -147,7 +121,7 @@ const ReplyCard: React.FC<ReplyCardProps> = ({
         deleteMenuRef.current &&
         !deleteMenuRef.current.contains(event.target as Node)
       ) {
-        setIsDeleting(false);
+        setShowDropdown(false);
       }
 
       // Handle edit mode - close if clicking outside edit area
@@ -156,7 +130,6 @@ const ReplyCard: React.FC<ReplyCardProps> = ({
         editAreaRef.current &&
         !editAreaRef.current.contains(event.target as Node)
       ) {
-        console.log("🔄 Click outside edit area, exiting edit mode");
         handleExitEditMode();
       }
     };
@@ -166,18 +139,6 @@ const ReplyCard: React.FC<ReplyCardProps> = ({
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [isEditing]);
-
-  // Debug logging
-  console.log("🔍 ReplyCard Debug:", {
-    replyId: reply.id,
-    replyUserId: reply.user.id,
-    replyUserName: reply.user.name,
-    isReplyOwner,
-    currentUserId,
-    isThreadOwner,
-    threadStatus,
-    localIsAccepted,
-  });
 
   const handleLikeToggle = async () => {
     if (isLiking) return;
@@ -200,65 +161,18 @@ const ReplyCard: React.FC<ReplyCardProps> = ({
     try {
       const response = await toggleReplyLike(reply.id);
 
-      console.log("🔄 API Response for reply like:", {
-        replyId: reply.id,
-        response: response,
-        responseType: typeof response,
-        hasLikesCount: "likesCount" in response,
-        hasLiked: "liked" in response,
-        likesCountValue: response?.likesCount,
-        likedValue: response?.liked,
-      });
+      // Use server response for accurate state, fallback to optimistic if server response is incomplete
+      const finalLikeCount = response?.likesCount ?? newLikeCount;
+      const finalIsLiked = response?.liked ?? newIsLiked;
 
-      // Update with actual server response if available
-      if (response && typeof response.likesCount === "number") {
-        setLocalLikeCount(response.likesCount);
-        console.log("✅ Updated like count from server:", response.likesCount);
-      } else {
-        console.log(
-          "⚠️ Server response missing likesCount, using optimistic value:",
-          newLikeCount
-        );
-      }
+      // Update local state with final values
+      setLocalLikeCount(finalLikeCount);
+      setLocalIsLiked(finalIsLiked);
 
-      if (response && typeof response.liked === "boolean") {
-        setLocalIsLiked(response.liked);
-        console.log("✅ Updated liked state from server:", response.liked);
-      } else {
-        console.log(
-          "⚠️ Server response missing liked state, using optimistic value:",
-          newIsLiked
-        );
-      }
-
-      // Notify parent component with the final values
+      // Notify parent component with final values
       if (onLikeToggle) {
-        // Always use the optimistic values if the server response is missing
-        // This ensures the UI stays consistent even if the API response is incomplete
-        const finalLikeCount = response?.likesCount ?? newLikeCount;
-        const finalIsLiked = response?.liked ?? newIsLiked;
-        console.log("📤 Notifying parent component:", {
-          finalLikeCount,
-          finalIsLiked,
-        });
         onLikeToggle(reply.id, finalLikeCount, finalIsLiked);
       }
-
-      // Force update the local state to ensure consistency
-      // This handles cases where the API response might be incomplete
-      // We always want to show the optimistic update to maintain UI consistency
-      setLocalLikeCount(newLikeCount);
-      setLocalIsLiked(newIsLiked);
-
-      console.log("✅ Like toggle successful:", {
-        replyId: reply.id,
-        previousCount: previousLikeCount,
-        newCount: newLikeCount,
-        serverCount: response?.likesCount,
-        previousLiked: previousIsLiked,
-        newLiked: newIsLiked,
-        serverLiked: response?.liked,
-      });
     } catch (error: any) {
       // Revert optimistic update on error
       setLocalLikeCount(previousLikeCount);
@@ -308,17 +222,11 @@ const ReplyCard: React.FC<ReplyCardProps> = ({
       return;
     }
 
-    console.log(`🎯 Toggling answer for reply ${reply.id}:`, {
-      currentLocalIsAccepted: localIsAccepted,
-      replyId: reply.id,
-      threadId: threadId,
-    });
-
     setIsAccepting(true);
     try {
       if (localIsAccepted) {
         // Unmark as answer - call API to remove accepted answer
-        console.log(`🚫 Unmarking reply ${reply.id} as answer`);
+
         await unmarkAnswer(threadId, reply.id);
 
         // Update local state
@@ -337,7 +245,7 @@ const ReplyCard: React.FC<ReplyCardProps> = ({
         });
       } else {
         // Mark as answer - call API to accept this reply
-        console.log(`✅ Marking reply ${reply.id} as answer`);
+
         await acceptAnswer(threadId, reply.id);
 
         // Update local state
@@ -371,42 +279,24 @@ const ReplyCard: React.FC<ReplyCardProps> = ({
   };
 
   const handleEditReply = async () => {
-    console.log("🔄 handleEditReply called - State Check:", {
-      replyId: reply.id,
-      threadId: threadId,
-      isReplyOwner: isReplyOwner,
-      isEditing: isEditing,
-      isUpdatingReply: isUpdatingReply,
-      currentUserId: currentUserId,
-      replyUserId: reply.user.id,
-      ownershipCheck: currentUserId === reply.user.id,
-      oldContent: reply.content,
-      newContent: editContent.trim(),
-      isContentChanged: editContent.trim() !== reply.content,
-    });
-
     // Check ownership first
     if (!isReplyOwner) {
-      console.warn("⚠️ Edit blocked: Not the owner");
       return;
     }
 
     // Check if already updating
     if (isUpdatingReply) {
-      console.log("⚠️ Edit already in progress, ignoring duplicate call");
       return;
     }
 
     // Check if content actually changed
     if (editContent.trim() === reply.content) {
-      console.log("⚠️ No content change detected, exiting edit mode");
       setIsEditing(false);
       return;
     }
 
     // Check if content is empty
     if (editContent.trim() === "") {
-      console.warn("⚠️ Content is empty, cannot save");
       toast({
         title: "Error",
         description: "Reply content cannot be empty",
@@ -417,7 +307,6 @@ const ReplyCard: React.FC<ReplyCardProps> = ({
 
     try {
       setIsUpdatingReply(true);
-      console.log("📡 Making API call to updateReply...");
 
       // Call the API directly
       const response = await updateReply(
@@ -426,12 +315,9 @@ const ReplyCard: React.FC<ReplyCardProps> = ({
         editContent.trim()
       );
 
-      console.log("✅ API call successful:", response);
-
       // Update local state
       if (onEditReply) {
-        console.log("🔄 Calling parent onEditReply callback...");
-        await onEditReply(reply.id, editContent.trim());
+        onEditReply(reply.id, editContent.trim());
       }
 
       // Exit edit mode and show success
@@ -441,8 +327,6 @@ const ReplyCard: React.FC<ReplyCardProps> = ({
         description: "Reply updated successfully!",
         variant: "default",
       });
-
-      console.log("🎉 Edit reply process completed successfully");
     } catch (error: any) {
       console.error("❌ Error in handleEditReply:", error);
       console.error("Error details:", {
@@ -469,19 +353,27 @@ const ReplyCard: React.FC<ReplyCardProps> = ({
   const handleDeleteReply = async () => {
     if (!isReplyOwner || isDeleting) return;
 
-    if (!confirm("Are you sure you want to delete this reply?")) {
-      return;
-    }
-
-    setIsDeleting(true);
     try {
+      setIsDeleting(true); // Set loading state
       if (onDeleteReply) {
-        await onDeleteReply(reply.id);
+        onDeleteReply(reply.id);
         // Success message is handled by parent component
       }
     } catch (error: any) {
-      // Error message is handled by parent component
       console.error("❌ Error in ReplyCard delete:", error);
+
+      // Handle specific backend errors
+      if (error.message && error.message.includes("Forbidden: Not the owner")) {
+        toast({
+          title: "Access Denied",
+          description: "You can only delete your own replies.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // For other errors, let parent handle them
+      throw error;
     } finally {
       setIsDeleting(false);
     }
@@ -506,8 +398,8 @@ const ReplyCard: React.FC<ReplyCardProps> = ({
               </div>
             </div>
 
-            {/* Edit Button - Only visible to reply owner */}
-            {isReplyOwner && !isEditing && (
+            {/* Edit Button - Only visible to reply owner when ownership is confirmed */}
+            {canShowOwnerOptions && !isEditing && (
               <button
                 onClick={handleEnterEditMode}
                 className="ml-2 p-1.5 bg-blue-600/20 text-blue-400 rounded-md hover:bg-blue-600/30 transition-all duration-200 border border-blue-500/30"
@@ -515,6 +407,13 @@ const ReplyCard: React.FC<ReplyCardProps> = ({
               >
                 <Edit className="w-3 h-3" />
               </button>
+            )}
+
+            {/* Loading indicator when ownership check is in progress */}
+            {isLoading && (
+              <div className="ml-2 p-1.5 bg-gray-600/20 text-gray-400 rounded-md border border-gray-500/30">
+                <div className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+              </div>
             )}
           </div>
         </div>
@@ -531,21 +430,27 @@ const ReplyCard: React.FC<ReplyCardProps> = ({
           {/* Single 3-dots Menu - Shows different options based on user role */}
           <div className="relative" ref={deleteMenuRef}>
             <button
-              onClick={() => setIsDeleting(!isDeleting)} // Toggle menu
-              className="p-1.5 bg-gray-800/60 text-gray-400 rounded-md hover:bg-gray-800/80 hover:text-gray-200 transition-all duration-200 border border-gray-600/30"
-              title="More options"
+              onClick={() => setShowDropdown(!showDropdown)} // Toggle menu
+              className={`p-1.5 bg-gray-800/60 text-gray-400 rounded-md hover:bg-gray-800/80 hover:text-gray-200 transition-all duration-200 border border-gray-600/30 ${
+                isLoading ? "opacity-50 cursor-not-allowed" : ""
+              }`}
+              title={isLoading ? "Loading permissions..." : "More options"}
+              disabled={isLoading}
             >
               <MoreHorizontal className="w-3 h-3" />
             </button>
 
             {/* Dropdown Menu */}
-            {isDeleting && (
+            {showDropdown && (
               <div className="absolute right-0 top-full mt-1 w-44 bg-gray-800 border border-gray-600 rounded-lg shadow-lg z-10">
-                {/* Reply Owner Options */}
-                {isReplyOwner && (
+                {/* Reply Owner Options - Only show when ownership is confirmed */}
+                {canShowOwnerOptions && (
                   <>
                     <button
-                      onClick={() => setShowDeleteDialog(true)}
+                      onClick={() => {
+                        setShowDeleteDialog(true);
+                        setShowDropdown(false); // Close dropdown when opening dialog
+                      }}
                       className="w-full flex items-center gap-2 px-3 py-2 text-left text-red-400 hover:bg-gray-700/50 transition-colors text-xs"
                     >
                       <Trash2 className="w-3 h-3" />
@@ -559,7 +464,7 @@ const ReplyCard: React.FC<ReplyCardProps> = ({
                           description: "Report functionality coming soon!",
                           variant: "default",
                         });
-                        setIsDeleting(false);
+                        setShowDropdown(false);
                       }}
                       className="w-full flex items-center gap-2 px-3 py-2 text-left text-gray-400 hover:bg-gray-700/50 transition-colors text-xs"
                     >
@@ -567,6 +472,25 @@ const ReplyCard: React.FC<ReplyCardProps> = ({
                       <span>Report</span>
                     </button>
                   </>
+                )}
+
+                {/* Report Option - Available to everyone when not owner */}
+                {!canShowOwnerOptions && (
+                  <button
+                    onClick={() => {
+                      // TODO: Implement report functionality
+                      toast({
+                        title: "Info",
+                        description: "Report functionality coming soon!",
+                        variant: "default",
+                      });
+                      setShowDropdown(false);
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-left text-gray-400 hover:bg-gray-700/50 transition-colors text-xs"
+                  >
+                    <Flag className="w-3 h-3" />
+                    <span>Report</span>
+                  </button>
                 )}
 
                 {/* Thread Owner Options - Mark/Unmark as Answer */}

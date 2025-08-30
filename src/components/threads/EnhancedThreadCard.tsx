@@ -125,39 +125,19 @@ const EnhancedThreadCard: React.FC<EnhancedThreadCardProps> = ({
     try {
       const response = await toggleThreadLike(thread.id);
 
-      console.log("🔄 API Response for thread like:", {
-        threadId: thread.id,
-        response: response,
-        responseType: typeof response,
-        hasLikesCount: "likesCount" in response,
-        hasLiked: "liked" in response,
-        likesCountValue: response?.likesCount,
-        likedValue: response?.liked,
-      });
+      // Use server response for accurate state, fallback to optimistic if server response is incomplete
+      const finalLikeCount =
+        response?.likesCount ??
+        (previousIsLiked ? previousLikeCount - 1 : previousLikeCount + 1);
+      const finalIsLiked = response?.liked ?? !previousIsLiked;
 
-      // Update with actual server response
-      const newLikeCount = response.likesCount || localLikeCount;
-      const newIsLiked =
-        response.liked !== undefined ? response.liked : !previousIsLiked;
+      // Update local state with final values
+      setLocalLikeCount(finalLikeCount);
+      setLocalIsLiked(finalIsLiked);
 
-      console.log("✅ Thread like update:", {
-        threadId: thread.id,
-        previousCount: previousLikeCount,
-        newCount: newLikeCount,
-        serverCount: response?.likesCount,
-        previousLiked: previousIsLiked,
-        newLiked: newIsLiked,
-        serverLiked: response?.liked,
-      });
-
-      // Always use the optimistic values to maintain UI consistency
-      // This ensures the like count is immediately updated for better UX
-      setLocalLikeCount(newLikeCount);
-      setLocalIsLiked(newIsLiked);
-
-      // Notify parent component
+      // Notify parent component with final values
       if (onLikeToggle) {
-        onLikeToggle(thread.id, newLikeCount, newIsLiked);
+        onLikeToggle(thread.id, finalLikeCount, finalIsLiked);
       }
 
       // Mark that changes occurred
@@ -195,7 +175,7 @@ const EnhancedThreadCard: React.FC<EnhancedThreadCardProps> = ({
 
     setIsDeleting(true);
     try {
-      console.log("🗑️ Deleting thread:", thread.id);
+      
 
       // Call the delete thread API endpoint
       await deleteThread(thread.id);

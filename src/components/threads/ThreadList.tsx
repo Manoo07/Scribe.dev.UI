@@ -1,17 +1,11 @@
-import {
-  ChevronDown,
-  Filter,
-  Globe,
-  MessageSquare,
-  Search,
-} from "lucide-react";
+import { ChevronDown, Filter, Globe, MessageSquare } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
 import EnhancedThreadCard from "./EnhancedThreadCard";
 import { Thread } from "./threadTypes";
 
 interface ThreadsListProps {
   threads: Thread[];
-  isLoading?: boolean;
+  isLoading: boolean;
   onThreadClick: (thread: Thread) => void;
   onCreateThread: (threadType: "classroom" | "generic") => void;
   showFilters?: boolean;
@@ -27,32 +21,33 @@ interface ThreadsListProps {
   onRefresh?: () => void;
   isCreating?: boolean;
   onChangesOccurred?: () => void;
+  onFiltersChange?: (filters: { sortBy: string }) => void;
+  onThreadLikeToggle?: (
+    threadId: string,
+    newLikeCount: number,
+    isLiked: boolean
+  ) => void;
 }
 
 const ThreadsList: React.FC<ThreadsListProps> = ({
   threads,
-  isLoading = false,
+  isLoading,
   onThreadClick,
   onCreateThread,
   showFilters = true,
   classroomContext,
-  selectedUnit = "all",
+  selectedUnit,
   setSelectedUnit,
   error,
   success,
   onRefresh,
   isCreating = false,
   onChangesOccurred,
+  onFiltersChange,
+  onThreadLikeToggle,
 }) => {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedThreadType, setSelectedThreadType] = useState<
-    "all" | "classroom" | "generic"
-  >("all");
-  // selectedUnit and setSelectedUnit are now controlled from parent (ThreadManager)
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [sortBy, setSortBy] = useState<"recent" | "replies" | "created">(
-    "recent"
-  );
+  // Sorting state
+  const [sortBy, setSortBy] = useState<string>("mostRecent");
 
   // Filter dropdown state
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -60,17 +55,39 @@ const ThreadsList: React.FC<ThreadsListProps> = ({
 
   // Sort options for the dropdown
   const sortOptions = [
-    { value: "recent", label: "Most Recent" },
-    { value: "replies", label: "Most Replied" },
-    { value: "created", label: "Newest" },
-    { value: "likes", label: "Most Liked" },
-    { value: "title", label: "Alphabetical" },
+    {
+      value: "mostRecent",
+      label: "Most Recent",
+      order: "desc",
+    },
+    {
+      value: "mostReplied",
+      label: "Most Replied",
+      order: "desc",
+    },
+    {
+      value: "newest",
+      label: "Newest",
+      order: "desc",
+    },
+    {
+      value: "mostLiked",
+      label: "Most Liked",
+      order: "desc",
+    },
+    {
+      value: "alphabetical",
+      label: "Alphabetical",
+      order: "asc",
+    },
   ];
 
   // Click outside handler to close filter dropdown
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (isFilterOpen) {
+      const target = event.target as Element;
+      // Check if click is outside the dropdown and button
+      if (isFilterOpen && !target.closest(".filter-dropdown-container")) {
         setIsFilterOpen(false);
       }
     };
@@ -97,81 +114,39 @@ const ThreadsList: React.FC<ThreadsListProps> = ({
     return [...new Set(categories)];
   }, [threads]);
 
-  // Filter and sort threads
-  const filteredThreads = useMemo(() => {
-    let filtered = threads;
-
-    // Search filter
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (thread) =>
-          thread.title.toLowerCase().includes(query) ||
-          thread.content.toLowerCase().includes(query) ||
-          (thread.user?.name || thread.authorName || "")
-            .toLowerCase()
-            .includes(query) ||
-          (Array.isArray(thread.tags) &&
-            thread.tags.some((tag) => tag.toLowerCase().includes(query)))
-      );
-    }
-
-    // Thread type filter
-    if (selectedThreadType !== "all") {
-      filtered = filtered.filter(
-        (thread) => thread.threadType === selectedThreadType
-      );
-    }
-
-    // Unit filter (for classroom threads)
-    if (selectedUnit !== "all") {
-      filtered = filtered.filter(
-        (thread) =>
-          thread.threadType === "classroom" && thread.unitId === selectedUnit
-      );
-    }
-
-    // Category filter (for generic threads)
-    if (selectedCategory !== "all") {
-      filtered = filtered.filter(
-        (thread) =>
-          thread.threadType === "generic" &&
-          thread.category === selectedCategory
-      );
-    }
-
+  // Sort threads
+  const sortedThreads = useMemo(() => {
     // Sort threads
-    filtered.sort((a, b) => {
+    const sorted = [...threads].sort((a, b) => {
       switch (sortBy) {
-        case "recent":
+        case "mostRecent":
           return (
             new Date(b.updatedAt || b.createdAt).getTime() -
             new Date(a.updatedAt || a.createdAt).getTime()
           );
-        case "replies":
+        case "mostReplied":
           return (b.repliesCount || 0) - (a.repliesCount || 0);
-        case "created":
+        case "newest":
           return (
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           );
+        case "mostLiked":
+          return (b.likesCount || 0) - (a.likesCount || 0);
+        case "alphabetical":
+          return a.title.localeCompare(b.title);
         default:
           return 0;
       }
     });
 
-    return filtered;
-  }, [
-    threads,
-    searchQuery,
-    selectedThreadType,
-    selectedUnit,
-    selectedCategory,
-    sortBy,
-  ]);
+    return sorted;
+  }, [threads, sortBy]);
 
   const threadStats = useMemo(() => {
     const total = threads.length;
-    const resolved = threads.filter((t) => t.isResolved).length;
+    const resolved = threads.filter(
+      (t) => t.threadStatus === "RESOLVED"
+    ).length;
     const open = total - resolved;
     const classroom = threads.filter(
       (t) => t.threadType === "classroom"
@@ -234,23 +209,35 @@ const ThreadsList: React.FC<ThreadsListProps> = ({
         {/* Create Thread Buttons and Filter */}
         <div className="flex items-center gap-3">
           {/* Context Indicator */}
-          <div className="text-xs text-gray-400">
+          {/* <div className="text-xs text-gray-400">
             {classroomContext ? (
               <span>Classroom Context</span>
             ) : (
               <span>Global Context</span>
             )}
-          </div>
+          </div> */}
 
           {/* Filter Dropdown */}
-          <div className="relative">
+          <div className="relative filter-dropdown-container">
+            {/* Filter Button */}
             <button
-              onClick={() => setIsFilterOpen(!isFilterOpen)}
-              className="flex items-center gap-2 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors border border-gray-600"
+              onClick={() => {
+                console.log(
+                  "🔄 Filter button clicked, current state:",
+                  isFilterOpen
+                );
+                setIsFilterOpen(!isFilterOpen);
+                console.log("🔄 Setting filter dropdown to:", !isFilterOpen);
+              }}
+              className="flex items-center gap-2 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg transition-colors"
             >
               <Filter className="w-4 h-4" />
-              <span className="text-sm">{selectedSortOption}</span>
-              <ChevronDown className="w-4 h-4" />
+              <span>{selectedSortOption}</span>
+              <ChevronDown
+                className={`w-4 h-4 transition-transform ${
+                  isFilterOpen ? "rotate-180" : ""
+                }`}
+              />
             </button>
 
             {/* Filter Dropdown Menu */}
@@ -261,9 +248,20 @@ const ThreadsList: React.FC<ThreadsListProps> = ({
                     <button
                       key={option.value}
                       onClick={() => {
+                        setSortBy(option.value);
                         setSelectedSortOption(option.label);
                         setIsFilterOpen(false);
-                        // TODO: Implement sorting logic
+
+                        // Notify parent of filter changes
+                        if (onFiltersChange) {
+                          console.log("🔄 Sort option clicked:", option);
+                          console.log("🔄 Calling onFiltersChange with:", {
+                            sortBy: option.value,
+                          });
+                          onFiltersChange({
+                            sortBy: option.value, // Use UI value directly
+                          });
+                        }
                       }}
                       className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
                     >
@@ -374,7 +372,7 @@ const ThreadsList: React.FC<ThreadsListProps> = ({
       {/* Threads List */}
       {!isLoading && (
         <div className="space-y-4">
-          {filteredThreads.length === 0 ? (
+          {sortedThreads.length === 0 ? (
             <div className="text-center py-12">
               <div className="text-gray-400 mb-4">
                 {threads.length === 0 ? (
@@ -387,7 +385,7 @@ const ThreadsList: React.FC<ThreadsListProps> = ({
                   </>
                 ) : (
                   <>
-                    <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <Filter className="w-12 h-12 mx-auto mb-4 opacity-50" />
                     <p className="text-lg mb-2">
                       No threads match your filters
                     </p>
@@ -399,15 +397,17 @@ const ThreadsList: React.FC<ThreadsListProps> = ({
               </div>
             </div>
           ) : (
-            filteredThreads.map((thread) => (
+            sortedThreads.map((thread) => (
               <EnhancedThreadCard
                 key={thread.id}
                 thread={thread}
                 onClick={() => onThreadClick(thread)}
                 showClassroomInfo={!classroomContext}
-                onLikeToggle={(_threadId, _newLikeCount, _isLiked) => {
-                  // The local state in EnhancedThreadCard handles the UI update
-                  // You can add a callback prop to notify parent component if needed
+                onLikeToggle={(threadId, newLikeCount, isLiked) => {
+                  // Notify parent component about the like change
+                  if (onThreadLikeToggle) {
+                    onThreadLikeToggle(threadId, newLikeCount, isLiked);
+                  }
                 }}
                 onDelete={handleThreadDelete}
                 onChangesOccurred={onChangesOccurred}

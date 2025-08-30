@@ -84,12 +84,29 @@ export const deleteThread = async (threadId: string): Promise<any> => {
 export const fetchThreadDetail = async (
   threadId: string,
   page = 1,
-  limit = 10
+  limit = 10,
+  filters?: {
+    sortBy?: string;
+  }
 ): Promise<any> => {
   try {
-    const response = await api.get(
-      `/threads/${threadId}?page=${page}&limit=${limit}`
-    );
+    const params = new URLSearchParams();
+    params.append("page", page.toString());
+    params.append("limit", limit.toString());
+
+    if (filters?.sortBy) {
+      params.append("sortBy", filters.sortBy);
+    }
+
+    console.log("🔄 API Call - fetchThreadDetail:", {
+      url: `/threads/${threadId}?${params.toString()}`,
+      threadId,
+      page,
+      limit,
+      filters,
+    });
+
+    const response = await api.get(`/threads/${threadId}?${params.toString()}`);
     return response.data;
   } catch (error) {
     console.error("Error fetching thread detail:", error);
@@ -97,9 +114,34 @@ export const fetchThreadDetail = async (
   }
 };
 // Fetch generic threads (all, paginated)
-export const fetchThreads = async (page = 1, limit = 10): Promise<any> => {
+export const fetchThreads = async (
+  page = 1,
+  limit = 10,
+  filters?: {
+    sortBy?: string;
+    limit?: number;
+  }
+): Promise<any> => {
   try {
-    const response = await api.get(`/threads?page=${page}&limit=${limit}`);
+    const params = new URLSearchParams();
+    params.append("page", page.toString());
+
+    if (filters?.sortBy) {
+      params.append("sortBy", filters.sortBy);
+    }
+    if (filters?.limit) {
+      params.append("limit", filters.limit.toString());
+    } else {
+      params.append("limit", limit.toString());
+    }
+
+    console.log("🔄 API Call - fetchThreads:", {
+      url: `/threads?${params.toString()}`,
+      filters,
+      params: Object.fromEntries(params.entries()),
+    });
+
+    const response = await api.get(`/threads?${params.toString()}`);
     return response.data;
   } catch (error) {
     console.error("Error fetching threads:", error);
@@ -128,12 +170,33 @@ export const fetchUnitThreads = async (
 export const fetchClassroomThreads = async (
   classroomId: string,
   page = 1,
-  limit = 10
+  limit = 10,
+  filters?: {
+    sortBy?: string;
+    limit?: number;
+  }
 ): Promise<any> => {
   try {
-    const response = await api.get(
-      `/threads?classroomId=${classroomId}&page=${page}&limit=${limit}`
-    );
+    const params = new URLSearchParams();
+    params.append("classroomId", classroomId);
+    params.append("page", page.toString());
+
+    if (filters?.sortBy) {
+      params.append("sortBy", filters.sortBy);
+    }
+    if (filters?.limit) {
+      params.append("limit", filters.limit.toString());
+    } else {
+      params.append("limit", limit.toString());
+    }
+
+    console.log("🔄 API Call - fetchClassroomThreads:", {
+      url: `/threads?${params.toString()}`,
+      filters,
+      params: Object.fromEntries(params.entries()),
+    });
+
+    const response = await api.get(`/threads?${params.toString()}`);
     return response.data;
   } catch (error) {
     console.error("Error fetching classroom threads:", error);
@@ -223,17 +286,22 @@ api.interceptors.response.use(
       localStorage.removeItem("role");
       localStorage.removeItem("userId");
 
-      // Show user-friendly message and redirect
+      // Use custom event to notify the app about authentication failure
+      // This will be handled by the AuthContext to show the proper session expiry modal
       if (
         window.location.pathname !== "/login" &&
         window.location.pathname !== "/signup"
       ) {
-        if (error.response?.status === 401) {
-          alert("Your session has expired. Please login again.");
-        } else {
-          alert("Access denied. Please login again.");
-        }
-        window.location.href = "/login";
+        const authErrorEvent = new CustomEvent("auth-error", {
+          detail: {
+            status: error.response?.status,
+            message:
+              error.response?.status === 401
+                ? "Your session has expired. Please login again."
+                : "Access denied. Please login again.",
+          },
+        });
+        window.dispatchEvent(authErrorEvent);
       }
     }
 
@@ -574,8 +642,11 @@ export const deleteReply = async (
     // Ensure token is valid and available
     ensureToken();
 
-    // Use the same endpoint structure: /threads/:threadId/reply/:replyId
-    const response = await api.delete(`/threads/${threadId}/reply/${replyId}`);
+    // Use the endpoint structure: /threads/:threadId?replyId=${replyId}
+    // This matches the user's requirement for the delete endpoint
+    const response = await api.delete(
+      `/threads/${threadId}?replyId=${replyId}`
+    );
     console.log("✅ Reply deleted successfully:", response.data);
     return response.data;
   } catch (error: any) {
@@ -585,6 +656,10 @@ export const deleteReply = async (
       data: error.response?.data,
       message: error.message,
     });
-    throw error;
+    const errorMessage =
+      error.response?.data?.message ||
+      error.message ||
+      "Failed to delete reply";
+    throw new Error(errorMessage);
   }
 };

@@ -1,8 +1,12 @@
 import {
   ArrowLeft,
   Brain,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Clock,
   Edit,
+  Filter,
   Heart,
   Loader2,
   Lock,
@@ -19,7 +23,6 @@ import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../hooks/use-toast";
 import { useOwnership } from "../../hooks/useOwnership";
 import {
-  deleteReply,
   deleteThread,
   fetchThreadDetail,
   toggleThreadLike,
@@ -57,17 +60,55 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
   const [isDeletingThread, setIsDeletingThread] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
+  // Pagination state for replies
+  const [currentPage, setCurrentPage] = useState(1);
+  const [repliesPerPage] = useState(10);
+  const [isLoadingReplies, setIsLoadingReplies] = useState(false);
+
+  // Replies sorting state
+  const [repliesSortBy, setRepliesSortBy] = useState<string>("newest");
+  const [isRepliesSortOpen, setIsRepliesSortOpen] = useState(false);
+  const [selectedRepliesSortOption, setSelectedRepliesSortOption] =
+    useState("Newest First");
+
+  // Replies sort options - mapped to API endpoints
+  const repliesSortOptions = [
+    {
+      value: "newest",
+      label: "Newest First",
+      order: "desc",
+    },
+    {
+      value: "mostLiked",
+      label: "Most Liked",
+      order: "desc",
+    },
+    {
+      value: "alphabetical",
+      label: "Alphabetical",
+      order: "asc",
+    },
+  ];
+
   // Ref for click outside handling
   const moreMenuRef = useRef<HTMLDivElement>(null);
 
-  // Click outside handler to close more menu
+  // Click outside handler to close more menu and replies sort dropdown
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+
+      // Close more menu if clicking outside
       if (
         moreMenuRef.current &&
         !moreMenuRef.current.contains(event.target as Node)
       ) {
         setIsMoreMenuOpen(false);
+      }
+
+      // Close replies sort dropdown if clicking outside
+      if (isRepliesSortOpen && !target.closest(".filter-dropdown-container")) {
+        setIsRepliesSortOpen(false);
       }
     };
 
@@ -75,66 +116,167 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, []);
+  }, [isRepliesSortOpen]);
+
+  const loadThread = async (page = 1) => {
+    try {
+      if (page === 1) {
+        setIsLoading(true);
+      } else {
+        setIsLoadingReplies(true);
+      }
+      setError(null);
+
+      const threadData = await fetchThreadDetail(
+        threadId,
+        page,
+        repliesPerPage,
+        { sortBy: repliesSortBy } // Use current sort setting
+      );
+
+      // Check if there are multiple accepted replies (this shouldn't happen)
+      const acceptedReplies =
+        threadData.replies?.data.filter((r: ThreadReply) => r.isAccepted) || [];
+      if (acceptedReplies.length > 1) {
+        console.error(
+          "🚨 CRITICAL: Multiple replies are already marked as accepted in initial data:",
+          acceptedReplies.map((r: ThreadReply) => ({
+            id: r.id,
+            content: r.content.substring(0, 30) + "...",
+          }))
+        );
+      } else if (acceptedReplies.length === 1) {
+      } else {
+      }
+
+      if (page === 1) {
+        setThread(threadData);
+      } else {
+        // Update only replies for pagination
+        setThread((prev) =>
+          prev
+            ? {
+                ...prev,
+                replies: threadData.replies,
+              }
+            : null
+        );
+      }
+    } catch (err: any) {
+      const errorMessage =
+        err?.response?.data?.message || err?.message || "Failed to load thread";
+      setError(errorMessage);
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+      setIsLoadingReplies(false);
+    }
+  };
 
   useEffect(() => {
-    const loadThread = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const threadData = await fetchThreadDetail(threadId);
+    loadThread(1);
+  }, [threadId]);
 
-        // Debug: Check initial thread data for multiple accepted replies
-        console.log("🔄 Loaded thread data:", {
-          threadId: threadData.id,
-          acceptedAnswerId: threadData.acceptedAnswerId,
-          replies: threadData.replies?.data.map((r: ThreadReply) => ({
-            id: r.id,
-            isAccepted: r.isAccepted,
-            content: r.content.substring(0, 50) + "...",
-          })),
-        });
+  // Handle page change for replies
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    loadThread(newPage);
+  };
 
-        // Check if there are multiple accepted replies (this shouldn't happen)
-        const acceptedReplies =
-          threadData.replies?.data.filter((r: ThreadReply) => r.isAccepted) ||
-          [];
-        if (acceptedReplies.length > 1) {
-          console.error(
-            "🚨 CRITICAL: Multiple replies are already marked as accepted in initial data:",
-            acceptedReplies.map((r: ThreadReply) => ({
-              id: r.id,
-              content: r.content.substring(0, 30) + "...",
-            }))
-          );
-        } else if (acceptedReplies.length === 1) {
-          console.log(
-            "✅ Initial data has one accepted reply:",
-            acceptedReplies[0].id
-          );
-        } else {
-          console.log("ℹ️ Initial data has no accepted replies");
-        }
+  // Handle replies sorting with API calls
+  const handleRepliesSort = async (sortBy: string) => {
+    if (!thread) return;
 
-        setThread(threadData);
-      } catch (err: any) {
-        const errorMessage =
-          err?.response?.data?.message ||
-          err?.message ||
-          "Failed to load thread";
-        setError(errorMessage);
-        toast({
-          title: "Error",
-          description: errorMessage,
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
+    setIsLoadingReplies(true);
+    try {
+      // Map UI sort values to API parameters
+      let apiSortBy = sortBy;
+      let limit = 15; // Default limit
+
+      switch (sortBy) {
+        case "newest":
+          apiSortBy = "newest";
+          limit = 15;
+          break;
+        case "mostLiked":
+          apiSortBy = "mostLiked";
+          limit = 15;
+          break;
+        case "alphabetical":
+          apiSortBy = "alphabetical";
+          limit = 25;
+          break;
+        default:
+          apiSortBy = "newest";
+          limit = 15;
+          break;
       }
-    };
 
-    loadThread();
-  }, [threadId, toast]);
+      console.log("🔄 Fetching replies with API filters:", {
+        threadId: thread.id,
+        sortBy: apiSortBy,
+        page: 1,
+        limit: limit,
+      });
+
+      // Fetch replies with new sorting from API
+      const threadData = await fetchThreadDetail(
+        thread.id,
+        1, // Reset to first page
+        limit,
+        { sortBy: apiSortBy } // Pass sort parameter
+      );
+
+      // Update thread with new replies data
+      setThread((prev) =>
+        prev
+          ? {
+              ...prev,
+              replies: threadData.replies,
+            }
+          : null
+      );
+
+      // Reset pagination
+      setCurrentPage(1);
+
+      console.log("🔄 Replies sorted by API:", sortBy, "->", apiSortBy);
+    } catch (error) {
+      console.error("❌ Error sorting replies:", error);
+      toast({
+        title: "Error",
+        description: "Failed to sort replies. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingReplies(false);
+    }
+  };
+
+  // Calculate pagination info
+  const getPaginationInfo = () => {
+    if (!thread?.replies?.pagination) return null;
+
+    const { total, page, limit, hasNext } = thread.replies.pagination;
+    const totalPages = Math.ceil(total / limit);
+    const hasPrev = page > 1;
+
+    return {
+      currentPage: page,
+      totalPages,
+      hasNext,
+      hasPrev,
+      total,
+      startItem: (page - 1) * limit + 1,
+      endItem: Math.min(page * limit, total),
+    };
+  };
+
+  const paginationInfo = getPaginationInfo();
 
   const handleThreadLikeToggle = async () => {
     if (!thread || isLiking) return;
@@ -242,27 +384,13 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
   const handleAnswerAccepted = (replyId: string) => {
     if (!thread) return;
 
-    console.log("🎯 Marking reply as accepted:", replyId);
-    console.log("🔍 Current thread state:", {
-      acceptedAnswerId: thread.acceptedAnswerId,
-      replies: thread.replies?.data.map((r) => ({
-        id: r.id,
-        isAccepted: r.isAccepted,
-      })),
-    });
-
     // Check if there's already an accepted answer
     const currentAcceptedReply = thread.replies?.data.find((r) => r.isAccepted);
     if (currentAcceptedReply) {
-      console.log(
-        `⚠️ Found existing accepted reply: ${currentAcceptedReply.id}, will unmark it`
-      );
     }
 
     setThread((prev) => {
       if (!prev) return null;
-
-      console.log("🔄 Updating thread state...");
 
       const updatedThread = {
         ...prev,
@@ -273,9 +401,7 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
               ...prev.replies,
               data: prev.replies.data.map((reply) => {
                 const newIsAccepted = reply.id === replyId;
-                console.log(
-                  `📝 Reply ${reply.id}: isAccepted = ${newIsAccepted} (was ${reply.isAccepted})`
-                );
+
                 return {
                   ...reply,
                   isAccepted: newIsAccepted,
@@ -285,20 +411,8 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
           : undefined,
       };
 
-      console.log("✅ New thread state:", {
-        acceptedAnswerId: updatedThread.acceptedAnswerId,
-        replies: updatedThread.replies?.data.map((r) => ({
-          id: r.id,
-          isAccepted: r.isAccepted,
-        })),
-      });
-
       return updatedThread;
     });
-
-    console.log(
-      "✅ Thread state updated - only one reply should be accepted now"
-    );
 
     // Mark that changes occurred
     if (onChangesOccurred) {
@@ -308,15 +422,6 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
 
   const handleAnswerUnmarked = () => {
     if (!thread) return;
-
-    console.log("🚫 Unmarking all accepted answers");
-    console.log("🔍 Current thread state before unmarking:", {
-      acceptedAnswerId: thread.acceptedAnswerId,
-      replies: thread.replies?.data.map((r) => ({
-        id: r.id,
-        isAccepted: r.isAccepted,
-      })),
-    });
 
     setThread((prev) =>
       prev
@@ -328,9 +433,6 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
               ? {
                   ...prev.replies,
                   data: prev.replies.data.map((reply) => {
-                    console.log(
-                      `📝 Reply ${reply.id}: setting isAccepted = false`
-                    );
                     return {
                       ...reply,
                       isAccepted: false,
@@ -341,8 +443,6 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
           }
         : null
     );
-
-    console.log("✅ All replies unmarked - thread is now unanswered");
 
     // Mark that changes occurred
     if (onChangesOccurred) {
@@ -381,28 +481,27 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
 
     try {
       // Call the API to delete the reply
-      await deleteReply(thread.id, replyId);
+      await deleteThread(replyId);
 
       // Remove reply from local state after successful API call
-      setThread((prev) =>
-        prev
-          ? {
-              ...prev,
-              replies: prev.replies
-                ? {
-                    ...prev.replies,
-                    data: prev.replies.data.filter(
-                      (reply) => reply.id !== replyId
-                    ),
-                    pagination: {
-                      ...prev.replies.pagination,
-                      total: prev.replies.pagination.total - 1,
-                    },
-                  }
-                : undefined,
-            }
-          : null
-      );
+      setThread((prev) => {
+        if (!prev) return null;
+
+        const updatedThread = {
+          ...prev,
+          replies: prev.replies
+            ? {
+                ...prev.replies,
+                data: prev.replies.data.filter((reply) => reply.id !== replyId),
+                pagination: {
+                  ...prev.replies.pagination,
+                  total: prev.replies.pagination.total - 1,
+                },
+              }
+            : undefined,
+        };
+        return updatedThread;
+      });
 
       // Mark that changes occurred
       if (onChangesOccurred) {
@@ -415,6 +514,7 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
         variant: "default",
       });
     } catch (error: any) {
+      // Handle errors
       const errorMessage =
         error?.response?.data?.message ||
         error?.message ||
@@ -532,8 +632,6 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
 
     setIsDeletingThread(true);
     try {
-      console.log("🗑️ Deleting thread:", thread.id);
-
       // Call the delete thread API endpoint
       await deleteThread(thread.id);
 
@@ -1045,12 +1143,58 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <h2 className="text-xl font-semibold text-white">
-              Replies ({totalReplies})
+              Replies ({thread.replies?.data?.length || 0})
             </h2>
             {thread.acceptedAnswerId && (
               <span className="bg-green-600/20 text-green-400 px-2 py-1 rounded-full text-xs">
                 ✓ Has Accepted Answer
               </span>
+            )}
+          </div>
+
+          {/* Replies Sort Dropdown */}
+          <div className="relative filter-dropdown-container">
+            <button
+              onClick={() => {
+                console.log(
+                  "🔄 Replies dropdown clicked, current state:",
+                  isRepliesSortOpen
+                );
+                setIsRepliesSortOpen(!isRepliesSortOpen);
+                console.log(
+                  "🔄 Setting replies dropdown to:",
+                  !isRepliesSortOpen
+                );
+              }}
+              className="flex items-center gap-2 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors border border-gray-600"
+            >
+              <Filter className="w-4 h-4" />
+              <span className="text-sm">{selectedRepliesSortOption}</span>
+              <ChevronDown className="w-4 h-4" />
+            </button>
+
+            {/* Replies Sort Dropdown Menu */}
+            {isRepliesSortOpen && (
+              <div className="absolute right-0 top-full mt-1 w-48 bg-gray-800 border border-gray-600 rounded-lg shadow-lg z-10">
+                <div className="py-1">
+                  {repliesSortOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => {
+                        setRepliesSortBy(option.value);
+                        setSelectedRepliesSortOption(option.label);
+                        setIsRepliesSortOpen(false);
+
+                        // Sort replies based on selection
+                        handleRepliesSort(option.value);
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
         </div>
@@ -1066,19 +1210,16 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
         {/* Replies List */}
         {(() => {
           // Debug logging for thread ownership
-          console.log("🔍 ThreadDetailView Debug:", {
-            threadId: thread.id,
-            threadUserId: thread.user.id,
-            threadUserName: thread.user.name,
-            currentUserId,
-            isThreadOwner: isOwner(thread.user.id),
-            userFromAuth: user?.id,
-            threadStatus: thread.threadStatus,
-          });
+
           return null;
         })()}
 
-        {replies.length === 0 ? (
+        {isLoadingReplies ? (
+          <div className="text-center py-8">
+            <Loader2 className="w-12 h-12 mx-auto mb-4 text-gray-500 animate-spin" />
+            <p className="text-gray-400 text-lg">Loading replies...</p>
+          </div>
+        ) : thread.replies?.data && thread.replies.data.length === 0 ? (
           <div className="text-center py-8">
             <MessageCircle className="w-12 h-12 mx-auto mb-4 text-gray-500" />
             <p className="text-gray-400 text-lg">No replies yet</p>
@@ -1086,7 +1227,7 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
           </div>
         ) : (
           <div className="space-y-4">
-            {replies.map((reply) => (
+            {thread.replies?.data?.map((reply) => (
               <ReplyCard
                 key={reply.id}
                 reply={reply}
@@ -1100,6 +1241,28 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
                 onDeleteReply={handleDeleteReply}
               />
             ))}
+            {paginationInfo && (
+              <div className="flex justify-center items-center gap-2 mt-6">
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={!paginationInfo.hasPrev}
+                  className="p-2 rounded-md text-gray-400 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <span className="text-gray-400 text-sm">
+                  {paginationInfo.startItem}-{paginationInfo.endItem} of{" "}
+                  {paginationInfo.total}
+                </span>
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={!paginationInfo.hasNext}
+                  className="p-2 rounded-md text-gray-400 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
