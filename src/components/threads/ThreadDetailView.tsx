@@ -1,40 +1,45 @@
-import React, { useEffect, useState, useRef } from "react";
 import {
   ArrowLeft,
-  MessageCircle,
-  User,
-  Clock,
-  Tag,
   Brain,
+  Clock,
+  Edit,
   Heart,
   Loader2,
-  Edit,
+  Lock,
+  MessageCircle,
   MoreHorizontal,
   Share2,
-  Lock,
+  Tag,
   Trash2,
+  User,
 } from "lucide-react";
-import { Thread, ThreadReply } from "./threadTypes";
+import React, { useEffect, useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import { useAuth } from "../../context/AuthContext";
+import { useToast } from "../../hooks/use-toast";
+import { useOwnership } from "../../hooks/useOwnership";
 import {
+  deleteReply,
+  deleteThread,
   fetchThreadDetail,
   toggleThreadLike,
   updateThread,
-  deleteThread,
 } from "../../services/api";
-import { useToast } from "../../hooks/use-toast";
-import { useAuth } from "../../context/AuthContext";
-import { useOwnership } from "../../hooks/useOwnership";
+import ConfirmationDialog from "../ui/ConfirmationDialog";
 import ReplyCard from "./ReplyCard";
 import ReplyForm from "./ReplyForm";
+import { Thread, ThreadReply } from "./threadTypes";
 
 interface ThreadDetailViewProps {
   threadId: string;
   onBack: () => void;
+  onChangesOccurred?: () => void;
 }
 
 const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
   threadId,
   onBack,
+  onChangesOccurred,
 }) => {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -50,6 +55,7 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [isClosingThread, setIsClosingThread] = useState(false);
   const [isDeletingThread, setIsDeletingThread] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   // Ref for click outside handling
   const moreMenuRef = useRef<HTMLDivElement>(null);
@@ -226,6 +232,11 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
           }
         : null
     );
+
+    // Mark that changes occurred
+    if (onChangesOccurred) {
+      onChangesOccurred();
+    }
   };
 
   const handleAnswerAccepted = (replyId: string) => {
@@ -288,6 +299,11 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
     console.log(
       "✅ Thread state updated - only one reply should be accepted now"
     );
+
+    // Mark that changes occurred
+    if (onChangesOccurred) {
+      onChangesOccurred();
+    }
   };
 
   const handleAnswerUnmarked = () => {
@@ -327,6 +343,11 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
     );
 
     console.log("✅ All replies unmarked - thread is now unanswered");
+
+    // Mark that changes occurred
+    if (onChangesOccurred) {
+      onChangesOccurred();
+    }
   };
 
   const handleEditReply = async (replyId: string, newContent: string) => {
@@ -358,29 +379,52 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
   const handleDeleteReply = async (replyId: string) => {
     if (!thread) return;
 
-    // Remove reply from local state
-    setThread((prev) =>
-      prev
-        ? {
-            ...prev,
-            replies: prev.replies
-              ? {
-                  ...prev.replies,
-                  data: prev.replies.data.filter(
-                    (reply) => reply.id !== replyId
-                  ),
-                  pagination: {
-                    ...prev.replies.pagination,
-                    total: prev.replies.pagination.total - 1,
-                  },
-                }
-              : undefined,
-          }
-        : null
-    );
+    try {
+      // Call the API to delete the reply
+      await deleteReply(thread.id, replyId);
 
-    // TODO: Implement API call to delete reply
-    // await deleteReply(replyId);
+      // Remove reply from local state after successful API call
+      setThread((prev) =>
+        prev
+          ? {
+              ...prev,
+              replies: prev.replies
+                ? {
+                    ...prev.replies,
+                    data: prev.replies.data.filter(
+                      (reply) => reply.id !== replyId
+                    ),
+                    pagination: {
+                      ...prev.replies.pagination,
+                      total: prev.replies.pagination.total - 1,
+                    },
+                  }
+                : undefined,
+            }
+          : null
+      );
+
+      // Mark that changes occurred
+      if (onChangesOccurred) {
+        onChangesOccurred();
+      }
+
+      toast({
+        title: "Success",
+        description: "Reply deleted successfully!",
+        variant: "default",
+      });
+    } catch (error: any) {
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Failed to delete reply";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    }
   };
 
   const handleEditThread = () => {
@@ -463,6 +507,11 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
         description: "Thread closed successfully!",
         variant: "default",
       });
+
+      // Mark that changes occurred
+      if (onChangesOccurred) {
+        onChangesOccurred();
+      }
     } catch (error: any) {
       const errorMessage =
         error?.response?.data?.message ||
@@ -481,14 +530,6 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
   const handleDeleteThread = async () => {
     if (!thread) return;
 
-    if (
-      !confirm(
-        "Are you sure you want to delete this thread? This action cannot be undone."
-      )
-    ) {
-      return;
-    }
-
     setIsDeletingThread(true);
     try {
       console.log("🗑️ Deleting thread:", thread.id);
@@ -501,6 +542,11 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
         description: "Thread deleted successfully!",
         variant: "default",
       });
+
+      // Mark that changes occurred
+      if (onChangesOccurred) {
+        onChangesOccurred();
+      }
 
       // Navigate back to threads list
       onBack();
@@ -518,7 +564,13 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
       });
     } finally {
       setIsDeletingThread(false);
+      setShowDeleteDialog(false);
     }
+  };
+
+  const openDeleteDialog = () => {
+    setShowDeleteDialog(true);
+    setIsMoreMenuOpen(false);
   };
 
   if (isLoading) {
@@ -529,11 +581,11 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
             onClick={onBack}
             className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-3.5 h-3.5" />
             Back to Threads
           </button>
         </div>
-        <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 animate-pulse">
+        <div className="bg-gray-800 border border-gray-600 rounded-lg p-6 animate-pulse">
           <div className="space-y-4">
             <div className="h-6 bg-gray-700 rounded w-3/4"></div>
             <div className="h-4 bg-gray-700 rounded w-1/2"></div>
@@ -552,7 +604,7 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
             onClick={onBack}
             className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-3.5 h-3.5" />
             Back to Threads
           </button>
         </div>
@@ -579,13 +631,13 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
           onClick={onBack}
           className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft className="w-3.5 h-3.5" />
           Back to Threads
         </button>
       </div>
 
       {/* Thread Content */}
-      <div className="bg-gray-900/50 border border-gray-700/50 rounded-xl p-6 hover:border-gray-600/70 hover:bg-gray-900/70 transition-all duration-200 shadow-sm">
+      <div className="bg-gray-800 border border-gray-600 rounded-xl p-6 shadow-lg">
         {/* Thread Header */}
         <div className="mb-5">
           <div className="flex items-center justify-between mb-3">
@@ -593,56 +645,90 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
 
             <div className="flex items-center gap-2">
               {/* Thread Status Badge */}
-              <span
-                className={`px-3 py-1.5 rounded-full text-sm font-medium ${
-                  thread.threadStatus === "RESOLVED"
-                    ? "bg-green-600/20 text-green-400 border border-green-500/30"
-                    : thread.threadStatus === "ANSWERED"
-                    ? "bg-blue-600/20 text-blue-400 border border-blue-500/30"
-                    : thread.threadStatus === "CLOSED"
-                    ? "bg-gray-600/20 text-gray-400 border border-gray-500/30"
-                    : "bg-yellow-600/20 text-yellow-400 border border-yellow-500/30"
-                }`}
-              >
-                {thread.threadStatus === "RESOLVED" && "✓ Resolved"}
-                {thread.threadStatus === "ANSWERED" && "○ Answered"}
-                {thread.threadStatus === "CLOSED" && "🔒 Closed"}
-                {thread.threadStatus === "UNANSWERED" && "○ Unanswered"}
-              </span>
+              <div className="flex flex-col items-start gap-1">
+                <span
+                  className={`px-2 py-1 rounded-md text-xs font-medium ${
+                    thread.threadStatus === "RESOLVED"
+                      ? "bg-gradient-to-r from-emerald-500/30 to-green-500/30 text-emerald-200 border border-emerald-400/40 shadow-sm"
+                      : thread.threadStatus === "ANSWERED"
+                      ? "bg-gradient-to-r from-blue-500/30 to-cyan-500/30 text-blue-200 border border-blue-400/40 shadow-sm"
+                      : thread.threadStatus === "CLOSED"
+                      ? "bg-gradient-to-r from-slate-500/30 to-gray-500/30 text-slate-200 border border-slate-400/40 shadow-sm"
+                      : "bg-gradient-to-r from-amber-500/20 to-yellow-500/20 text-amber-300 border border-amber-400/30 shadow-sm"
+                  }`}
+                >
+                  {thread.threadStatus === "RESOLVED" && "✓ Resolved"}
+                  {thread.threadStatus === "ANSWERED" && "○ Answered"}
+                  {thread.threadStatus === "CLOSED" && "🔒 Closed"}
+                  {thread.threadStatus === "UNANSWERED" && "○ Unanswered"}
+                </span>
+              </div>
 
               {/* 3-dots Menu - Only visible to thread owner */}
               {isOwner(thread.user.id) && (
                 <div className="relative" ref={moreMenuRef}>
                   <button
-                    onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
-                    className="p-1.5 bg-gray-800/60 text-gray-400 rounded-md hover:bg-gray-800/80 hover:text-gray-200 transition-all duration-200 border border-gray-600/30"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsMoreMenuOpen(!isMoreMenuOpen);
+                    }}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    className="p-1.5 bg-gray-800/60 text-gray-400 rounded-md hover:bg-gray-800/70 hover:text-gray-200 transition-all duration-300 border border-gray-600/30"
                     title="More options"
                   >
-                    <MoreHorizontal className="w-3 h-3" />
+                    <MoreHorizontal className="w-2.5 h-2.5" />
                   </button>
 
                   {/* Dropdown Menu */}
                   {isMoreMenuOpen && (
-                    <div className="absolute right-0 top-full mt-1 w-40 bg-gray-800 border border-gray-600 rounded-lg shadow-lg z-10">
+                    <div
+                      className="absolute right-0 top-full mt-1 w-40 bg-gray-800 border border-gray-600 rounded-lg shadow-lg z-10"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }}
+                    >
                       <button
-                        onClick={handleCloseThread}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleCloseThread();
+                        }}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                        }}
                         disabled={isClosingThread}
-                        className="w-full flex items-center gap-2 px-3 py-2 text-left text-yellow-400 hover:bg-gray-700/50 transition-colors text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full flex items-center gap-2 px-3 py-2 text-left text-yellow-400 hover:bg-gray-700/30 transition-colors text-xs disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <Lock className="w-3 h-3" />
+                        <Lock className="w-2.5 h-2.5" />
                         <span>
                           {isClosingThread ? "Closing..." : "Close Thread"}
                         </span>
                       </button>
                       <button
-                        onClick={handleDeleteThread}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          openDeleteDialog();
+                        }}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                        }}
                         disabled={isDeletingThread}
-                        className="w-full flex items-center gap-2 px-3 py-2 text-left text-red-400 hover:bg-gray-700/50 transition-colors text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full flex items-center gap-2 px-3 py-2 text-left text-red-400 hover:bg-gray-700/30 transition-colors text-xs disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <Trash2 className="w-3 h-3" />
-                        <span>
-                          {isDeletingThread ? "Deleting..." : "Delete Thread"}
-                        </span>
+                        <Trash2 className="w-2.5 h-2.5" />
+                        <span>Delete Thread</span>
                       </button>
                     </div>
                   )}
@@ -654,15 +740,15 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
           {/* Thread Meta with Edit Button */}
           <div className="flex items-center gap-3 text-xs text-gray-400 flex-wrap">
             <div className="flex items-center gap-1">
-              <User className="w-3.5 h-3.5" />
+              <User className="w-3 h-3" />
               <span>{thread.user.name}</span>
             </div>
             <div className="flex items-center gap-1">
-              <Clock className="w-3.5 h-3.5" />
+              <Clock className="w-3 h-3" />
               <span>{new Date(thread.createdAt).toLocaleDateString()}</span>
             </div>
             <div className="flex items-center gap-1">
-              <MessageCircle className="w-3.5 h-3.5" />
+              <MessageCircle className="w-3 h-3" />
               <span>{totalReplies} replies</span>
             </div>
 
@@ -674,7 +760,7 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
                 className="ml-2 p-1.5 bg-blue-600/20 text-blue-400 rounded-md hover:bg-blue-600/30 transition-all duration-200 border border-blue-500/30"
                 title="Edit thread"
               >
-                <Edit className="w-3 h-3" />
+                <Edit className="w-2.5 h-2.5" />
               </button>
             )}
 
@@ -728,12 +814,12 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
               >
                 {isUpdatingThread ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     Updating...
                   </>
                 ) : (
                   <>
-                    <Edit className="w-4 h-4" />
+                    <Edit className="w-3.5 h-3.5" />
                     Update Thread
                   </>
                 )}
@@ -741,7 +827,7 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
               <button
                 onClick={handleCancelEditThread}
                 disabled={isUpdatingThread}
-                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-600/90 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
@@ -749,35 +835,142 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
           </div>
         ) : (
           <div className="text-gray-300 mb-5 prose prose-invert prose-sm max-w-none">
-            <div className="whitespace-pre-wrap text-sm leading-relaxed">
+            <ReactMarkdown
+              components={{
+                p: ({ children }) => (
+                  <p className="mb-0 leading-relaxed text-sm">{children}</p>
+                ),
+                h1: ({ children }) => (
+                  <h1 className="text-lg font-semibold text-white mb-2">
+                    {children}
+                  </h1>
+                ),
+                h2: ({ children }) => (
+                  <h2 className="text-base font-semibold text-white mb-2">
+                    {children}
+                  </h2>
+                ),
+                h3: ({ children }) => (
+                  <h3 className="text-sm font-semibold text-white mb-1">
+                    {children}
+                  </h3>
+                ),
+                h4: ({ children }) => (
+                  <h4 className="text-sm font-medium text-white mb-1">
+                    {children}
+                  </h4>
+                ),
+                h5: ({ children }) => (
+                  <h5 className="text-sm font-medium text-white mb-1">
+                    {children}
+                  </h5>
+                ),
+                h6: ({ children }) => (
+                  <h6 className="text-sm font-medium text-white mb-1">
+                    {children}
+                  </h6>
+                ),
+                code: ({ children, className, ...props }) => {
+                  const isInline = !className;
+                  return isInline ? (
+                    <code className="bg-gray-700 px-1.5 py-0.5 rounded text-xs font-mono text-emerald-300 border border-gray-600">
+                      {children}
+                    </code>
+                  ) : (
+                    <code className="block bg-gray-700 p-2 rounded text-xs font-mono text-emerald-300 border border-gray-600 overflow-x-auto">
+                      {children}
+                    </code>
+                  );
+                },
+                pre: ({ children }) => (
+                  <pre className="bg-gray-700 p-3 rounded border border-gray-600 overflow-x-auto mb-3">
+                    {children}
+                  </pre>
+                ),
+                strong: ({ children }) => (
+                  <strong className="text-white font-semibold">
+                    {children}
+                  </strong>
+                ),
+                em: ({ children }) => (
+                  <em className="text-gray-200 italic">{children}</em>
+                ),
+                blockquote: ({ children }) => (
+                  <blockquote className="border-l-4 border-gray-500 pl-3 italic text-gray-400 mb-3">
+                    {children}
+                  </blockquote>
+                ),
+                ul: ({ children }) => (
+                  <ul className="list-disc list-inside mb-3 space-y-1">
+                    {children}
+                  </ul>
+                ),
+                ol: ({ children }) => (
+                  <ol className="list-decimal list-inside mb-3 space-y-1">
+                    {children}
+                  </ol>
+                ),
+                li: ({ children }) => (
+                  <li className="text-gray-300">{children}</li>
+                ),
+                a: ({ children, href }) => (
+                  <a
+                    href={href}
+                    className="text-blue-400 hover:text-blue-400/80 underline"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {children}
+                  </a>
+                ),
+                table: ({ children }) => (
+                  <div className="overflow-x-auto mb-3">
+                    <table className="min-w-full border border-gray-600 rounded">
+                      {children}
+                    </table>
+                  </div>
+                ),
+                th: ({ children }) => (
+                  <th className="border border-gray-600 px-3 py-2 text-left text-white font-semibold bg-gray-700">
+                    {children}
+                  </th>
+                ),
+                td: ({ children }) => (
+                  <td className="border border-gray-600 px-3 py-2 text-gray-300">
+                    {children}
+                  </td>
+                ),
+                hr: () => <hr className="border-gray-600 my-3" />,
+              }}
+            >
               {thread.content}
-            </div>
+            </ReactMarkdown>
           </div>
         )}
 
         {/* Thread Actions */}
-        <div className="flex items-center justify-between border-t border-gray-700/30 pt-4">
+        <div className="flex items-center justify-between border-t border-slate-600/50 pt-4">
           <div className="flex items-center gap-3">
             <button
               onClick={handleThreadLikeToggle}
               disabled={isLiking}
-              className={`flex items-center gap-1 px-2 py-1 rounded-md transition-all duration-200 font-medium text-sm ${
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 font-medium text-sm ${
                 thread.isLikedByMe
-                  ? "bg-gradient-to-r from-red-500/20 to-pink-500/20 text-red-400 hover:from-red-500/30 hover:to-pink-500/30 border border-red-500/30"
-                  : "bg-gray-800/60 text-gray-300 hover:bg-gray-800/80 hover:text-gray-200 border border-gray-600/30"
+                  ? "bg-gradient-to-r from-red-500/20 to-pink-500/20 text-red-300 hover:from-red-500/30 hover:to-pink-500/30 border border-red-400/40 shadow-sm"
+                  : "bg-gradient-to-r from-slate-700/50 to-slate-600/50 text-slate-200 hover:from-slate-600/50 hover:to-slate-500/50 border border-slate-500/30 shadow-sm"
               }`}
             >
               <Heart
-                className={`w-2.5 h-2.5 ${
+                className={`w-3.5 h-3.5 ${
                   thread.isLikedByMe ? "fill-current" : ""
                 }`}
               />
               <span className="font-medium">{thread.likesCount}</span>
-              {isLiking && <Loader2 className="w-2 h-2 animate-spin" />}
+              {isLiking && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
             </button>
 
-            <button className="flex items-center gap-1 px-2 py-1 bg-gray-800/60 text-gray-300 rounded-md hover:bg-gray-800/80 hover:text-gray-200 transition-all duration-200 font-medium border border-gray-600/30 text-sm">
-              <Share2 className="w-2.5 h-2.5" />
+            <button className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-slate-700/50 to-slate-600/50 text-slate-200 rounded-lg hover:from-slate-600/50 hover:to-slate-500/50 transition-all duration-200 font-medium border border-slate-500/30 text-sm shadow-sm">
+              <Share2 className="w-3.5 h-3.5" />
               <span>Share</span>
             </button>
           </div>
@@ -790,13 +983,13 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
 
         {/* Tags */}
         {Array.isArray(thread.tags) && thread.tags.length > 0 && (
-          <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-700">
-            <Tag className="w-4 h-4 text-gray-400" />
+          <div className="flex items-center gap-2 mt-4 pt-4 border-t border-slate-600/50">
+            <Tag className="w-3.5 h-3.5 text-slate-400" />
             <div className="flex flex-wrap gap-2">
               {thread.tags.map((tag, index) => (
                 <span
                   key={index}
-                  className="bg-gray-700 text-gray-300 px-2 py-1 rounded text-sm"
+                  className="bg-gradient-to-r from-slate-700/80 to-slate-600/80 text-slate-200 px-3 py-1.5 rounded-full text-sm border border-slate-500/40 shadow-sm hover:from-slate-600/80 hover:to-slate-500/80 transition-all duration-200"
                 >
                   {tag}
                 </span>
@@ -807,25 +1000,31 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
 
         {/* AI Insights */}
         {thread.hasAiInsights && (
-          <div className="border-t border-gray-700 pt-6 mt-4">
+          <div className="border-t border-slate-600/50 pt-6 mt-4">
             <div className="flex items-center gap-2 mb-4">
-              <Brain className="w-5 h-5 text-purple-400" />
-              <span className="text-purple-400 font-medium">AI Insights</span>
+              <div className="p-2 rounded-lg bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-400/30">
+                <Brain className="w-5 h-5 text-purple-300" />
+              </div>
+              <span className="text-purple-200 font-semibold text-lg">
+                AI Insights
+              </span>
             </div>
 
             {thread.aiSummary && (
-              <div className="bg-purple-600/10 border border-purple-600/30 rounded-lg p-4 mb-4">
-                <h3 className="text-purple-400 font-medium mb-2">Summary</h3>
-                <p className="text-purple-200 text-sm">{thread.aiSummary}</p>
+              <div className="bg-gradient-to-br from-purple-600/15 to-pink-600/15 border border-purple-500/30 rounded-xl p-4 mb-4 shadow-sm">
+                <h3 className="text-purple-200 font-semibold mb-3">Summary</h3>
+                <p className="text-purple-100 text-sm leading-relaxed">
+                  {thread.aiSummary}
+                </p>
               </div>
             )}
 
             {thread.aiSuggestedAnswer && (
-              <div className="bg-blue-600/10 border border-blue-600/30 rounded-lg p-4">
-                <h3 className="text-blue-400 font-medium mb-2">
+              <div className="bg-gradient-to-br from-blue-600/15 to-cyan-600/15 border border-blue-500/30 rounded-xl p-4 shadow-sm">
+                <h3 className="text-blue-200 font-semibold mb-3">
                   Suggested Answer
                 </h3>
-                <p className="text-blue-200 text-sm">
+                <p className="text-blue-100 text-sm leading-relaxed">
                   {thread.aiSuggestedAnswer}
                 </p>
               </div>
@@ -904,6 +1103,19 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
           </div>
         )}
       </div>
+
+      {/* Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        onConfirm={handleDeleteThread}
+        title="Delete Thread"
+        message="Are you sure you want to delete this thread? This action cannot be undone and all replies will be permanently removed."
+        confirmText="Delete Thread"
+        cancelText="Cancel"
+        variant="danger"
+        isLoading={isDeletingThread}
+      />
     </div>
   );
 };

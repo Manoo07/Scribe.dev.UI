@@ -1,4 +1,4 @@
-import { BookOpen, Edit, Eye, Globe, Send, X } from "lucide-react";
+import { Edit, Eye, Globe, MessageSquare, Send, X } from "lucide-react";
 import React, { useState } from "react";
 import ReactMarkdown from "react-markdown";
 
@@ -118,7 +118,7 @@ const EnhancedNewThreadModal: React.FC<EnhancedNewThreadModalProps> = ({
         <div className="flex items-center justify-between p-6 border-b border-gray-700">
           <div className="flex items-center gap-3">
             {threadType === "classroom" ? (
-              <BookOpen className="w-6 h-6 text-green-400" />
+              <MessageSquare className="w-6 h-6 text-green-400" />
             ) : (
               <Globe className="w-6 h-6 text-blue-400" />
             )}
@@ -151,7 +151,7 @@ const EnhancedNewThreadModal: React.FC<EnhancedNewThreadModalProps> = ({
           >
             <div className="flex items-center gap-2 mb-2">
               {threadType === "classroom" ? (
-                <BookOpen className="w-5 h-5 text-green-400" />
+                <MessageSquare className="w-5 h-5 text-green-400" />
               ) : (
                 <Globe className="w-5 h-5 text-blue-400" />
               )}

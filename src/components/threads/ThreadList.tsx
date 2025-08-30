@@ -1,5 +1,11 @@
-import { BookOpen, Filter, Globe, Search } from "lucide-react";
-import React, { useMemo, useState } from "react";
+import {
+  ChevronDown,
+  Filter,
+  Globe,
+  MessageSquare,
+  Search,
+} from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
 import EnhancedThreadCard from "./EnhancedThreadCard";
 import { Thread } from "./threadTypes";
 
@@ -20,6 +26,7 @@ interface ThreadsListProps {
   success?: string | null;
   onRefresh?: () => void;
   isCreating?: boolean;
+  onChangesOccurred?: () => void;
 }
 
 const ThreadsList: React.FC<ThreadsListProps> = ({
@@ -35,6 +42,7 @@ const ThreadsList: React.FC<ThreadsListProps> = ({
   success,
   onRefresh,
   isCreating = false,
+  onChangesOccurred,
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedThreadType, setSelectedThreadType] = useState<
@@ -45,6 +53,41 @@ const ThreadsList: React.FC<ThreadsListProps> = ({
   const [sortBy, setSortBy] = useState<"recent" | "replies" | "created">(
     "recent"
   );
+
+  // Filter dropdown state
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [selectedSortOption, setSelectedSortOption] = useState("Most Recent");
+
+  // Sort options for the dropdown
+  const sortOptions = [
+    { value: "recent", label: "Most Recent" },
+    { value: "replies", label: "Most Replied" },
+    { value: "created", label: "Newest" },
+    { value: "likes", label: "Most Liked" },
+    { value: "title", label: "Alphabetical" },
+  ];
+
+  // Click outside handler to close filter dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isFilterOpen) {
+        setIsFilterOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isFilterOpen]);
+
+  // Handle thread deletion
+  const handleThreadDelete = (deletedThreadId: string) => {
+    // If we have a refresh function, use it to get fresh data
+    if (onRefresh) {
+      onRefresh();
+    }
+  };
 
   // Get unique categories from generic threads
   const availableCategories = useMemo(() => {
@@ -188,9 +231,52 @@ const ThreadsList: React.FC<ThreadsListProps> = ({
           </div>
         </div>
 
-        {/* Create Thread Buttons */}
-        <div className="flex items-center gap-2">
-          {classroomContext && (
+        {/* Create Thread Buttons and Filter */}
+        <div className="flex items-center gap-3">
+          {/* Context Indicator */}
+          <div className="text-xs text-gray-400">
+            {classroomContext ? (
+              <span>Classroom Context</span>
+            ) : (
+              <span>Global Context</span>
+            )}
+          </div>
+
+          {/* Filter Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setIsFilterOpen(!isFilterOpen)}
+              className="flex items-center gap-2 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors border border-gray-600"
+            >
+              <Filter className="w-4 h-4" />
+              <span className="text-sm">{selectedSortOption}</span>
+              <ChevronDown className="w-4 h-4" />
+            </button>
+
+            {/* Filter Dropdown Menu */}
+            {isFilterOpen && (
+              <div className="absolute right-0 top-full mt-1 w-48 bg-gray-800 border border-gray-600 rounded-lg shadow-lg z-10">
+                <div className="py-1">
+                  {sortOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => {
+                        setSelectedSortOption(option.label);
+                        setIsFilterOpen(false);
+                        // TODO: Implement sorting logic
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Show "New Question" button ONLY for classroom context */}
+          {classroomContext ? (
             <button
               onClick={() => onCreateThread("classroom")}
               className="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -203,167 +289,33 @@ const ThreadsList: React.FC<ThreadsListProps> = ({
                 </>
               ) : (
                 <>
-                  <BookOpen className="w-4 h-4" />
+                  <MessageSquare className="w-4 h-4" />
                   New Question
                 </>
               )}
             </button>
+          ) : (
+            /* Show "New Discussion" button ONLY for global context */
+            <button
+              onClick={() => onCreateThread("generic")}
+              className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isLoading || isCreating}
+            >
+              {isCreating ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <Globe className="w-4 h-4" />
+                  New Discussion
+                </>
+              )}
+            </button>
           )}
-          <button
-            onClick={() => onCreateThread("generic")}
-            className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={isLoading || isCreating}
-          >
-            {isCreating ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                Creating...
-              </>
-            ) : (
-              <>
-                <Globe className="w-4 h-4" />
-                New Discussion
-              </>
-            )}
-          </button>
         </div>
       </div>
-
-      {/* Search and Filters */}
-      {showFilters && (
-        <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-          <div className="flex flex-col lg:flex-row gap-4">
-            {/* Search */}
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <input
-                  type="text"
-                  placeholder="Search threads, content, authors, or tags..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  disabled={isLoading || isCreating}
-                  className="w-full bg-gray-700 border border-gray-600 rounded-lg pl-10 pr-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                />
-              </div>
-            </div>
-
-            {/* Filters */}
-            <div className="flex flex-wrap gap-3">
-              {/* Thread Type Filter */}
-              {!classroomContext && (
-                <select
-                  value={selectedThreadType}
-                  onChange={(e) => setSelectedThreadType(e.target.value as any)}
-                  disabled={isLoading || isCreating}
-                  className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <option value="all">All Types</option>
-                  <option value="classroom">Classroom Only</option>
-                  <option value="generic">Global Only</option>
-                </select>
-              )}
-
-              {/* Unit Filter */}
-              {classroomContext &&
-                classroomContext.units.length > 0 &&
-                setSelectedUnit && (
-                  <select
-                    value={selectedUnit}
-                    onChange={(e) => setSelectedUnit(e.target.value)}
-                    disabled={isLoading || isCreating}
-                    className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <option value="all">All Units</option>
-                    {classroomContext.units.map((unit) => (
-                      <option key={unit.id} value={unit.id}>
-                        {unit.name}
-                      </option>
-                    ))}
-                  </select>
-                )}
-
-              {/* Category Filter */}
-              {availableCategories.length > 0 && (
-                <select
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                  disabled={isLoading || isCreating}
-                  className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <option value="all">All Categories</option>
-                  {availableCategories.map((category) => (
-                    <option key={category} value={category}>
-                      {category.charAt(0).toUpperCase() + category.slice(1)}
-                    </option>
-                  ))}
-                </select>
-              )}
-
-              {/* Sort Filter */}
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
-                disabled={isLoading || isCreating}
-                className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <option value="recent">Most Recent</option>
-                <option value="replies">Most Replies</option>
-                <option value="created">Newest</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Active Filters Display */}
-          {(searchQuery ||
-            selectedThreadType !== "all" ||
-            selectedUnit !== "all" ||
-            selectedCategory !== "all") && (
-            <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-700">
-              <Filter className="w-4 h-4 text-gray-400" />
-              <span className="text-sm text-gray-400">Active filters:</span>
-              <div className="flex flex-wrap gap-1">
-                {searchQuery && (
-                  <span className="bg-blue-600/20 text-blue-400 px-2 py-1 rounded text-xs">
-                    Search: "{searchQuery}"
-                  </span>
-                )}
-                {selectedThreadType !== "all" && (
-                  <span className="bg-purple-600/20 text-purple-400 px-2 py-1 rounded text-xs">
-                    Type: {selectedThreadType}
-                  </span>
-                )}
-                {selectedUnit !== "all" && (
-                  <span className="bg-green-600/20 text-green-400 px-2 py-1 rounded text-xs">
-                    Unit:{" "}
-                    {
-                      classroomContext?.units.find((u) => u.id === selectedUnit)
-                        ?.name
-                    }
-                  </span>
-                )}
-                {selectedCategory !== "all" && (
-                  <span className="bg-yellow-600/20 text-yellow-400 px-2 py-1 rounded text-xs">
-                    Category: {selectedCategory}
-                  </span>
-                )}
-                <button
-                  onClick={() => {
-                    setSearchQuery("");
-                    setSelectedThreadType("all");
-                    if (setSelectedUnit) setSelectedUnit("all");
-                    setSelectedCategory("all");
-                  }}
-                  disabled={isLoading || isCreating}
-                  className="text-gray-400 hover:text-white text-xs ml-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Clear all
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Error Display */}
       {error && (
@@ -404,7 +356,7 @@ const ThreadsList: React.FC<ThreadsListProps> = ({
           {[...Array(3)].map((_, index) => (
             <div
               key={index}
-              className="bg-gray-800 border border-gray-700 rounded-lg p-6 animate-pulse"
+              className="bg-gray-800 border border-gray-600 rounded-lg p-6 animate-pulse"
             >
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 bg-gray-700 rounded-full"></div>
@@ -457,6 +409,8 @@ const ThreadsList: React.FC<ThreadsListProps> = ({
                   // The local state in EnhancedThreadCard handles the UI update
                   // You can add a callback prop to notify parent component if needed
                 }}
+                onDelete={handleThreadDelete}
+                onChangesOccurred={onChangesOccurred}
               />
             ))
           )}

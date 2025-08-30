@@ -162,16 +162,16 @@ export const createThread = async (data: CreateThreadPayload): Promise<any> => {
 };
 import axios from "axios";
 import {
+  CreateReplyPayload,
+  CreateThreadPayload,
   Like,
   LikeRequest,
   LikeResponse,
-  CreateThreadPayload,
-  CreateReplyPayload,
   ThreadReply,
 } from "../components/threads/threadTypes";
 import { ContentType, Unit } from "../types";
-import { mockUnits } from "./mockData";
 import { ensureToken } from "../utils/authUtils";
+import { mockUnits } from "./mockData";
 
 // Base URL for API requests
 const API_BASE_URL = "http://localhost:3000/api/v1";
@@ -559,6 +559,32 @@ export const createReply = async (
     return response.data;
   } catch (error) {
     console.error("❌ Error creating reply:", error);
+    throw error;
+  }
+};
+
+// Delete a reply
+export const deleteReply = async (
+  threadId: string,
+  replyId: string
+): Promise<void> => {
+  try {
+    console.log("🔄 Deleting reply:", { threadId, replyId });
+
+    // Ensure token is valid and available
+    ensureToken();
+
+    // Use the same endpoint structure: /threads/:threadId/reply/:replyId
+    const response = await api.delete(`/threads/${threadId}/reply/${replyId}`);
+    console.log("✅ Reply deleted successfully:", response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error("❌ Error deleting reply:", error);
+    console.error("Error details:", {
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message,
+    });
     throw error;
   }
 };

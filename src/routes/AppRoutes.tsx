@@ -1,27 +1,27 @@
 import {
+  Navigate,
+  Route,
   BrowserRouter as Router,
   Routes,
-  Route,
-  Navigate,
 } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import LoginPage from "../pages/Login";
-import SignupPage from "../pages/Signup";
-import LogoutPage from "../pages/Logout";
 import DashboardLayout from "../layouts/DashboardLayout";
-import OverviewPage from "../pages/Dashboard";
 import AssignmentsPage from "../pages/Assignment";
 import ClassroomDetailPage from "../pages/ClassroomDetailPage";
 import MyClassroomsPage from "../pages/Classrooms";
+import OverviewPage from "../pages/Dashboard";
 import ForgotPasswordPage from "../pages/ForgotPasswordPage";
+import LoginPage from "../pages/Login";
+import LogoutPage from "../pages/Logout";
 import ResetPasswordPage from "../pages/ResetPasswordPage";
+import SignupPage from "../pages/Signup";
 
-import MainLayout from "../layouts/MainLayout";
-import Hero from "../components/Hero";
-import Features from "../components/Features";
-import Announcements from "../pages/Announcements";
 import AttendanceDashboard from "../components/attendance/AttendanceDashboard";
+import Features from "../components/Features";
+import Hero from "../components/Hero";
 import ThreadsTab from "../components/threads/ThreadsTab";
+import MainLayout from "../layouts/MainLayout";
+import Announcements from "../pages/Announcements";
 
 const AppRoutes = () => {
   const { isAuthenticated, isLoading } = useAuth();

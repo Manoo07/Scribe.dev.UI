@@ -1,27 +1,28 @@
-import React, { useState, useEffect, useRef } from "react";
 import {
-  Heart,
-  User,
-  CheckCircle,
   Award,
-  X,
+  CheckCircle,
   Edit,
-  Trash2,
-  MessageCircle,
-  Share2,
-  MoreHorizontal,
   Flag,
+  Heart,
+  MessageCircle,
+  MoreHorizontal,
+  Share2,
+  Trash2,
+  User,
+  X,
 } from "lucide-react";
-import { ThreadReply } from "./threadTypes";
+import React, { useEffect, useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import { useAuth } from "../../context/AuthContext";
+import { useToast } from "../../hooks/use-toast";
+import { useOwnership } from "../../hooks/useOwnership";
 import {
-  toggleReplyLike,
   acceptAnswer,
+  toggleReplyLike,
   unmarkAnswer,
   updateReply,
 } from "../../services/api";
-import { useToast } from "../../hooks/use-toast";
-import { useOwnership } from "../../hooks/useOwnership";
-import { useAuth } from "../../context/AuthContext";
+import { ThreadReply } from "./threadTypes";
 
 interface ReplyCardProps {
   reply: ThreadReply;
@@ -57,6 +58,7 @@ const ReplyCard: React.FC<ReplyCardProps> = ({
   const [isAccepting, setIsAccepting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isUpdatingReply, setIsUpdatingReply] = useState(false);
   const [localLikeCount, setLocalLikeCount] = useState(reply.likesCount);
   const [localIsLiked, setLocalIsLiked] = useState(reply.isLikedByMe);
@@ -115,6 +117,15 @@ const ReplyCard: React.FC<ReplyCardProps> = ({
     setLocalIsAccepted(reply.isAccepted);
   }, [reply.isAccepted, reply.id]); // Removed localIsAccepted from dependencies to prevent infinite loop
 
+  // Sync local like state with prop changes from parent
+  useEffect(() => {
+    console.log(
+      `🔄 ReplyCard ${reply.id}: syncing like state - likesCount: ${reply.likesCount} -> ${localLikeCount}, isLiked: ${reply.isLikedByMe} -> ${localIsLiked}`
+    );
+    setLocalLikeCount(reply.likesCount);
+    setLocalIsLiked(reply.isLikedByMe);
+  }, [reply.likesCount, reply.isLikedByMe, reply.id]);
+
   // Reset editing state if component unmounts or reply changes
   useEffect(() => {
     return () => {
@@ -171,30 +182,88 @@ const ReplyCard: React.FC<ReplyCardProps> = ({
   const handleLikeToggle = async () => {
     if (isLiking) return;
 
+    // Optimistic update - immediately show the change
+    const previousLikeCount = localLikeCount;
+    const previousIsLiked = localIsLiked;
+
+    // Calculate the new values
+    const newLikeCount = previousIsLiked
+      ? previousLikeCount - 1
+      : previousLikeCount + 1;
+    const newIsLiked = !previousIsLiked;
+
+    // Apply optimistic update
+    setLocalLikeCount(newLikeCount);
+    setLocalIsLiked(newIsLiked);
     setIsLiking(true);
+
     try {
       const response = await toggleReplyLike(reply.id);
 
-      // Update local state optimistically
-      const newLikeCount =
-        response.likesCount || localLikeCount + (localIsLiked ? -1 : 1);
-      const newIsLiked =
-        response.liked !== undefined ? response.liked : !localIsLiked;
+      console.log("🔄 API Response for reply like:", {
+        replyId: reply.id,
+        response: response,
+        responseType: typeof response,
+        hasLikesCount: "likesCount" in response,
+        hasLiked: "liked" in response,
+        likesCountValue: response?.likesCount,
+        likedValue: response?.liked,
+      });
 
+      // Update with actual server response if available
+      if (response && typeof response.likesCount === "number") {
+        setLocalLikeCount(response.likesCount);
+        console.log("✅ Updated like count from server:", response.likesCount);
+      } else {
+        console.log(
+          "⚠️ Server response missing likesCount, using optimistic value:",
+          newLikeCount
+        );
+      }
+
+      if (response && typeof response.liked === "boolean") {
+        setLocalIsLiked(response.liked);
+        console.log("✅ Updated liked state from server:", response.liked);
+      } else {
+        console.log(
+          "⚠️ Server response missing liked state, using optimistic value:",
+          newIsLiked
+        );
+      }
+
+      // Notify parent component with the final values
+      if (onLikeToggle) {
+        // Always use the optimistic values if the server response is missing
+        // This ensures the UI stays consistent even if the API response is incomplete
+        const finalLikeCount = response?.likesCount ?? newLikeCount;
+        const finalIsLiked = response?.liked ?? newIsLiked;
+        console.log("📤 Notifying parent component:", {
+          finalLikeCount,
+          finalIsLiked,
+        });
+        onLikeToggle(reply.id, finalLikeCount, finalIsLiked);
+      }
+
+      // Force update the local state to ensure consistency
+      // This handles cases where the API response might be incomplete
+      // We always want to show the optimistic update to maintain UI consistency
       setLocalLikeCount(newLikeCount);
       setLocalIsLiked(newIsLiked);
 
-      // Notify parent component
-      if (onLikeToggle) {
-        onLikeToggle(reply.id, newLikeCount, newIsLiked);
-      }
-
-      toast({
-        title: "Success",
-        description: newIsLiked ? "Reply liked!" : "Reply unliked!",
-        variant: "default",
+      console.log("✅ Like toggle successful:", {
+        replyId: reply.id,
+        previousCount: previousLikeCount,
+        newCount: newLikeCount,
+        serverCount: response?.likesCount,
+        previousLiked: previousIsLiked,
+        newLiked: newIsLiked,
+        serverLiked: response?.liked,
       });
     } catch (error: any) {
+      // Revert optimistic update on error
+      setLocalLikeCount(previousLikeCount);
+      setLocalIsLiked(previousIsLiked);
+
       const errorMessage =
         error?.response?.data?.message ||
         error?.message ||
@@ -204,13 +273,40 @@ const ReplyCard: React.FC<ReplyCardProps> = ({
         description: errorMessage,
         variant: "destructive",
       });
+
+      console.error("❌ Like toggle failed:", {
+        replyId: reply.id,
+        error: errorMessage,
+        revertedCount: previousLikeCount,
+        revertedLiked: previousIsLiked,
+      });
     } finally {
       setIsLiking(false);
     }
   };
 
   const handleToggleAnswer = async () => {
-    if (isAccepting || !isThreadOwner) return;
+    // Double-check permission before proceeding
+    if (!isThreadOwner) {
+      toast({
+        title: "Permission Denied",
+        description: "Only the thread owner can mark answers as accepted.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (isAccepting) return;
+
+    // Show confirmation dialog for marking answers
+    const action = localIsAccepted ? "unmark" : "mark";
+    const confirmMessage = localIsAccepted
+      ? "Are you sure you want to unmark this as the accepted answer? The thread will return to unanswered status."
+      : "Are you sure you want to mark this reply as the accepted answer? This will resolve the thread.";
+
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
 
     console.log(`🎯 Toggling answer for reply ${reply.id}:`, {
       currentLocalIsAccepted: localIsAccepted,
@@ -381,22 +477,11 @@ const ReplyCard: React.FC<ReplyCardProps> = ({
     try {
       if (onDeleteReply) {
         await onDeleteReply(reply.id);
-        toast({
-          title: "Success",
-          description: "Reply deleted successfully!",
-          variant: "default",
-        });
+        // Success message is handled by parent component
       }
     } catch (error: any) {
-      const errorMessage =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to delete reply";
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      // Error message is handled by parent component
+      console.error("❌ Error in ReplyCard delete:", error);
     } finally {
       setIsDeleting(false);
     }
@@ -460,7 +545,7 @@ const ReplyCard: React.FC<ReplyCardProps> = ({
                 {isReplyOwner && (
                   <>
                     <button
-                      onClick={handleDeleteReply}
+                      onClick={() => setShowDeleteDialog(true)}
                       className="w-full flex items-center gap-2 px-3 py-2 text-left text-red-400 hover:bg-gray-700/50 transition-colors text-xs"
                     >
                       <Trash2 className="w-3 h-3" />
@@ -492,6 +577,7 @@ const ReplyCard: React.FC<ReplyCardProps> = ({
                         onClick={handleToggleAnswer}
                         disabled={isAccepting}
                         className="w-full flex items-center gap-2 px-3 py-2 text-left text-red-400 hover:bg-gray-700/50 transition-colors text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Unmark this reply as the accepted answer"
                       >
                         <X className="w-3 h-3" />
                         <span>
@@ -503,6 +589,7 @@ const ReplyCard: React.FC<ReplyCardProps> = ({
                         onClick={handleToggleAnswer}
                         disabled={isAccepting}
                         className="w-full flex items-center gap-2 px-3 py-2 text-left text-green-400 hover:bg-gray-700/50 transition-colors text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Mark this reply as the accepted answer (only thread owner can do this)"
                       >
                         <Award className="w-3 h-3" />
                         <span>
@@ -561,8 +648,117 @@ const ReplyCard: React.FC<ReplyCardProps> = ({
             </div>
           </div>
         ) : (
-          <div className="whitespace-pre-wrap text-sm leading-relaxed">
-            {reply.content}
+          <div className="prose prose-invert prose-sm max-w-none text-gray-200">
+            <ReactMarkdown
+              components={{
+                p: ({ children }) => (
+                  <p className="mb-0 leading-relaxed">{children}</p>
+                ),
+                h1: ({ children }) => (
+                  <h1 className="text-lg font-semibold text-white mb-2">
+                    {children}
+                  </h1>
+                ),
+                h2: ({ children }) => (
+                  <h2 className="text-base font-semibold text-white mb-2">
+                    {children}
+                  </h2>
+                ),
+                h3: ({ children }) => (
+                  <h3 className="text-sm font-semibold text-white mb-1">
+                    {children}
+                  </h3>
+                ),
+                h4: ({ children }) => (
+                  <h4 className="text-sm font-medium text-white mb-1">
+                    {children}
+                  </h4>
+                ),
+                h5: ({ children }) => (
+                  <h5 className="text-sm font-medium text-white mb-1">
+                    {children}
+                  </h5>
+                ),
+                h6: ({ children }) => (
+                  <h6 className="text-sm font-medium text-white mb-1">
+                    {children}
+                  </h6>
+                ),
+                code: ({ children, className, ...props }) => {
+                  const isInline = !className;
+                  return isInline ? (
+                    <code className="bg-gray-700 px-1.5 py-0.5 rounded text-xs font-mono text-emerald-300 border border-gray-600">
+                      {children}
+                    </code>
+                  ) : (
+                    <code className="block bg-gray-700 p-2 rounded text-xs font-mono text-emerald-300 border border-gray-600 overflow-x-auto">
+                      {children}
+                    </code>
+                  );
+                },
+                pre: ({ children }) => (
+                  <pre className="bg-gray-700 p-3 rounded border border-gray-600 overflow-x-auto mb-3">
+                    {children}
+                  </pre>
+                ),
+                strong: ({ children }) => (
+                  <strong className="text-white font-semibold">
+                    {children}
+                  </strong>
+                ),
+                em: ({ children }) => (
+                  <em className="text-gray-200 italic">{children}</em>
+                ),
+                blockquote: ({ children }) => (
+                  <blockquote className="border-l-4 border-gray-500 pl-3 italic text-gray-400 mb-3">
+                    {children}
+                  </blockquote>
+                ),
+                ul: ({ children }) => (
+                  <ul className="list-disc list-inside mb-3 space-y-1">
+                    {children}
+                  </ul>
+                ),
+                ol: ({ children }) => (
+                  <ol className="list-decimal list-inside mb-3 space-y-1">
+                    {children}
+                  </ol>
+                ),
+                li: ({ children }) => (
+                  <li className="text-gray-300">{children}</li>
+                ),
+                a: ({ children, href }) => (
+                  <a
+                    href={href}
+                    className="text-blue-400 hover:text-blue-400/80 underline"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {children}
+                  </a>
+                ),
+                table: ({ children }) => (
+                  <div className="overflow-x-auto mb-3">
+                    <table className="min-w-full border border-gray-600 rounded">
+                      {children}
+                    </table>
+                  </div>
+                ),
+                th: ({ children }) => (
+                  <th className="border border-gray-600 px-3 py-2 text-left text-white font-semibold bg-gray-700">
+                    {children}
+                  </th>
+                ),
+                td: ({ children }) => (
+                  <td className="border border-gray-600 px-3 py-2 text-gray-300">
+                    {children}
+                  </td>
+                ),
+                hr: () => <hr className="border-gray-600 my-3" />,
+              }}
+            >
+              {reply.content}
+            </ReactMarkdown>
           </div>
         )}
       </div>
@@ -604,6 +800,39 @@ const ReplyCard: React.FC<ReplyCardProps> = ({
           {/* Space for future actions */}
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 border border-gray-600 rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-white mb-4">
+              Delete Reply
+            </h3>
+            <p className="text-gray-300 mb-6">
+              Are you sure you want to delete this reply? This action cannot be
+              undone.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowDeleteDialog(false)}
+                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-500 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShowDeleteDialog(false);
+                  handleDeleteReply();
+                }}
+                disabled={isDeleting}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isDeleting ? "Deleting..." : "Delete Reply"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

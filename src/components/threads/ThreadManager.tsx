@@ -1,15 +1,15 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useCallback, useEffect, useState } from "react";
+import { useToast } from "../../hooks/use-toast";
 import {
   createThread,
+  fetchClassroomThreads,
   fetchThreads,
   fetchUnitThreads,
-  fetchClassroomThreads,
 } from "../../services/api";
 import EnhancedNewThreadModal from "./EnhancedNewThreadModal";
 import ThreadDetailView from "./ThreadDetailView";
 import ThreadsList from "./ThreadList";
 import { Thread } from "./threadTypes";
-import { useToast } from "../../hooks/use-toast";
 
 interface ThreadsManagerProps {
   context: "global" | "classroom";
@@ -36,8 +36,20 @@ const ThreadsManager: React.FC<ThreadsManagerProps> = ({
   const [selectedUnit, setSelectedUnit] = useState<string>("all");
   const pageSize = 10;
 
+  // Track if data needs refresh
+  const [lastRefreshTime, setLastRefreshTime] = useState<number>(Date.now());
+  const [hasChanges, setHasChanges] = useState<boolean>(false);
+
   // Fetch threads from API
   const fetchData = useCallback(async () => {
+    console.log("🔄 fetchData called with:", {
+      context,
+      classroomId: classroomData?.id,
+      selectedUnit,
+      page,
+      pageSize,
+    });
+
     setIsLoading(true);
     setError(null);
     try {
@@ -45,15 +57,25 @@ const ThreadsManager: React.FC<ThreadsManagerProps> = ({
       if (context === "classroom" && classroomData?.id) {
         if (selectedUnit && selectedUnit !== "all") {
           // Fetch threads for specific unit within classroom
+          console.log("🔄 Fetching unit threads for:", selectedUnit);
           data = await fetchUnitThreads(selectedUnit, page, pageSize);
         } else {
           // Fetch all threads for the classroom
+          console.log("🔄 Fetching classroom threads for:", classroomData.id);
           data = await fetchClassroomThreads(classroomData.id, page, pageSize);
         }
       } else {
         // Fetch global threads
+        console.log("🔄 Fetching global threads");
         data = await fetchThreads(page, pageSize);
       }
+
+      console.log("✅ Data fetched successfully:", {
+        threadsCount: data.threads?.length || 0,
+        hasNext: data.pagination?.hasNext || false,
+        total: data.pagination?.total || 0,
+      });
+
       setThreads(data.threads || []);
       setHasNext(data.pagination?.hasNext || false);
       setTotal(data.pagination?.total || 0);
@@ -71,6 +93,7 @@ const ThreadsManager: React.FC<ThreadsManagerProps> = ({
       });
     } finally {
       setIsLoading(false);
+      console.log("🔄 fetchData completed, loading state set to false");
     }
   }, [context, classroomData?.id, page, selectedUnit, pageSize, toast]);
 
@@ -145,12 +168,50 @@ const ThreadsManager: React.FC<ThreadsManagerProps> = ({
   };
 
   const handleBackToList = () => {
+    console.log("🔄 Going back to threads list, hasChanges:", hasChanges);
+
+    // Always refresh data when going back to ensure we have the latest information
+    // This handles cases where changes might not have been properly tracked
+    if (hasChanges) {
+      console.log("📝 Changes detected, performing smart refresh");
+      handleSmartRefresh();
+    } else {
+      console.log(
+        "🔄 No changes detected, but refreshing anyway to ensure data consistency"
+      );
+      fetchData();
+    }
+
     setSelectedThread(null);
   };
 
   const handleRefresh = () => {
     fetchData();
   };
+
+  // Smart refresh that only fetches data when there are changes
+  const handleSmartRefresh = useCallback(async () => {
+    console.log("🔄 handleSmartRefresh called, hasChanges:", hasChanges);
+
+    // If no changes detected, don't make API call
+    if (!hasChanges) {
+      console.log("🔄 No changes detected, skipping API call");
+      return;
+    }
+
+    console.log("🔄 Changes detected, refreshing data...");
+    setHasChanges(false);
+    console.log("🔄 Fetching updated data...");
+    await fetchData();
+    console.log("🔄 Data refresh completed");
+  }, [hasChanges, fetchData]);
+
+  // Mark that changes have occurred (called by child components)
+  const markChangesOccurred = useCallback(() => {
+    console.log("📝 markChangesOccurred called - setting hasChanges to true");
+    setHasChanges(true);
+    console.log("📝 Changes marked - data needs refresh");
+  }, []);
 
   const handlePageChange = (newPage: number) => {
     setPage(newPage);
@@ -163,6 +224,7 @@ const ThreadsManager: React.FC<ThreadsManagerProps> = ({
       <ThreadDetailView
         threadId={selectedThread.id}
         onBack={handleBackToList}
+        onChangesOccurred={markChangesOccurred}
       />
     );
   }
@@ -182,6 +244,7 @@ const ThreadsManager: React.FC<ThreadsManagerProps> = ({
         success={success}
         onRefresh={handleRefresh}
         isCreating={isCreating}
+        onChangesOccurred={markChangesOccurred}
       />
 
       {/* Pagination Controls */}
