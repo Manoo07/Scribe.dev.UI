@@ -175,8 +175,6 @@ const EnhancedThreadCard: React.FC<EnhancedThreadCardProps> = ({
 
     setIsDeleting(true);
     try {
-      
-
       // Call the delete thread API endpoint
       await deleteThread(thread.id);
 
