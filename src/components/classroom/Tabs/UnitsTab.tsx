@@ -8,9 +8,10 @@ import { ClipboardList } from "lucide-react";
 
 interface VirtualClassroomProps {
   classroomId: string;
+  classroomName?: string;
 }
 
-const VirtualClassroom: React.FC<VirtualClassroomProps> = ({ classroomId }) => {
+const VirtualClassroom: React.FC<VirtualClassroomProps> = ({ classroomId, classroomName }) => {
   const [units, setUnits] = useState<Unit[]>([]);
   const [activeUnitId, setActiveUnitId] = useState<string | null>(null);
   const [isUploaderOpen, setIsUploaderOpen] = useState(false);
@@ -103,7 +104,7 @@ const VirtualClassroom: React.FC<VirtualClassroomProps> = ({ classroomId }) => {
         <div className="flex items-center gap-3 mb-2">
           <ClipboardList size={28} className="text-blue-500" />
           <h1 className="text-3xl font-bold text-white">
-            Mathematics Virtual Classroom
+            {classroomName || "Virtual Classroom"}
           </h1>
         </div>
         <p className="text-gray-400">
