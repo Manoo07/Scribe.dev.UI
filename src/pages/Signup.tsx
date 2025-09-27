@@ -8,6 +8,8 @@ import {
   Lock,
   Mail,
   User,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -44,6 +46,9 @@ const Signup: React.FC = () => {
   const [departments, setDepartments] = useState([]);
   const [years, setYears] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  // Password visibility state
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const showToast = (message: string, type: "success" | "error") => {
     setToast({ message, type });
@@ -318,26 +323,52 @@ const Signup: React.FC = () => {
         return (
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <InputField
-                label="Password"
-                id="password"
-                type="password"
-                value={password}
-                onChange={setPassword}
-                Icon={Lock}
-                placeholder="Create a strong password"
-                required
-              />
-              <InputField
-                label="Confirm Password"
-                id="confirmPassword"
-                type="password"
-                value={confirmPassword}
-                onChange={setConfirmPassword}
-                Icon={Lock}
-                placeholder="Confirm your password"
-                required
-              />
+              {/* Password Field with Eye Icon */}
+              <div className="relative">
+                <InputField
+                  label="Password"
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={setPassword}
+                  Icon={Lock}
+                  placeholder="Create a strong password"
+                  required
+                />
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  className="absolute right-3 top-3/5 -translate-y-1/2 text-gray-400 hover:text-gray-200 focus:outline-none"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {/* Eye is closed when password is hidden, open when visible */}
+                  {!showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+              {/* Confirm Password Field with Eye Icon */}
+              <div className="relative">
+                <InputField
+                  label="Confirm Password"
+                  id="confirmPassword"
+                  type={showConfirmPassword ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={setConfirmPassword}
+                  Icon={Lock}
+                  placeholder="Confirm your password"
+                  required
+                />
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  className="absolute right-3 top-3/5 -translate-y-1/2 text-gray-400 hover:text-gray-200 focus:outline-none"
+                  onClick={() => setShowConfirmPassword((v) => !v)}
+                  aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                >
+                  {/* Eye is closed when password is hidden, open when visible */}
+                  {!showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
             </div>
             <div className="bg-gray-700/30 rounded-lg p-4">
               <h4 className="text-sm font-medium text-gray-300 mb-2">
@@ -489,7 +520,7 @@ const Signup: React.FC = () => {
                 Already have an account?{" "}
                 <button
                   onClick={() => navigate("/login")}
-                  className="text-blue-400 hover:text-blue-300 font-medium transition-colors"
+                  className="text-blue-400 hover:text-blue-300 font-medium transition-colors duration-200 cursor-pointer"
                 >
                   Log in here
                 </button>
@@ -535,7 +566,7 @@ const Signup: React.FC = () => {
                     type="button"
                     variant="secondary"
                     onClick={handlePrevious}
-                    className="flex items-center gap-2"
+                    className="flex items-center gap-2 cursor-pointer"
                   >
                     <ArrowLeft className="h-4 w-4" />
                     Previous
@@ -547,7 +578,7 @@ const Signup: React.FC = () => {
                     type="button"
                     variant="primary"
                     onClick={handleNext}
-                    className="flex items-center gap-2"
+                    className="flex items-center gap-2 cursor-pointer"
                   >
                     Next
                     <ChevronRight className="h-4 w-4" />
