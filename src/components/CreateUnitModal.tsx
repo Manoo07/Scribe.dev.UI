@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { X } from "lucide-react";
+import { X, FileText, Link2, Video, File, Upload } from "lucide-react";
 import { createUnit, createContent } from "../services/api";
 import { ContentType } from "../types";
 import { marked } from "marked";
@@ -135,10 +135,10 @@ const CreateUnitModal: React.FC<CreateUnitModalProps> = ({
                   } transition-colors`}
                   onClick={() => setContentType(type)}
                 >
-                  {type === ContentType.NOTE && <span>📝 Note</span>}
-                  {type === ContentType.LINK && <span>🔗 Link</span>}
-                  {type === ContentType.VIDEO && <span>🎬 Video</span>}
-                  {type === ContentType.DOCUMENT && <span>📄 Document</span>}
+                  {type === ContentType.NOTE && <><FileText className="inline w-4 h-4 mr-1" /> Note</>}
+                  {type === ContentType.LINK && <><Link2 className="inline w-4 h-4 mr-1" /> Link</>}
+                  {type === ContentType.VIDEO && <><Video className="inline w-4 h-4 mr-1" /> Video</>}
+                  {type === ContentType.DOCUMENT && <><File className="inline w-4 h-4 mr-1" /> Document</>}
                 </button>
               ))}
             </div>
@@ -250,7 +250,7 @@ const CreateUnitModal: React.FC<CreateUnitModalProps> = ({
                       </div>
                     ) : (
                       <div>
-                        <span role="img" aria-label="upload" className="mx-auto text-gray-400 mb-2">⬆️</span>
+                        <Upload className="mx-auto text-gray-400 mb-2 w-6 h-6" />
                         <p className="text-gray-300 mb-2">
                           Drag and drop files here, or click to browse
                         </p>
