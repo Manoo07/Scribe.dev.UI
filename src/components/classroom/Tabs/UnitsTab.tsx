@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import UnitsList from "../../UnitList";
 import UnitDetail from "../../UnitDetails";
-import ContentUploader from "../.././ContentUploader";
+import AddContentOnlyModal from "../../AddContentModal";
+import ContentUploader from "../../EditContentModal";
 import { Unit } from "../../../types/index";
 import { getUnits } from "../../../services/api";
 import { ClipboardList } from "lucide-react";
@@ -15,6 +16,7 @@ const VirtualClassroom: React.FC<VirtualClassroomProps> = ({ classroomId, classr
   const [units, setUnits] = useState<Unit[]>([]);
   const [activeUnitId, setActiveUnitId] = useState<string | null>(null);
   const [isUploaderOpen, setIsUploaderOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,8 +38,10 @@ const VirtualClassroom: React.FC<VirtualClassroomProps> = ({ classroomId, classr
     }
   };
 
+
   const handleUnitSelect = (unitId: string) => {
     setActiveUnitId(unitId);
+    setIsEditMode(false);
   };
 
   const handleBackToUnits = () => {
@@ -46,11 +50,13 @@ const VirtualClassroom: React.FC<VirtualClassroomProps> = ({ classroomId, classr
 
   const handleOpenUploader = (unitId: string) => {
     setActiveUnitId(unitId);
+    setIsEditMode(true);
     setIsUploaderOpen(true);
   };
 
   const handleCloseUploader = () => {
     setIsUploaderOpen(false);
+    setIsEditMode(false);
   };
 
   const activeUnit = units.find((unit) => unit.id === activeUnitId);
@@ -116,18 +122,33 @@ const VirtualClassroom: React.FC<VirtualClassroomProps> = ({ classroomId, classr
         <UnitDetail
           unit={activeUnit}
           onBack={handleBackToUnits}
-          onAddContent={() => setIsUploaderOpen(true)}
+          onAddContent={() => {
+            setIsEditMode(false);
+            setIsUploaderOpen(true);
+          }}
           onRefresh={fetchUnits}
         />
       ) : activeUnit && isUploaderOpen ? (
-        <ContentUploader
-          unit={activeUnit}
-          onClose={handleCloseUploader}
-          onSuccess={() => {
-            fetchUnits();
-            setIsUploaderOpen(false);
-          }}
-        />
+        isEditMode ? (
+          <ContentUploader
+            unit={activeUnit}
+            onClose={handleCloseUploader}
+            onSuccess={() => {
+              fetchUnits();
+              setIsUploaderOpen(false);
+              setIsEditMode(false);
+            }}
+          />
+        ) : (
+          <AddContentOnlyModal
+            unit={activeUnit}
+            onClose={handleCloseUploader}
+            onSuccess={() => {
+              fetchUnits();
+              setIsUploaderOpen(false);
+            }}
+          />
+        )
       ) : (
         <UnitsList
           units={units}
