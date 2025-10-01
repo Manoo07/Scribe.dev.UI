@@ -14,6 +14,8 @@ interface ThreadsListProps {
     name: string;
     units: Array<{ id: string; name: string }>;
   };
+  selectedUnit?: string;
+  setSelectedUnit?: (unitId: string) => void;
 }
 
 const ThreadsList: React.FC<ThreadsListProps> = ({
@@ -23,12 +25,14 @@ const ThreadsList: React.FC<ThreadsListProps> = ({
   onCreateThread,
   showFilters = true,
   classroomContext,
+  selectedUnit = "all",
+  setSelectedUnit,
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedThreadType, setSelectedThreadType] = useState<
     "all" | "classroom" | "generic"
   >("all");
-  const [selectedUnit, setSelectedUnit] = useState<string>("all");
+  // selectedUnit and setSelectedUnit are now controlled from parent (ThreadManager)
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"recent" | "replies" | "created">(
     "recent"
@@ -212,20 +216,22 @@ const ThreadsList: React.FC<ThreadsListProps> = ({
               )}
 
               {/* Unit Filter */}
-              {classroomContext && classroomContext.units.length > 0 && (
-                <select
-                  value={selectedUnit}
-                  onChange={(e) => setSelectedUnit(e.target.value)}
-                  className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="all">All Units</option>
-                  {classroomContext.units.map((unit) => (
-                    <option key={unit.id} value={unit.id}>
-                      {unit.name}
-                    </option>
-                  ))}
-                </select>
-              )}
+              {classroomContext &&
+                classroomContext.units.length > 0 &&
+                setSelectedUnit && (
+                  <select
+                    value={selectedUnit}
+                    onChange={(e) => setSelectedUnit(e.target.value)}
+                    className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="all">All Units</option>
+                    {classroomContext.units.map((unit) => (
+                      <option key={unit.id} value={unit.id}>
+                        {unit.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
 
               {/* Category Filter */}
               {availableCategories.length > 0 && (
@@ -293,7 +299,7 @@ const ThreadsList: React.FC<ThreadsListProps> = ({
                   onClick={() => {
                     setSearchQuery("");
                     setSelectedThreadType("all");
-                    setSelectedUnit("all");
+                    if (setSelectedUnit) setSelectedUnit("all");
                     setSelectedCategory("all");
                   }}
                   className="text-gray-400 hover:text-white text-xs ml-2"

@@ -1,3 +1,102 @@
+// Toggle like for a thread (POST /threads/like/:threadId)
+export const toggleThreadLike = async (threadId: string): Promise<any> => {
+  try {
+    console.log("Hello test toggle threadLike");
+    console.log(threadId);
+    const response = await api.post(`/threads/like/${threadId}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error toggling thread like:", error);
+    throw error;
+  }
+};
+// Accept answer for a thread
+export const acceptAnswer = async (
+  threadId: string,
+  replyId: string
+): Promise<void> => {
+  try {
+    await api.patch(`/threads/${threadId}/accept-answer/${replyId}`);
+  } catch (error) {
+    console.error("Error accepting answer:", error);
+    throw error;
+  }
+};
+// Delete a thread
+export const deleteThread = async (threadId: string): Promise<void> => {
+  try {
+    await api.delete(`/threads/${threadId}`);
+  } catch (error) {
+    console.error("Error deleting thread:", error);
+    throw error;
+  }
+};
+// Fetch thread detail (with replies, paginated)
+export const fetchThreadDetail = async (
+  threadId: string,
+  page = 1,
+  limit = 10
+): Promise<any> => {
+  try {
+    const response = await api.get(
+      `/threads/${threadId}?page=${page}&limit=${limit}`
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching thread detail:", error);
+    throw error;
+  }
+};
+// Fetch generic threads (all, paginated)
+export const fetchThreads = async (page = 1, limit = 10): Promise<any> => {
+  try {
+    const response = await api.get(`/threads?page=${page}&limit=${limit}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching threads:", error);
+    throw error;
+  }
+};
+
+// Fetch unit-based threads (paginated)
+export const fetchUnitThreads = async (
+  unitId: string,
+  page = 1,
+  limit = 10
+): Promise<any> => {
+  try {
+    const response = await api.get(
+      `/threads/unit/${unitId}?page=${page}&limit=${limit}`
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching unit threads:", error);
+    throw error;
+  }
+};
+// Create a new thread (unit-based or generic)
+export const createThread = async (data: {
+  title: string;
+  content: string;
+  unitId?: string;
+}): Promise<any> => {
+  try {
+    const payload: any = {
+      title: data.title,
+      content: data.content,
+    };
+    if (data.unitId) payload.unitId = data.unitId;
+    const response = await api.post("/threads", payload, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error creating thread:", error);
+    throw error;
+  }
+};
 import axios from "axios";
 import { LikeRequest, LikeResponse } from "../components/threads/threadTypes";
 import { ContentType, Unit } from "../types";

@@ -74,7 +74,7 @@ const EnhancedThreadCard: React.FC<EnhancedThreadCardProps> = ({
           <div className="flex items-center gap-2 mb-2">
             {getThreadTypeIcon()}
             <h3 className="text-lg font-medium text-white hover:text-blue-400 transition-colors">
-              {thread.title}
+              {thread.title || "Untitled"}
             </h3>
             {thread.isResolved && (
               <CheckCircle className="w-5 h-5 text-green-400" />
@@ -88,11 +88,11 @@ const EnhancedThreadCard: React.FC<EnhancedThreadCardProps> = ({
           <div className="flex items-center gap-3 text-sm text-gray-400 flex-wrap">
             <div className="flex items-center gap-1">
               <User className="w-4 h-4" />
-              <span>{thread.authorName}</span>
+              <span>{thread.authorName || thread.user?.name || "Unknown"}</span>
             </div>
             <div className="flex items-center gap-1">
               <Clock className="w-4 h-4" />
-              <span>{formatTimeAgo(thread.createdAt)}</span>
+              <span>{formatTimeAgo(thread.createdAt || thread.createdAt)}</span>
             </div>
 
             {/* Thread type specific info */}
@@ -101,7 +101,7 @@ const EnhancedThreadCard: React.FC<EnhancedThreadCardProps> = ({
             {/* Show classroom info for classroom threads when requested */}
             {showClassroomInfo && thread.threadType === "classroom" && (
               <span className="bg-purple-600/20 text-purple-400 px-2 py-1 rounded text-xs">
-                {thread.classroomName}
+                {thread.classroomName || ""}
               </span>
             )}
           </div>
@@ -118,7 +118,11 @@ const EnhancedThreadCard: React.FC<EnhancedThreadCardProps> = ({
 
           <div className="flex items-center gap-1 text-gray-400 text-sm">
             <MessageCircle className="w-4 h-4" />
-            <span>{thread.repliesCount}</span>
+            <span>
+              {typeof thread.repliesCount === "number"
+                ? thread.repliesCount
+                : 0}
+            </span>
           </div>
         </div>
       </div>
@@ -139,7 +143,7 @@ const EnhancedThreadCard: React.FC<EnhancedThreadCardProps> = ({
             em: ({ children }) => <em className="text-gray-200">{children}</em>,
           }}
         >
-          {thread.content}
+          {thread.content || ""}
         </ReactMarkdown>
       </div>
 
@@ -174,7 +178,7 @@ const EnhancedThreadCard: React.FC<EnhancedThreadCardProps> = ({
       )}
 
       {/* Tags */}
-      {thread.tags.length > 0 && (
+      {Array.isArray(thread.tags) && thread.tags.length > 0 && (
         <div className="flex items-center gap-2 mb-4">
           <Tag className="w-4 h-4 text-gray-400" />
           <div className="flex flex-wrap gap-1">
@@ -197,7 +201,7 @@ const EnhancedThreadCard: React.FC<EnhancedThreadCardProps> = ({
             <div className="flex items-center gap-1 text-sm text-gray-400">
               <Reply className="w-4 h-4" />
               <span>
-                Last reply by {thread.lastReplyBy} •{" "}
+                Last reply by {thread.lastReplyBy || ""} •{" "}
                 {formatTimeAgo(thread.lastReplyAt)}
               </span>
             </div>
@@ -205,11 +209,13 @@ const EnhancedThreadCard: React.FC<EnhancedThreadCardProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          {!thread.isResolved && thread.repliesCount === 0 && (
-            <span className="bg-red-600/20 text-red-400 px-2 py-1 rounded text-xs">
-              Unanswered
-            </span>
-          )}
+          {typeof thread.isResolved === "boolean" &&
+            !thread.isResolved &&
+            thread.repliesCount === 0 && (
+              <span className="bg-red-600/20 text-red-400 px-2 py-1 rounded text-xs">
+                Unanswered
+              </span>
+            )}
 
           {thread.isResolved && (
             <span className="bg-green-600/20 text-green-400 px-2 py-1 rounded text-xs">

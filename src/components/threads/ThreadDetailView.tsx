@@ -1,3 +1,4 @@
+import axios from "axios";
 import {
   ArrowLeft,
   CheckCircle,
@@ -11,134 +12,289 @@ import {
   ThumbsUp,
   User,
 } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { Thread, ThreadReply } from "./threadTypes";
+import {
+  acceptAnswer,
+  deleteThread,
+  fetchThreadDetail,
+  toggleThreadLike,
+} from "../../services/api";
 
 interface ThreadDetailViewProps {
   threadId: string;
   onBack: () => void;
 }
 
+import { formatDistanceToNow } from "../../utils/dateUtils";
+import { Thread, ThreadReply } from "./threadTypes";
+
+// Extend ThreadReply for local state to include like info
+type ThreadReplyWithLike = ThreadReply & {
+  isLikedByMe?: boolean;
+  likesCount?: number;
+};
+
 const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
   threadId,
   onBack,
 }) => {
+  // Like state for thread
+  const [isLikedByMe, setIsLikedByMe] = useState<boolean>(false);
+  const [likesCount, setLikesCount] = useState<number>(0);
+  // State for which reply's menu is open
+  const [replyMenuOpen, setReplyMenuOpen] = useState<string | null>(null);
+  // Ref for reply menu dropdown
+  const replyMenuRef = useRef<HTMLDivElement | null>(null);
+
+  // Close reply menu when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        replyMenuRef.current &&
+        !replyMenuRef.current.contains(event.target as Node)
+      ) {
+        setReplyMenuOpen(null);
+      }
+    }
+    if (replyMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    } else {
+      document.removeEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [replyMenuOpen]);
+
+  // Format a date string to "x time ago"
+  const formatTimeAgo = (dateString: string) => {
+    if (!dateString) return "";
+    return formatDistanceToNow(new Date(dateString));
+  };
+
+  // Handle submit reply
+  const handleSubmitReply = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newReply.trim()) return;
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    try {
+      await axios.post(
+        `http://localhost:3000/api/v1/threads/${threadId}/reply`,
+        { content: newReply },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setNewReply("");
+      setShowReplyPreview(false);
+      // Refresh replies
+      fetchThreadDetail(threadId, replyPage, replyPageSize).then((data) => {
+        const mappedReplies = (data.replies?.data || []).map((reply: any) => ({
+          id: reply.id,
+          content: reply.content,
+          user: reply.user,
+          createdAt: reply.createdAt,
+          isAccepted: reply.isAccepted,
+          likesCount: reply.likesCount,
+        }));
+        setReplies(mappedReplies);
+        setReplyHasNext(data.replies?.pagination?.hasNext || false);
+        setReplyTotal(data.replies?.pagination?.total || 0);
+      });
+    } catch (err) {
+      // Optionally show error toast
+    }
+  };
   const [thread, setThread] = useState<Thread | null>(null);
-  const [replies, setReplies] = useState<ThreadReply[]>([]);
+  // Store accepted answer id
+  const [acceptedAnswerId, setAcceptedAnswerId] = useState<string | null>(null);
+  const [replies, setReplies] = useState<ThreadReplyWithLike[]>([]);
   const [newReply, setNewReply] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [showReplyPreview, setShowReplyPreview] = useState(false);
+  const [replyPage, setReplyPage] = useState(1);
+  const [replyHasNext, setReplyHasNext] = useState(false);
+  const [replyTotal, setReplyTotal] = useState(0);
+  const [currentUser, setCurrentUser] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const [showThreadMenu, setShowThreadMenu] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const replyPageSize = 10;
 
+  // Delete thread handler
+  const handleDeleteThread = async () => {
+    if (!thread) return;
+    setDeleting(true);
+    try {
+      await deleteThread(thread.id);
+      // Optionally show a toast here
+      onBack(); // Go back after delete
+    } catch (err) {
+      // Optionally show error toast
+    } finally {
+      setDeleting(false);
+      setShowThreadMenu(false);
+    }
+  };
+
+  // Fetch current user for delete permission
   useEffect(() => {
-    // Mock data for demonstration
-    const mockThread: Thread = {
-      id: threadId,
-      threadType: "classroom",
-      title: "How to solve quadratic equations with complex roots?",
-      content:
-        "I'm struggling with understanding how to handle quadratic equations when the discriminant is negative. Can someone explain the process step by step? I've been working on this problem: x² + 2x + 5 = 0, and I keep getting confused when I reach the square root of a negative number.",
-      authorId: "student1",
-      authorName: "Alice Johnson",
-      classroomId: "classroom1",
-      classroomName: "Advanced Mathematics",
-      unitId: "unit1",
-      unitName: "Algebra Fundamentals",
-      createdAt: "2024-01-15T10:30:00Z",
-      updatedAt: "2024-01-15T14:20:00Z",
-      isResolved: false,
-      repliesCount: 3,
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    axios
+      .get("http://localhost:3000/api/v1/auth/me", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((res) => setCurrentUser(res.data))
+      .catch(() => setCurrentUser(null));
+  }, []);
 
-      tags: ["quadratic", "complex-numbers", "algebra"],
-      lastReplyAt: "2024-01-15T14:20:00Z",
-      lastReplyBy: "Dr. Smith",
-    };
-
-    const mockReplies: ThreadReply[] = [
-      {
-        id: "reply1",
-        threadId: threadId,
-        content:
-          "Great question! When dealing with complex roots, remember that √(-1) = i. So for your equation x² + 2x + 5 = 0, using the quadratic formula: x = (-2 ± √(4-20))/2 = (-2 ± √(-16))/2 = (-2 ± 4i)/2 = -1 ± 2i",
-        authorId: "teacher1",
-        authorName: "Dr. Smith",
-        createdAt: "2024-01-15T11:15:00Z",
-        isMarkedAsAnswer: true,
-      },
-      {
-        id: "reply2",
-        threadId: threadId,
-        content:
-          "Thanks Dr. Smith! That makes sense. So the roots are -1 + 2i and -1 - 2i. Is there a way to verify these are correct?",
-        authorId: "student1",
-        authorName: "Alice Johnson",
-        createdAt: "2024-01-15T12:30:00Z",
-        isMarkedAsAnswer: false,
-      },
-      {
-        id: "reply3",
-        threadId: threadId,
-        content:
-          "Yes! You can substitute back into the original equation. For x = -1 + 2i: (-1+2i)² + 2(-1+2i) + 5 = (1-4i-4) + (-2+4i) + 5 = 0 ✓",
-        authorId: "teacher1",
-        authorName: "Dr. Smith",
-        createdAt: "2024-01-15T14:20:00Z",
-        isMarkedAsAnswer: false,
-      },
-    ];
-
-    setThread(mockThread);
-    setReplies(mockReplies);
-    setIsLoading(false);
-  }, [threadId]);
-
-  const formatTimeAgo = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInHours = Math.floor(
-      (now.getTime() - date.getTime()) / (1000 * 60 * 60)
-    );
-
-    if (diffInHours < 1) return "Just now";
-    if (diffInHours < 24) return `${diffInHours}h ago`;
-    const diffInDays = Math.floor(diffInHours / 24);
-    if (diffInDays < 7) return `${diffInDays}d ago`;
-    return date.toLocaleDateString();
+  // Fetch thread and replies
+  useEffect(() => {
+    setIsLoading(true);
+    fetchThreadDetail(threadId, replyPage, replyPageSize)
+      .then((data) => {
+        const threadData = {
+          id: data.id,
+          title: data.title,
+          content: data.content,
+          authorId: data.user?.id || "",
+          authorName: data.user?.name || "",
+          createdAt: data.createdAt,
+          updatedAt: data.updatedAt || data.createdAt,
+          isResolved: data.threadStatus === "ANSWERED" || false,
+          repliesCount: data.replies?.pagination?.total || 0,
+          tags: data.tags || [],
+          lastReplyAt: data.lastReplyAt,
+          lastReplyBy: data.lastReplyBy,
+          threadType: data.threadType || "classroom",
+          classroomId: data.classroomId,
+          classroomName: data.classroomName,
+          unitId: data.unitId,
+          unitName: data.unitName,
+          category: data.category,
+        };
+        setThread(threadData);
+        setAcceptedAnswerId(data.acceptedAnswerId || null);
+        setIsLikedByMe(!!data.isLikedByMe);
+        setLikesCount(data.likesCount || 0);
+        // Map replies with like state
+        const mappedReplies: ThreadReplyWithLike[] = (
+          data.replies?.data || []
+        ).map((reply: any) => ({
+          id: reply.id,
+          content: reply.content,
+          user: reply.user,
+          createdAt: reply.createdAt,
+          isAccepted: reply.isAccepted,
+          likesCount: reply.likesCount || 0,
+          isLikedByMe: !!reply.isLikedByMe,
+        }));
+        setReplies(mappedReplies);
+        setReplyHasNext(data.replies?.pagination?.hasNext || false);
+        setReplyTotal(data.replies?.pagination?.total || 0);
+      })
+      .catch(() => {
+        setThread(null);
+        setReplies([]);
+      })
+      .finally(() => setIsLoading(false));
+  }, [threadId, replyPage]);
+  // Handle like toggle for reply
+  const handleReplyLike = async (replyId: string) => {
+    try {
+      // Use the same endpoint as thread like, but with replyId
+      const res = await axios.post(
+        `http://localhost:3000/api/v1/threads/like/${replyId}`
+      );
+      setReplies((prevReplies) =>
+        prevReplies.map((reply) =>
+          reply.id === replyId
+            ? {
+                ...reply,
+                isLikedByMe: res.data.liked,
+                likesCount: res.data.likesCount,
+              }
+            : reply
+        )
+      );
+    } catch (e) {
+      // Optionally show error toast
+    }
+  };
+  // Handle like toggle
+  const handleThreadLike = async () => {
+    if (!thread) return;
+    try {
+      const res = await toggleThreadLike(thread.id);
+      setIsLikedByMe(res.liked);
+      setLikesCount(res.likesCount);
+    } catch (e) {
+      // Optionally show error toast
+    }
+  };
+  // Accept or unmark answer handler
+  const handleAcceptAnswer = async (
+    replyId: string,
+    isCurrentlyAccepted: boolean
+  ) => {
+    if (!thread) return;
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    try {
+      await acceptAnswer(thread.id, replyId);
+      setAcceptedAnswerId(isCurrentlyAccepted ? null : replyId);
+      // Optionally, refetch thread/replies for up-to-date state
+      fetchThreadDetail(threadId, replyPage, replyPageSize).then((data) => {
+        setAcceptedAnswerId(
+          data.acceptedAnswerId || (isCurrentlyAccepted ? null : replyId)
+        );
+        const mappedReplies = (data.replies?.data || []).map((reply: any) => ({
+          id: reply.id,
+          content: reply.content,
+          user: reply.user,
+          createdAt: reply.createdAt,
+          isAccepted: reply.isAccepted,
+          likesCount: reply.likesCount,
+        }));
+        setReplies(mappedReplies);
+      });
+    } catch (err) {
+      // Optionally show error toast
+    }
   };
 
-  const handleSubmitReply = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newReply.trim()) return;
-
-    const reply: ThreadReply = {
-      id: Date.now().toString(),
-      threadId: threadId,
-      content: newReply,
-      authorId: "current-user",
-      authorName: "You",
-      createdAt: new Date().toISOString(),
-      isMarkedAsAnswer: false,
-    };
-
-    setReplies((prev) => [...prev, reply]);
-    setNewReply("");
+  // Delete reply handler
+  const handleDeleteReply = async (replyId: string) => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    try {
+      await axios.delete(`http://localhost:3000/api/v1/threads/${replyId}`, {
+        headers: {
+          "Content-Type": "text/plain",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      // Refresh replies after delete
+      fetchThreadDetail(threadId, replyPage, replyPageSize).then((data) => {
+        const mappedReplies = (data.replies?.data || []).map((reply: any) => ({
+          id: reply.id,
+          content: reply.content,
+          user: reply.user,
+          createdAt: reply.createdAt,
+          isAccepted: reply.isAccepted,
+          likesCount: reply.likesCount,
+        }));
+        setReplies(mappedReplies);
+        setReplyHasNext(data.replies?.pagination?.hasNext || false);
+        setReplyTotal(data.replies?.pagination?.total || 0);
+      });
+    } catch (err) {
+      // Optionally show error toast
+    }
   };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-gray-400">Loading thread...</div>
-      </div>
-    );
-  }
-
-  if (!thread) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-gray-400">Thread not found</div>
-      </div>
-    );
-  }
 
   const markdownComponents = {
     h1: ({ children }: any) => (
@@ -193,10 +349,26 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
     ),
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-gray-400">Loading thread...</div>
+      </div>
+    );
+  }
+
+  if (!thread) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-gray-400">Thread not found</div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
+      <div className="flex items-center gap-4 mb-6 relative">
         <button
           onClick={onBack}
           className="text-gray-400 hover:text-white transition-colors"
@@ -204,6 +376,21 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
           <ArrowLeft className="w-6 h-6" />
         </button>
         <div className="flex-1">
+          {/* Like button */}
+          <button
+            className={`flex items-center gap-1 px-2 py-1 rounded text-sm transition-colors ${
+              isLikedByMe
+                ? "bg-blue-700/30 text-blue-400"
+                : "text-gray-400 hover:text-blue-400 hover:bg-gray-700/40"
+            }`}
+            onClick={handleThreadLike}
+            aria-label={isLikedByMe ? "Unlike" : "Like"}
+          >
+            <ThumbsUp
+              className={`w-5 h-5 ${isLikedByMe ? "fill-blue-400" : ""}`}
+            />
+            <span>{likesCount}</span>
+          </button>
           <div className="flex items-center gap-2 mb-2">
             <h1 className="text-2xl font-semibold text-white">
               {thread.title}
@@ -232,7 +419,47 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
             </div>
           </div>
         </div>
+        {/* 3-dot menu for thread actions */}
+        <div className="relative">
+          <button
+            className="text-gray-400 hover:text-white p-2 rounded-full focus:outline-none"
+            onClick={() => setShowThreadMenu((v) => !v)}
+            aria-label="Thread actions"
+          >
+            <MoreVertical className="w-6 h-6" />
+          </button>
+          {showThreadMenu && (
+            <div className="absolute right-0 mt-2 w-40 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-20">
+              <ul className="py-1">
+                {/* Only show delete if current user is thread author */}
+                {currentUser && thread.authorId === currentUser.id && (
+                  <li>
+                    <button
+                      className="w-full text-left px-4 py-2 text-red-500 hover:bg-gray-700 hover:text-red-600 text-sm disabled:opacity-60"
+                      onClick={handleDeleteThread}
+                      disabled={deleting}
+                    >
+                      {deleting ? "Deleting..." : "Delete"}
+                    </button>
+                  </li>
+                )}
+                <li>
+                  <button className="w-full text-left px-4 py-2 text-gray-300 hover:bg-gray-700 text-sm">
+                    Update
+                  </button>
+                </li>
+                <li>
+                  <button className="w-full text-left px-4 py-2 text-gray-300 hover:bg-gray-700 text-sm">
+                    Report
+                  </button>
+                </li>
+              </ul>
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Reply Form with Markdown Preview (moved above replies) */}
 
       {/* Thread Content with Markdown */}
       <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
@@ -247,7 +474,7 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
           <div className="flex items-center gap-2 mt-6 pt-4 border-t border-gray-700">
             <Tag className="w-4 h-4 text-gray-400" />
             <div className="flex flex-wrap gap-1">
-              {thread.tags.map((tag) => (
+              {thread.tags.map((tag: string) => (
                 <span
                   key={tag}
                   className="bg-gray-700 text-gray-300 px-2 py-1 rounded text-xs hover:bg-gray-600 transition-colors"
@@ -259,72 +486,6 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
           </div>
         )}
       </div>
-
-      {/* Replies with Markdown Support */}
-      <div className="space-y-4">
-        <h3 className="text-xl font-semibold text-white flex items-center gap-2">
-          <MessageCircle className="w-5 h-5" />
-          Replies ({replies.length})
-        </h3>
-
-        {replies.map((reply, index) => (
-          <div
-            key={reply.id}
-            className="bg-gray-800 border border-gray-700 rounded-lg p-4"
-          >
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <User className="w-4 h-4 text-gray-400" />
-                  <span className="font-medium text-white">
-                    {reply.authorName}
-                  </span>
-                  {reply.isMarkedAsAnswer && (
-                    <span className="bg-green-600/20 text-green-400 px-2 py-1 rounded text-xs">
-                      ✓ Accepted Answer
-                    </span>
-                  )}
-                  {reply.isFromAi && (
-                    <span className="bg-purple-600/20 text-purple-400 px-2 py-1 rounded text-xs">
-                      🤖 AI Response
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-1 text-sm text-gray-400">
-                  <Clock className="w-3 h-3" />
-                  <span>{formatTimeAgo(reply.createdAt)}</span>
-                </div>
-              </div>
-              <button className="text-gray-400 hover:text-white">
-                <MoreVertical className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="prose prose-invert max-w-none mb-3">
-              <ReactMarkdown components={markdownComponents}>
-                {reply.content}
-              </ReactMarkdown>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <button className="flex items-center gap-1 text-gray-400 hover:text-blue-400 transition-colors">
-                <ThumbsUp className="w-4 h-4" />
-                <span className="text-sm">Helpful</span>
-              </button>
-              <button className="text-gray-400 hover:text-white text-sm transition-colors">
-                Reply
-              </button>
-              {!reply.isMarkedAsAnswer && index > 0 && (
-                <button className="text-gray-400 hover:text-green-400 text-sm transition-colors">
-                  Mark as Answer
-                </button>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Reply Form with Markdown Preview */}
       <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
         <div className="flex items-center justify-between mb-4">
           <h4 className="text-lg font-medium text-white">Add a Reply</h4>
@@ -351,7 +512,7 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
             <textarea
               value={newReply}
               onChange={(e) => setNewReply(e.target.value)}
-              placeholder="Share your thoughts or help solve this problem... (Markdown supported: **bold**, *italic*, `code`, etc.)"
+              placeholder="Share your thoughts or help solve this problem... Markdown supported: **bold**, *italic*, `code`, lists, links, images, etc."
               className="w-full bg-gray-700 border border-gray-600 rounded-lg p-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px] resize-vertical"
               required
             />
@@ -385,6 +546,169 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
             </button>
           </div>
         </form>
+      </div>
+
+      {/* Replies with Markdown Support */}
+      <div className="space-y-4">
+        <h3 className="text-xl font-semibold text-white flex items-center gap-2">
+          <MessageCircle className="w-5 h-5" />
+          Replies ({replyTotal})
+        </h3>
+
+        {replies.map((reply) => {
+          const isAccepted = acceptedAnswerId && reply.id === acceptedAnswerId;
+          return (
+            <div
+              key={reply.id}
+              className={`bg-gray-800 border ${
+                isAccepted ? "border-green-500" : "border-gray-700"
+              } rounded-lg p-4 ${
+                isAccepted ? "shadow-green-700/30 shadow-lg" : ""
+              }`}
+            >
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <User className="w-4 h-4 text-gray-400" />
+                    <span className="font-medium text-white">
+                      {reply.user?.name || "Unknown"}
+                    </span>
+                    {isAccepted && (
+                      <span className="bg-green-600/20 text-green-400 px-2 py-1 rounded text-xs">
+                        ✓ Accepted Answer
+                      </span>
+                    )}
+                    {reply.isFromAi && (
+                      <span className="bg-purple-600/20 text-purple-400 px-2 py-1 rounded text-xs">
+                        🤖 AI Response
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 text-sm text-gray-400">
+                    <Clock className="w-3 h-3" />
+                    <span>{formatTimeAgo(reply.createdAt)}</span>
+                  </div>
+                </div>
+                <div className="relative flex items-center gap-2">
+                  <button
+                    className="text-gray-400 hover:text-white p-2 rounded-full focus:outline-none"
+                    onClick={() =>
+                      setReplyMenuOpen(
+                        replyMenuOpen === reply.id ? null : reply.id
+                      )
+                    }
+                    aria-label="Reply actions"
+                  >
+                    <MoreVertical className="w-4 h-4" />
+                  </button>
+                  {replyMenuOpen === reply.id && (
+                    <div
+                      ref={replyMenuRef}
+                      className="absolute right-0 mt-2 w-36 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-20"
+                    >
+                      <ul className="py-1">
+                        {currentUser && reply.user?.id === currentUser.id && (
+                          <li>
+                            <button
+                              className="w-full text-left px-4 py-2 text-red-500 hover:bg-gray-700 hover:text-red-600 text-sm"
+                              onClick={() => {
+                                setReplyMenuOpen(null);
+                                handleDeleteReply(reply.id);
+                              }}
+                            >
+                              Delete
+                            </button>
+                          </li>
+                        )}
+                        {/* Only thread author can accept or unmark answer */}
+                        {currentUser &&
+                          thread &&
+                          thread.authorId === currentUser.id && (
+                            <li>
+                              {isAccepted ? (
+                                <button
+                                  className="w-full text-left px-4 py-2 text-yellow-500 hover:bg-gray-700 hover:text-yellow-600 text-sm"
+                                  onClick={() => {
+                                    setReplyMenuOpen(null);
+                                    handleAcceptAnswer(reply.id, true);
+                                  }}
+                                >
+                                  Unmark as Answer
+                                </button>
+                              ) : (
+                                <button
+                                  className="w-full text-left px-4 py-2 text-green-500 hover:bg-gray-700 hover:text-green-600 text-sm"
+                                  onClick={() => {
+                                    setReplyMenuOpen(null);
+                                    handleAcceptAnswer(reply.id, false);
+                                  }}
+                                >
+                                  Mark as Answer
+                                </button>
+                              )}
+                            </li>
+                          )}
+                        <li>
+                          <button className="w-full text-left px-4 py-2 text-gray-300 hover:bg-gray-700 text-sm">
+                            Update
+                          </button>
+                        </li>
+                        <li>
+                          <button className="w-full text-left px-4 py-2 text-gray-300 hover:bg-gray-700 text-sm">
+                            Report
+                          </button>
+                        </li>
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="prose prose-invert max-w-none mb-3">
+                <ReactMarkdown components={markdownComponents}>
+                  {reply.content}
+                </ReactMarkdown>
+              </div>
+
+              <div className="flex items-center gap-4">
+                <button
+                  className={`flex items-center gap-1 text-gray-400 hover:text-blue-400 transition-colors ${
+                    reply.isLikedByMe ? "text-blue-400" : ""
+                  }`}
+                  onClick={() => handleReplyLike(reply.id)}
+                  aria-label={reply.isLikedByMe ? "Unlike" : "Like"}
+                >
+                  <ThumbsUp
+                    className={`w-4 h-4 ${
+                      reply.isLikedByMe ? "fill-blue-400" : ""
+                    }`}
+                  />
+                  <span className="text-sm">{reply.likesCount || 0}</span>
+                  <span className="text-xs ml-1">Helpful</span>
+                </button>
+              </div>
+            </div>
+          );
+        })}
+
+        {/* Replies Pagination Controls */}
+        <div className="flex justify-center mt-4">
+          <button
+            className="px-4 py-2 bg-gray-700 text-white rounded mr-2 disabled:opacity-50"
+            disabled={replyPage === 1 || isLoading}
+            onClick={() => setReplyPage((p) => Math.max(1, p - 1))}
+          >
+            Previous
+          </button>
+          <span className="px-4 py-2 text-gray-400">Page {replyPage}</span>
+          <button
+            className="px-4 py-2 bg-gray-700 text-white rounded ml-2 disabled:opacity-50"
+            disabled={!replyHasNext || isLoading}
+            onClick={() => setReplyPage((p) => p + 1)}
+          >
+            Next
+          </button>
+        </div>
       </div>
     </div>
   );

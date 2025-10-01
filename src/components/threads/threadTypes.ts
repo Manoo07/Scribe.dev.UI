@@ -38,12 +38,17 @@ export type Thread = ClassroomThread | GenericThread;
 
 export interface ThreadReply {
   id: string;
-  threadId: string;
+  threadId?: string;
   content: string;
-  authorId: string;
-  authorName: string;
+  user?: {
+    id: string;
+    name: string;
+  };
+  authorId?: string;
+  authorName?: string;
   createdAt: string;
-  isMarkedAsAnswer: boolean;
+  isMarkedAsAnswer?: boolean;
+  isAccepted?: boolean;
   isFromAi?: boolean;
   parentReplyId?: string; // for nested replies
 }

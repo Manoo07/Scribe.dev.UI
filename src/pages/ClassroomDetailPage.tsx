@@ -9,12 +9,15 @@ import StudentsTab from "../components/classroom/Tabs/StudentsTab";
 import ThreadsTab from "../components/classroom/Tabs/ThreadsTab";
 import UnitsTab from "../components/classroom/Tabs/UnitsTab";
 import { ClassroomProvider } from "../context/ClassroomContext";
+import { getUnits } from "../services/api";
 
 const ClassroomDetailPage = () => {
   const { id } = useParams();
   const [classroom, setClassroom] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("Units");
+  const [units, setUnits] = useState<any[]>([]);
+  const [unitsLoading, setUnitsLoading] = useState(true);
 
   useEffect(() => {
     const fetchClassroom = async () => {
@@ -35,20 +38,40 @@ const ClassroomDetailPage = () => {
         setLoading(false);
       }
     };
-
-    if (id) fetchClassroom();
+    const fetchUnitsData = async () => {
+      setUnitsLoading(true);
+      try {
+        const data = await getUnits(id!);
+        setUnits(data);
+      } catch (err) {
+        setUnits([]);
+      } finally {
+        setUnitsLoading(false);
+      }
+    };
+    if (id) {
+      fetchClassroom();
+      fetchUnitsData();
+    }
   }, [id]);
 
   const renderTab = () => {
     switch (activeTab) {
       case "Units":
-        return <UnitsTab classroomId={id!} classroomName={classroom?.name} />;
+        return (
+          <UnitsTab
+            classroomId={id!}
+            units={units}
+            setUnits={setUnits}
+            loading={unitsLoading}
+          />
+        );
       case "Threads":
         return (
           <ThreadsTab
             classroomId={id!}
-            classroomName={classroom.name}
-            units={classroom.units || []}
+            classroomName={classroom?.name}
+            units={units.map((unit: any) => ({ id: unit.id, name: unit.name }))}
           />
         );
       case "Assignments":
