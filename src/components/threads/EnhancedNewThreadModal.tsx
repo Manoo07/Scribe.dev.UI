@@ -1,6 +1,7 @@
 import { Edit, Eye, Globe, MessageSquare, Send, X } from "lucide-react";
 import React, { useState } from "react";
 import ReactMarkdown from "react-markdown";
+import { useToast } from "../../hooks/use-toast";
 
 interface EnhancedNewThreadModalProps {
   units?: Array<{ id: string; name: string }>;
@@ -27,6 +28,7 @@ const EnhancedNewThreadModal: React.FC<EnhancedNewThreadModalProps> = ({
   const [content, setContent] = useState("");
   const [selectedUnitId, setSelectedUnitId] = useState("");
   const [showPreview, setShowPreview] = useState(false);
+  const { toast } = useToast();
   // Only show unit dropdown if units are provided and threadType is classroom
   const showUnitDropdown =
     threadType === "classroom" && units && units.length > 0;
@@ -49,17 +51,46 @@ const EnhancedNewThreadModal: React.FC<EnhancedNewThreadModalProps> = ({
     e.preventDefault();
     if (!title.trim() || !content.trim()) return;
 
-    // For classroom threads, unit selection is optional
-    if (threadType === "classroom") {
-      onSubmit({
-        title: title.trim(),
-        content: content.trim(),
-        unitId: selectedUnitId || undefined,
+    // Show loading toast
+    const loadingToast = toast({
+      title: "Creating Thread",
+      description: "Please wait while we create your discussion thread...",
+    });
+
+    try {
+      // For classroom threads, unit selection is optional
+      if (threadType === "classroom") {
+        onSubmit({
+          title: title.trim(),
+          content: content.trim(),
+          unitId: selectedUnitId || undefined,
+        });
+      } else {
+        onSubmit({
+          title: title.trim(),
+          content: content.trim(),
+        });
+      }
+
+      // Dismiss loading toast and show success
+      loadingToast.dismiss();
+      toast({
+        title: "Thread Created Successfully! 💬",
+        description: `"${title.trim()}" has been posted.`,
       });
-    } else {
-      onSubmit({
-        title: title.trim(),
-        content: content.trim(),
+    } catch (error) {
+      // Dismiss loading toast and show error
+      loadingToast.dismiss();
+
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to create thread. Please try again.";
+
+      toast({
+        title: "Failed to Create Thread",
+        description: errorMessage,
+        variant: "destructive",
       });
     }
   };

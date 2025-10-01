@@ -62,6 +62,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         }
 
         // Token is valid, try to get fresh user data from /auth/me
+        // Check if we have recent user data (less than 5 minutes old)
+        const lastUserFetch = localStorage.getItem("lastUserFetch");
+        const now = Date.now();
+        const fiveMinutes = 5 * 60 * 1000;
+
+        if (lastUserFetch && now - parseInt(lastUserFetch) < fiveMinutes) {
+          // Use cached user data if it's recent
+          const storedUser = localStorage.getItem("user");
+          if (storedUser) {
+            const userData = JSON.parse(storedUser);
+            setUser(userData);
+            console.log("✅ Using cached user data (recent)");
+            return;
+          }
+        }
+
         try {
           const freshUserData = await getCurrentUser();
           if (freshUserData && freshUserData.id) {
@@ -76,6 +92,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             localStorage.setItem("user", JSON.stringify(user));
             localStorage.setItem("role", user.role);
             localStorage.setItem("userId", user.id);
+            localStorage.setItem("lastUserFetch", now.toString()); // Update last fetch time
 
             setUser(user);
             console.log("✅ Fresh user data loaded from /auth/me:", user);
@@ -119,6 +136,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     localStorage.removeItem("user");
     localStorage.removeItem("role");
     localStorage.removeItem("userId");
+    localStorage.removeItem("lastUserFetch"); // Clear last fetch time on logout
     setUser(null);
   }, []);
 
@@ -137,6 +155,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     localStorage.setItem("user", JSON.stringify(user));
     localStorage.setItem("role", user.role);
     localStorage.setItem("userId", user.id);
+    localStorage.setItem("lastUserFetch", Date.now().toString()); // Update last fetch time on login
 
     setUser(user);
   }, []);
@@ -186,6 +205,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         localStorage.setItem("user", JSON.stringify(user));
         localStorage.setItem("role", user.role);
         localStorage.setItem("userId", user.id);
+        localStorage.setItem("lastUserFetch", Date.now().toString()); // Update last fetch time on successful fetch
 
         setUser(user);
         console.log("✅ Fresh user data fetched and stored:", user);

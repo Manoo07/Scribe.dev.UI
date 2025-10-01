@@ -23,9 +23,13 @@ import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../hooks/use-toast";
 import { useOwnership } from "../../hooks/useOwnership";
 import {
+  acceptAnswer,
+  createReply,
   deleteThread,
   fetchThreadDetail,
+  toggleReplyLike,
   toggleThreadLike,
+  unmarkAnswer,
   updateThread,
 } from "../../services/api";
 import ConfirmationDialog from "../ui/ConfirmationDialog";
@@ -378,6 +382,33 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
     // Mark that changes occurred
     if (onChangesOccurred) {
       onChangesOccurred();
+    }
+  };
+
+  const handleCreateReply = async (content: string) => {
+    console.log("🔄 handleCreateReply called with content:", content);
+    if (!thread) {
+      console.error("❌ No thread available");
+      return;
+    }
+
+    try {
+      console.log("🔄 Calling createReply API with:", { threadId: thread.id, content });
+      const newReply = await createReply({
+        threadId: thread.id,
+        content: content,
+      });
+      console.log("✅ Reply created successfully:", newReply);
+
+      // Handle the reply created
+      handleReplyCreated(newReply);
+    } catch (error: any) {
+      console.error("❌ Error creating reply:", error);
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Failed to post reply";
+      throw new Error(errorMessage);
     }
   };
 
@@ -1202,9 +1233,8 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
         {/* Reply Form */}
         <ReplyForm
           threadId={thread.id}
-          onReplyCreated={handleReplyCreated}
+          onSubmit={handleCreateReply}
           placeholder="Share your thoughts..."
-          className="mb-6"
         />
 
         {/* Replies List */}

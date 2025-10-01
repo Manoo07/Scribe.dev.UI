@@ -1,13 +1,14 @@
-import React, { useState } from "react";
-import { X, FileText, Link2, Video, File, Upload } from "lucide-react";
-import { createUnit, createContent } from "../services/api";
-import { ContentType } from "../types";
+import { FileIcon, FileText, Link, Upload, Video, X } from "lucide-react";
 import { marked } from "marked";
+import React, { useState } from "react";
+import { useToast } from "../hooks/use-toast";
+import { createContent, createUnit } from "../services/api";
+import { ContentType } from "../types";
 
 interface CreateUnitModalProps {
   classroomId: string;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (unit?: any) => void;
 }
 
 const CreateUnitModal: React.FC<CreateUnitModalProps> = ({
@@ -17,7 +18,9 @@ const CreateUnitModal: React.FC<CreateUnitModalProps> = ({
 }) => {
   const [unitName, setUnitName] = useState("");
   const [description, setDescription] = useState("");
-  const [contentType, setContentType] = useState<ContentType | undefined>(undefined);
+  const [contentType, setContentType] = useState<ContentType | undefined>(
+    undefined
+  );
   const [noteContent, setNoteContent] = useState("");
   const [linkUrl, setLinkUrl] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
@@ -25,9 +28,9 @@ const CreateUnitModal: React.FC<CreateUnitModalProps> = ({
   const [showPreview, setShowPreview] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   console.log("Classroom ID", classroomId);
-
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -38,8 +41,16 @@ const CreateUnitModal: React.FC<CreateUnitModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!unitName.trim()) return;
+
     setIsSubmitting(true);
     setError(null);
+
+    // Show loading toast
+    const loadingToast = toast({
+      title: "Creating Unit",
+      description: "Please wait while we create your unit...",
+    });
+
     try {
       // Create the unit first
       const unitData: any = {
@@ -49,24 +60,62 @@ const CreateUnitModal: React.FC<CreateUnitModalProps> = ({
       if (description.trim() !== "") {
         unitData.description = description.trim();
       }
+
       const createdUnit = await createUnit(unitData);
+
+      // Dismiss loading toast and show success
+      loadingToast.dismiss();
+      toast({
+        title: "Unit Created Successfully! 🎉",
+        description: `"${unitName.trim()}" has been added to your classroom.`,
+      });
 
       // Only create content if something is provided
       if (contentType) {
+        let contentCreated = false;
+
         if (contentType === ContentType.NOTE && noteContent.trim()) {
           await createContent(createdUnit.id, ContentType.NOTE, noteContent);
+          contentCreated = true;
         } else if (contentType === ContentType.LINK && linkUrl.trim()) {
           await createContent(createdUnit.id, ContentType.LINK, linkUrl);
+          contentCreated = true;
         } else if (contentType === ContentType.VIDEO && videoUrl.trim()) {
           await createContent(createdUnit.id, ContentType.VIDEO, videoUrl);
+          contentCreated = true;
         } else if (contentType === ContentType.DOCUMENT && files.length > 0) {
           await createContent(createdUnit.id, ContentType.DOCUMENT, files[0]);
+          contentCreated = true;
+        }
+
+        if (contentCreated) {
+          toast({
+            title: "Content Added",
+            description: `Initial ${contentType.toLowerCase()} content has been added to the unit.`,
+          });
         }
       }
-      onSuccess();
+
+      // Pass the created unit to the success callback
+      onSuccess(createdUnit);
     } catch (err) {
       console.error("Failed to create unit:", err);
-      setError("Failed to create unit. Please try again.");
+
+      // Dismiss loading toast and show error
+      loadingToast.dismiss();
+
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "Failed to create unit. Please try again.";
+      setError(errorMessage);
+
+      toast({
+        title: "Failed to Create Unit",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
       setIsSubmitting(false);
     }
   };
@@ -135,10 +184,30 @@ const CreateUnitModal: React.FC<CreateUnitModalProps> = ({
                   } transition-colors`}
                   onClick={() => setContentType(type)}
                 >
-                  {type === ContentType.NOTE && <><FileText className="inline w-4 h-4 mr-1" /> Note</>}
-                  {type === ContentType.LINK && <><Link2 className="inline w-4 h-4 mr-1" /> Link</>}
-                  {type === ContentType.VIDEO && <><Video className="inline w-4 h-4 mr-1" /> Video</>}
-                  {type === ContentType.DOCUMENT && <><File className="inline w-4 h-4 mr-1" /> Document</>}
+                  {type === ContentType.NOTE && (
+                    <span>
+                      <FileText className="w-4 h-4 inline mr-1" />
+                      Note
+                    </span>
+                  )}
+                  {type === ContentType.LINK && (
+                    <span>
+                      <Link className="w-4 h-4 inline mr-1" />
+                      Link
+                    </span>
+                  )}
+                  {type === ContentType.VIDEO && (
+                    <span>
+                      <Video className="w-4 h-4 inline mr-1" />
+                      Video
+                    </span>
+                  )}
+                  {type === ContentType.DOCUMENT && (
+                    <span>
+                      <FileIcon className="w-4 h-4 inline mr-1" />
+                      Document
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
@@ -158,7 +227,9 @@ const CreateUnitModal: React.FC<CreateUnitModalProps> = ({
                     {showPreview ? "Hide Preview" : "Show Preview"}
                   </button>
                 </div>
-                <div className={`${showPreview ? "grid grid-cols-2 gap-4" : ""}`}>
+                <div
+                  className={`${showPreview ? "grid grid-cols-2 gap-4" : ""}`}
+                >
                   <div>
                     <textarea
                       id="noteContent"
@@ -174,7 +245,9 @@ const CreateUnitModal: React.FC<CreateUnitModalProps> = ({
                       <div
                         className="prose prose-invert max-w-none"
                         dangerouslySetInnerHTML={{
-                          __html: marked(noteContent || "*Preview will appear here*")
+                          __html: marked(
+                            noteContent || "*Preview will appear here*"
+                          ),
                         }}
                       />
                     </div>
@@ -267,7 +340,8 @@ const CreateUnitModal: React.FC<CreateUnitModalProps> = ({
                     onChange={handleFileChange}
                     multiple
                     style={{
-                      display: contentType === ContentType.DOCUMENT ? "block" : "none",
+                      display:
+                        contentType === ContentType.DOCUMENT ? "block" : "none",
                     }}
                   />
                 </div>

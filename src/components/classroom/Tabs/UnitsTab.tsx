@@ -10,6 +10,7 @@ interface UnitsTabProps {
   units: Unit[];
   setUnits: (units: Unit[]) => void;
   loading: boolean;
+  onUnitsRefresh?: () => void;
 }
 
 const UnitsTab: React.FC<UnitsTabProps> = ({
@@ -17,6 +18,7 @@ const UnitsTab: React.FC<UnitsTabProps> = ({
   units,
   setUnits,
   loading,
+  onUnitsRefresh,
 }) => {
   const [activeUnitId, setActiveUnitId] = useState<string | null>(null);
   const [isUploaderOpen, setIsUploaderOpen] = useState(false);
@@ -41,6 +43,10 @@ const UnitsTab: React.FC<UnitsTabProps> = ({
   const handleRefresh = (newUnits: Unit[]) => {
     setUnits(newUnits);
     setError(null);
+    // Also call external refresh if provided
+    if (onUnitsRefresh) {
+      onUnitsRefresh();
+    }
   };
 
   const activeUnit = units.find((unit) => unit.id === activeUnitId);

@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
 import axios from "axios";
-import { Trash2, Edit3 } from "lucide-react";
+import { Edit3, Trash2 } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 
-import { useUserContext } from "../context/UserContext";
 import CreateClassroomForm from "../components/classroom/CreateClassroomForm";
 import EditClassroomForm from "../components/classroom/EditClassroomForm";
 import {
@@ -16,7 +15,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "../components/ui/alert-dialog";
-import { toast, Toaster } from "../components/ui/toast";
+import { useUserContext } from "../context/UserContext";
+import { useToast } from "../hooks/use-toast";
 
 const MyClassroomsPage = () => {
   const [classrooms, setClassrooms] = useState<any[]>([]);
@@ -167,6 +167,12 @@ const MyClassroomsPage = () => {
       setProcessingClassroomId(classroomToDelete.id);
       setDialogOpen(false);
 
+      // Show loading toast
+      const loadingToast = toast({
+        title: "Deleting Classroom",
+        description: "Please wait while we remove the classroom...",
+      });
+
       const token = localStorage.getItem("token");
 
       await axios.delete(
@@ -178,21 +184,36 @@ const MyClassroomsPage = () => {
         }
       );
 
+      // Dismiss loading toast and show success
+      loadingToast.dismiss();
+      toast({
+        title: "Classroom Deleted Successfully! 🗑️",
+        description: `"${classroomToDelete.name}" has been permanently removed.`,
+      });
+
       setClassrooms((prevClassrooms) =>
         prevClassrooms.filter(
           (classroom) => classroom.id !== classroomToDelete.id
         )
       );
 
-      toast.success("Classroom deleted successfully");
-
       console.log("Classroom deleted successfully");
     } catch (err) {
+      // Dismiss loading toast and show error
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "Failed to delete classroom. Please try again.";
+
+      toast({
+        title: "Failed to Delete Classroom",
+        description: errorMessage,
+        variant: "destructive",
+      });
+
       console.error("Error deleting classroom:", err);
-      toast.error("Failed to delete classroom. Please try again.");
     } finally {
       setProcessingClassroomId(null);
-      setClassroomToDelete(null);
     }
   };
 

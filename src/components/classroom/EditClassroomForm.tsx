@@ -1,7 +1,6 @@
-import React, { useState, useEffect, forwardRef } from "react";
 import axios from "axios";
 import { X } from "lucide-react";
-import { toast, Toaster } from "../ui/toast";
+import React, { forwardRef, useEffect, useState } from "react";
 
 interface EditClassroomFormProps {
   isOpen: boolean;
@@ -18,7 +17,6 @@ const EditClassroomForm = forwardRef<HTMLDivElement, EditClassroomFormProps>(
     });
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
-
 
     // Update form data when classroom prop changes
     useEffect(() => {
@@ -77,6 +75,12 @@ const EditClassroomForm = forwardRef<HTMLDivElement, EditClassroomFormProps>(
 
       setLoading(true);
 
+      // Show loading toast
+      const loadingToast = toast({
+        title: "Updating Classroom",
+        description: "Please wait while we save your changes...",
+      });
+
       try {
         const token = localStorage.getItem("token");
 
@@ -100,6 +104,16 @@ const EditClassroomForm = forwardRef<HTMLDivElement, EditClassroomFormProps>(
 
         console.log("Classroom updated successfully:", response.data);
 
+        // Dismiss loading toast and show success
+        loadingToast.dismiss();
+        toast({
+          title: "Classroom Updated Successfully! ✨",
+          description: `"${formData.name.trim()}" has been updated.`,
+        });
+
+        // Notify other parts of the app that classroom was updated
+        localStorage.setItem("classroom-updated", classroom.id);
+
         // Call the callback with the updated classroom data
         onClassroomUpdated(
           response.data.classroom || { ...classroom, ...updateData }
@@ -108,6 +122,9 @@ const EditClassroomForm = forwardRef<HTMLDivElement, EditClassroomFormProps>(
       } catch (error) {
         console.error("Error updating classroom:", error);
 
+        // Dismiss loading toast and show error
+        loadingToast.dismiss();
+
         if (axios.isAxiosError(error)) {
           const errorMessage =
             error.response?.data?.message ||
@@ -115,9 +132,17 @@ const EditClassroomForm = forwardRef<HTMLDivElement, EditClassroomFormProps>(
             "Failed to update classroom";
           console.error("Server error:", error.response?.data);
 
-          toast.error(errorMessage);
+          toast({
+            title: "Failed to Update Classroom",
+            description: errorMessage,
+            variant: "destructive",
+          });
         } else {
-          toast.error("An unexpected error occurred. Please try again.");
+          toast({
+            title: "Failed to Update Classroom",
+            description: "An unexpected error occurred. Please try again.",
+            variant: "destructive",
+          });
         }
       } finally {
         setLoading(false);
