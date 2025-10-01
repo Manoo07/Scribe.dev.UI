@@ -1,7 +1,7 @@
 import axios from "axios";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import React, { useState } from "react";
-import { Toast, ToastProvider, ToastViewport } from "../components/ui/toast";
+import { toast, Toaster } from "../components/ui/toast";
 import { Link, useNavigate } from "react-router-dom";
 import Logo from "../components/Logo";
 import Button from "../components/ui/button";
@@ -12,7 +12,7 @@ const Login: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
+
   const { setUserRole } = useUserContext();
   const navigate = useNavigate();
 
@@ -37,24 +37,14 @@ const Login: React.FC = () => {
       navigate("/dashboard");
     } catch (error) {
       console.error("Login failed", error);
-  setToast("Login failed. Please check your credentials.");
+  toast.error("Login failed. Please check your credentials.");
     }
   };
 
   return (
-    <ToastProvider>
+    <>
+      <Toaster position="top-right" richColors />
       <div className="min-h-screen bg-gray-900 flex items-center justify-center px-4 py-12">
-        {toast && (
-          <div className="fixed top-4 right-4 z-[9999] min-w-xs">
-            <Toast variant="destructive" open onOpenChange={() => setToast(null)}>
-              <div className="flex flex-col gap-1">
-                <span className="font-semibold">Error</span>
-                <span>{toast}</span>
-              </div>
-            </Toast>
-          </div>
-        )}
-        <ToastViewport className="fixed top-4 right-4 z-[9999]" />
         <div className="max-w-md w-full space-y-8 bg-gray-800 p-8 rounded-xl shadow-2xl">
           <div className="flex flex-col items-center">
             <Logo darkMode />
@@ -164,7 +154,7 @@ const Login: React.FC = () => {
           </form>
         </div>
       </div>
-    </ToastProvider>
+  </>
   );
 };
 
