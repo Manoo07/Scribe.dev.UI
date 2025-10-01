@@ -1,6 +1,6 @@
 import { Plus } from "lucide-react";
 import React, { useState } from "react";
-import { toast, Toaster } from "./ui/toast";
+import { useToast } from "../hooks/use-toast";
 import { deleteUnit } from "../services/api";
 import { ContentType, Unit } from "../types";
 import { formatDistanceToNow } from "../utils/dateUtils";
@@ -37,7 +37,7 @@ const UnitsList: React.FC<UnitsListProps> = ({
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [localUnits, setLocalUnits] = useState<Unit[]>(units);
-
+  const { toast } = useToast();
 
   // Keep localUnits in sync with props.units if they change externally
   React.useEffect(() => {

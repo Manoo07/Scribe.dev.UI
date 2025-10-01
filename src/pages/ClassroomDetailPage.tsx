@@ -1,5 +1,5 @@
 import axios from "axios";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 
 import AssignmentsTab from "../components/classroom/Tabs/AssignmentsTab";
@@ -20,6 +20,12 @@ const ClassroomDetailPage = () => {
   const [units, setUnits] = useState<any[]>([]);
   const [unitsLoading, setUnitsLoading] = useState(true);
   const { toast } = useToast();
+
+  // Memoize the units array to prevent unnecessary re-renders
+  const memoizedUnits = useMemo(
+    () => units.map((unit: any) => ({ id: unit.id, name: unit.name })),
+    [units]
+  );
 
   useEffect(() => {
     const fetchClassroom = async () => {
@@ -131,6 +137,7 @@ const ClassroomDetailPage = () => {
           <UnitsTab
             classroomId={id!}
             units={units}
+            setUnits={setUnits}
             loading={unitsLoading}
             onUnitsRefresh={handleUnitsRefresh}
           />
@@ -140,7 +147,7 @@ const ClassroomDetailPage = () => {
           <ThreadsTab
             classroomId={id!}
             classroomName={classroom?.name}
-            units={units.map((unit: any) => ({ id: unit.id, name: unit.name }))}
+            units={memoizedUnits}
           />
         );
       case "Assignments":

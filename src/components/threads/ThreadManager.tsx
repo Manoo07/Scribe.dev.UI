@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useToast } from "../../hooks/use-toast";
 import {
   createThread,
@@ -42,41 +42,18 @@ const ThreadsManager: React.FC<ThreadsManagerProps> = ({
     limit: 20, // Default limit
   });
 
+  // Use ref to store current filters to avoid dependency issues
+  const currentFiltersRef = useRef({
+    sortBy: "mostRecent",
+    limit: 20,
+  });
+
+  // Use ref to store classroom data to avoid dependency issues
+  const classroomDataRef = useRef(classroomData);
+
   // Track if data needs refresh
   const [lastRefreshTime, setLastRefreshTime] = useState<number>(Date.now());
   const [hasChanges, setHasChanges] = useState<boolean>(false);
-
-  // Filter mapping function to convert UI values to API values
-  const mapFiltersToAPI = useCallback((filters: any) => {
-    const apiFilters = { ...filters };
-
-    // Use your exact API values
-    switch (filters.sortBy) {
-      case "mostRecent":
-        apiFilters.sortBy = "mostRecent";
-        apiFilters.limit = 20;
-        break;
-      case "mostReplied":
-        apiFilters.sortBy = "mostReplied";
-        apiFilters.limit = 15;
-        break;
-      case "mostLiked":
-        apiFilters.sortBy = "mostLiked";
-        apiFilters.limit = 10;
-        break;
-      case "alphabetical":
-        apiFilters.sortBy = "alphabetical";
-        apiFilters.limit = 25;
-        break;
-      default:
-        apiFilters.sortBy = "mostRecent";
-        apiFilters.limit = 20;
-        break;
-    }
-
-    console.log("🔄 Filter mapping:", { uiFilters: filters, apiFilters });
-    return apiFilters;
-  }, []);
 
   // Fetch threads from API
   const fetchData = useCallback(async () => {
@@ -85,19 +62,42 @@ const ThreadsManager: React.FC<ThreadsManagerProps> = ({
     try {
       let data;
 
-      // Map current filters to API format
-      const apiFilters = mapFiltersToAPI(currentFilters);
+      // Map current filters to API format inline to avoid dependency issues
+      const apiFilters = (() => {
+        const filters = { ...currentFiltersRef.current };
+        switch (filters.sortBy) {
+          case "mostRecent":
+            filters.sortBy = "mostRecent";
+            filters.limit = 20;
+            break;
+          case "mostReplied":
+            filters.sortBy = "mostReplied";
+            filters.limit = 15;
+            break;
+          case "mostLiked":
+            filters.sortBy = "mostLiked";
+            filters.limit = 10;
+            break;
+          case "alphabetical":
+            filters.sortBy = "alphabetical";
+            filters.limit = 25;
+            break;
+          default:
+            filters.sortBy = "mostRecent";
+            filters.limit = 20;
+            break;
+        }
+        return filters;
+      })();
 
-      if (context === "classroom" && classroomData?.id) {
+      if (context === "classroom" && classroomDataRef.current?.id) {
         if (selectedUnit && selectedUnit !== "all") {
           // Fetch threads for specific unit within classroom
-
           data = await fetchUnitThreads(selectedUnit, page, pageSize);
         } else {
           // Fetch all threads for the classroom with current filters
-
           data = await fetchClassroomThreads(
-            classroomData.id,
+            classroomDataRef.current.id,
             page,
             pageSize,
             apiFilters
@@ -105,7 +105,6 @@ const ThreadsManager: React.FC<ThreadsManagerProps> = ({
         }
       } else {
         // Fetch global threads with current filters
-
         data = await fetchThreads(page, pageSize, apiFilters);
       }
 
@@ -127,16 +126,7 @@ const ThreadsManager: React.FC<ThreadsManagerProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [
-    context,
-    classroomData?.id,
-    page,
-    selectedUnit,
-    pageSize,
-    currentFilters,
-    mapFiltersToAPI,
-    toast,
-  ]);
+  }, [context, page, selectedUnit, pageSize]);
 
   // Fetch data with filters
   const fetchDataWithFilters = useCallback(
@@ -212,18 +202,55 @@ const ThreadsManager: React.FC<ThreadsManagerProps> = ({
 
       console.log("🔄 Complete filters object:", newFilters);
 
-      // Update the current filters state
+      // Update the current filters state and ref
       setCurrentFilters(newFilters);
+      currentFiltersRef.current = newFilters;
 
       // Reset to first page when filters change
       setPage(1);
 
-      // Map UI filters to API filters and trigger data refresh
-      const apiFilters = mapFiltersToAPI(newFilters);
+      // Map UI filters to API filters inline and trigger data refresh
+      const apiFilters = (() => {
+        const mappedFilters = { ...newFilters };
+        switch (mappedFilters.sortBy) {
+          case "mostRecent":
+            mappedFilters.sortBy = "mostRecent";
+            mappedFilters.limit = 20;
+            break;
+          case "mostReplied":
+            mappedFilters.sortBy = "mostReplied";
+            mappedFilters.limit = 15;
+            break;
+          case "mostLiked":
+            mappedFilters.sortBy = "mostLiked";
+            mappedFilters.limit = 10;
+            break;
+          case "alphabetical":
+            mappedFilters.sortBy = "alphabetical";
+            mappedFilters.limit = 25;
+            break;
+          default:
+            mappedFilters.sortBy = "mostRecent";
+            mappedFilters.limit = 20;
+            break;
+        }
+        return mappedFilters;
+      })();
+
       fetchDataWithFilters(apiFilters);
     },
-    [fetchDataWithFilters, currentFilters, mapFiltersToAPI]
+    [fetchDataWithFilters]
   );
+
+  // Sync ref with state
+  useEffect(() => {
+    currentFiltersRef.current = currentFilters;
+  }, [currentFilters]);
+
+  // Sync classroomData ref
+  useEffect(() => {
+    classroomDataRef.current = classroomData;
+  }, [classroomData]);
 
   useEffect(() => {
     fetchData();

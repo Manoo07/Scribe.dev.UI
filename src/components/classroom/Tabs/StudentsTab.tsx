@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useClassroomContext } from "../../../context/ClassroomContext";
-import { toast, Toaster } from "../../ui/toast";
+import { useToast } from "../../../hooks/use-toast";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,7 +20,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "../../ui/alert-dialog";
-import Button from "../../ui/button";
+import Button from "../../ui/Button";
 import { Card, CardContent } from "../../ui/card";
 import { Checkbox } from "../../ui/checkbox";
 import { Input } from "../../ui/input";
@@ -44,6 +44,7 @@ const StudentsTab = ({ classroomId }: { classroomId: string }) => {
   const [processingStudentId, setProcessingStudentId] = useState<string | null>(
     null
   );
+  const { toast } = useToast();
   const [studentToRemove, setStudentToRemove] = useState<Student | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
@@ -57,8 +58,6 @@ const StudentsTab = ({ classroomId }: { classroomId: string }) => {
     Set<string>
   >(new Set());
   const [bulkProcessing, setBulkProcessing] = useState(false);
-
-
 
   // Use classroom context for students data
   const {

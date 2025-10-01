@@ -2,7 +2,7 @@ import { Building, Megaphone, PlusCircle, User, Users } from "lucide-react";
 import { useState } from "react";
 import AnnouncementCard from "../components/announcements/AnnouncementCard";
 import CreateAnnouncementModal from "../components/announcements/CreateAnnouncement";
-import Button from "../components/ui/button";
+import Button from "../components/ui/Button";
 import { Card, CardContent } from "../components/ui/card";
 import { mockAnnouncements } from "../data/mockAnnouncement";
 
@@ -145,7 +145,7 @@ const Announcements = () => {
       {/* Filter Tabs */}
       <div className="flex flex-wrap gap-2">
         <Button
-          variant={activeFilter === "all" ? "default" : "outline"}
+          variant={activeFilter === "all" ? "primary" : "outline"}
           onClick={() => setActiveFilter("all")}
           className={`${
             activeFilter === "all"
@@ -156,7 +156,7 @@ const Announcements = () => {
           All Announcements
         </Button>
         <Button
-          variant={activeFilter === "classroom" ? "default" : "outline"}
+          variant={activeFilter === "classroom" ? "primary" : "outline"}
           onClick={() => setActiveFilter("classroom")}
           className={`${
             activeFilter === "classroom"
@@ -168,7 +168,7 @@ const Announcements = () => {
           Classroom
         </Button>
         <Button
-          variant={activeFilter === "college" ? "default" : "outline"}
+          variant={activeFilter === "college" ? "primary" : "outline"}
           onClick={() => setActiveFilter("college")}
           className={`${
             activeFilter === "college"

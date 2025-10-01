@@ -73,7 +73,7 @@ export const useOwnership = (): UseOwnershipReturn => {
     } finally {
       setIsLoading(false);
     }
-  }, [authUser?.id, fetchFreshUserData, currentUserId]);
+  }, [authUser?.id, fetchFreshUserData]); // Removed currentUserId from dependencies
 
   const isOwner = useCallback(
     (createdBy: string): boolean => {
@@ -95,7 +95,7 @@ export const useOwnership = (): UseOwnershipReturn => {
     if (!currentUserId) {
       fetchCurrentUser();
     }
-  }, [fetchCurrentUser, currentUserId]);
+  }, [fetchCurrentUser]); // Removed currentUserId from dependencies
 
   return {
     currentUserId,

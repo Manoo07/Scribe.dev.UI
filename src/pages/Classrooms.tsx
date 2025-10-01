@@ -15,6 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "../components/ui/alert-dialog";
+import { Toaster } from "../components/ui/toast";
 import { useUserContext } from "../context/UserContext";
 import { useToast } from "../hooks/use-toast";
 
@@ -30,6 +31,7 @@ const MyClassroomsPage = () => {
   const [processingClassroomId, setProcessingClassroomId] = useState<
     string | null
   >(null);
+  const { toast } = useToast();
   const { userRole } = useUserContext();
 
   const createModalRef = useRef<HTMLDivElement>(null);
@@ -226,155 +228,157 @@ const MyClassroomsPage = () => {
     <>
       <Toaster position="top-right" richColors />
       <div
-      className={`p-6 md:p-8 transition-opacity duration-300 ${
-        showCreateForm || showEditForm ? "opacity-70" : "opacity-100"
-      }`}
-    >
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-white">My Classrooms</h2>
-        {userRole === "FACULTY" && (
-          <button
-            onClick={handleAddClassroom}
-            className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm shadow transition"
-          >
-            + Add Classroom
-          </button>
-        )}
-      </div>
-
-      {loading && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {Array(4)
-            .fill(0)
-            .map((_, idx) => (
-              <div
-                key={idx}
-                className="bg-gray-800 animate-pulse p-4 rounded-lg h-28"
-              >
-                <div className="bg-gray-700 h-4 w-3/4 mb-3 rounded" />
-                <div className="bg-gray-700 h-3 w-1/2 mb-2 rounded" />
-                <div className="bg-gray-700 h-3 w-1/3 rounded" />
-              </div>
-            ))}
+        className={`p-6 md:p-8 transition-opacity duration-300 ${
+          showCreateForm || showEditForm ? "opacity-70" : "opacity-100"
+        }`}
+      >
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-white">My Classrooms</h2>
+          {userRole === "FACULTY" && (
+            <button
+              onClick={handleAddClassroom}
+              className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm shadow transition"
+            >
+              + Add Classroom
+            </button>
+          )}
         </div>
-      )}
 
-      {error && <p className="text-red-500 mb-4">{error}</p>}
-
-      {!loading && !error && (
-        <>
-          {classrooms.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-gray-400 text-lg mb-4">No classrooms found</p>
-              {userRole === "FACULTY" && (
-                <p className="text-gray-500">
-                  Click "Add Classroom" to create your first classroom
-                </p>
-              )}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {classrooms.map((classroom) => (
+        {loading && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {Array(4)
+              .fill(0)
+              .map((_, idx) => (
                 <div
-                  key={classroom.id}
-                  className="bg-gray-800 hover:bg-gray-700 transition p-5 rounded-xl shadow-md relative group"
+                  key={idx}
+                  className="bg-gray-800 animate-pulse p-4 rounded-lg h-28"
                 >
-                  <Link
-                    to={`/dashboard/classrooms/${classroom.id}`}
-                    className="block"
-                  >
-                    <h3 className="text-xl font-semibold text-white mb-1 pr-16">
-                      {classroom.name}
-                    </h3>
-                    {classroom.description && (
-                      <p className="text-gray-300 text-sm mb-2 pr-16">
-                        {classroom.description}
-                      </p>
-                    )}
-                    <p className="text-gray-400 text-sm">
-                      Section: {classroom.section?.name || "N/A"}
-                    </p>
-                    <p className="text-gray-400 text-sm">
-                      Faculty: {classroom.faculty?.specialization || "N/A"}
-                    </p>
-                  </Link>
-
-                  {userRole === "FACULTY" && (
-                    <div className="absolute top-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        onClick={(e) => handleEditClassroom(e, classroom)}
-                        className="p-2 text-gray-400 hover:text-blue-400 hover:bg-gray-700 rounded-lg transition"
-                        title="Edit classroom"
-                      >
-                        <Edit3 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={(e) => confirmDeleteClassroom(e, classroom)}
-                        disabled={processingClassroomId === classroom.id}
-                        className="p-2 text-gray-400 hover:text-red-400 hover:bg-gray-700 rounded-lg transition disabled:opacity-50"
-                        title="Delete classroom"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                        {processingClassroomId === classroom.id && (
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-400"></div>
-                          </div>
-                        )}
-                      </button>
-                    </div>
-                  )}
+                  <div className="bg-gray-700 h-4 w-3/4 mb-3 rounded" />
+                  <div className="bg-gray-700 h-3 w-1/2 mb-2 rounded" />
+                  <div className="bg-gray-700 h-3 w-1/3 rounded" />
                 </div>
               ))}
-            </div>
-          )}
-        </>
-      )}
+          </div>
+        )}
 
-      <CreateClassroomForm
-        ref={createModalRef}
-        isOpen={showCreateForm}
-        onClose={() => setShowCreateForm(false)}
-        onClassroomCreated={handleClassroomCreated}
-      />
+        {error && <p className="text-red-500 mb-4">{error}</p>}
 
-      <EditClassroomForm
-        ref={editModalRef}
-        isOpen={showEditForm}
-        classroom={classroomToEdit}
-        onClose={() => {
-          setShowEditForm(false);
-          setClassroomToEdit(null);
-        }}
-        onClassroomUpdated={handleClassroomUpdated}
-      />
+        {!loading && !error && (
+          <>
+            {classrooms.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-gray-400 text-lg mb-4">
+                  No classrooms found
+                </p>
+                {userRole === "FACULTY" && (
+                  <p className="text-gray-500">
+                    Click "Add Classroom" to create your first classroom
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {classrooms.map((classroom) => (
+                  <div
+                    key={classroom.id}
+                    className="bg-gray-800 hover:bg-gray-700 transition p-5 rounded-xl shadow-md relative group"
+                  >
+                    <Link
+                      to={`/dashboard/classrooms/${classroom.id}`}
+                      className="block"
+                    >
+                      <h3 className="text-xl font-semibold text-white mb-1 pr-16">
+                        {classroom.name}
+                      </h3>
+                      {classroom.description && (
+                        <p className="text-gray-300 text-sm mb-2 pr-16">
+                          {classroom.description}
+                        </p>
+                      )}
+                      <p className="text-gray-400 text-sm">
+                        Section: {classroom.section?.name || "N/A"}
+                      </p>
+                      <p className="text-gray-400 text-sm">
+                        Faculty: {classroom.faculty?.specialization || "N/A"}
+                      </p>
+                    </Link>
 
-      {/* Confirmation Dialog */}
-      <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <AlertDialogContent className="bg-gray-800 border-gray-700 text-white">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Classroom</AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-400">
-              Are you sure you want to delete the classroom "
-              {classroomToDelete?.name}"? This action cannot be undone and will
-              permanently remove all associated data.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel
-              className="bg-gray-700 text-white hover:bg-gray-600"
-              onClick={handleDialogCancel}
-            >
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-red-600 hover:bg-red-700 text-white"
-              onClick={handleDeleteClassroom}
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+                    {userRole === "FACULTY" && (
+                      <div className="absolute top-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={(e) => handleEditClassroom(e, classroom)}
+                          className="p-2 text-gray-400 hover:text-blue-400 hover:bg-gray-700 rounded-lg transition"
+                          title="Edit classroom"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={(e) => confirmDeleteClassroom(e, classroom)}
+                          disabled={processingClassroomId === classroom.id}
+                          className="p-2 text-gray-400 hover:text-red-400 hover:bg-gray-700 rounded-lg transition disabled:opacity-50"
+                          title="Delete classroom"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          {processingClassroomId === classroom.id && (
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-400"></div>
+                            </div>
+                          )}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        <CreateClassroomForm
+          ref={createModalRef}
+          isOpen={showCreateForm}
+          onClose={() => setShowCreateForm(false)}
+          onClassroomCreated={handleClassroomCreated}
+        />
+
+        <EditClassroomForm
+          ref={editModalRef}
+          isOpen={showEditForm}
+          classroom={classroomToEdit}
+          onClose={() => {
+            setShowEditForm(false);
+            setClassroomToEdit(null);
+          }}
+          onClassroomUpdated={handleClassroomUpdated}
+        />
+
+        {/* Confirmation Dialog */}
+        <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <AlertDialogContent className="bg-gray-800 border-gray-700 text-white">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Classroom</AlertDialogTitle>
+              <AlertDialogDescription className="text-gray-400">
+                Are you sure you want to delete the classroom "
+                {classroomToDelete?.name}"? This action cannot be undone and
+                will permanently remove all associated data.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel
+                className="bg-gray-700 text-white hover:bg-gray-600"
+                onClick={handleDialogCancel}
+              >
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-red-600 hover:bg-red-700 text-white"
+                onClick={handleDeleteClassroom}
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </>
   );

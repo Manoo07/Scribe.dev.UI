@@ -1,6 +1,7 @@
 import axios from "axios";
 import { X } from "lucide-react";
 import React, { forwardRef, useEffect, useState } from "react";
+import { useToast } from "../../hooks/use-toast";
 
 interface EditClassroomFormProps {
   isOpen: boolean;
@@ -17,6 +18,7 @@ const EditClassroomForm = forwardRef<HTMLDivElement, EditClassroomFormProps>(
     });
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
+    const { toast } = useToast();
 
     // Update form data when classroom prop changes
     useEffect(() => {
