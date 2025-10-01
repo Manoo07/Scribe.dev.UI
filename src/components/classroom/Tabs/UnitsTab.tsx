@@ -1,47 +1,30 @@
-import React, { useState, useEffect } from "react";
-import UnitsList from "../../UnitList";
-import UnitDetail from "../../UnitDetails";
-import AddContentOnlyModal from "../../AddContentModal";
-import ContentUploader from "../../EditContentModal";
-import { Unit } from "../../../types/index";
-import { getUnits } from "../../../services/api";
 import { ClipboardList } from "lucide-react";
+import React, { useState } from "react";
+import { Unit } from "../../../types/index";
+import ContentUploader from "../../EditContentModal";
+import UnitDetail from "../../UnitDetails";
+import UnitsList from "../../UnitList";
 
-interface VirtualClassroomProps {
+interface UnitsTabProps {
   classroomId: string;
-  classroomName?: string;
+  units: Unit[];
+  setUnits: (units: Unit[]) => void;
+  loading: boolean;
+  onUnitsRefresh?: () => void;
 }
 
-const VirtualClassroom: React.FC<VirtualClassroomProps> = ({ classroomId, classroomName }) => {
-  const [units, setUnits] = useState<Unit[]>([]);
+const UnitsTab: React.FC<UnitsTabProps> = ({
+  classroomId,
+  units,
+  setUnits,
+  loading,
+  onUnitsRefresh,
+}) => {
   const [activeUnitId, setActiveUnitId] = useState<string | null>(null);
   const [isUploaderOpen, setIsUploaderOpen] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetchUnits();
-  }, [classroomId]);
-
-  const fetchUnits = async () => {
-    setLoading(true);
-    try {
-      const data = await getUnits(classroomId);
-      setUnits(data);
-      setError(null);
-    } catch (err) {
-      console.error("Failed to fetch units:", err);
-      setError("Failed to load units. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-
   const handleUnitSelect = (unitId: string) => {
     setActiveUnitId(unitId);
-    setIsEditMode(false);
   };
 
   const handleBackToUnits = () => {
@@ -50,13 +33,20 @@ const VirtualClassroom: React.FC<VirtualClassroomProps> = ({ classroomId, classr
 
   const handleOpenUploader = (unitId: string) => {
     setActiveUnitId(unitId);
-    setIsEditMode(true);
     setIsUploaderOpen(true);
   };
 
   const handleCloseUploader = () => {
     setIsUploaderOpen(false);
-    setIsEditMode(false);
+  };
+
+  const handleRefresh = (newUnits: Unit[]) => {
+    setUnits(newUnits);
+    setError(null);
+    // Also call external refresh if provided
+    if (onUnitsRefresh) {
+      onUnitsRefresh();
+    }
   };
 
   const activeUnit = units.find((unit) => unit.id === activeUnitId);
@@ -93,12 +83,6 @@ const VirtualClassroom: React.FC<VirtualClassroomProps> = ({ classroomId, classr
         <div className="bg-red-900/20 border border-red-500 p-6 rounded-lg max-w-md">
           <h2 className="text-red-400 text-xl font-bold mb-2">Error</h2>
           <p className="text-white mb-4">{error}</p>
-          <button
-            onClick={fetchUnits}
-            className="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded transition-colors"
-          >
-            Try Again
-          </button>
         </div>
       </div>
     );
@@ -109,9 +93,7 @@ const VirtualClassroom: React.FC<VirtualClassroomProps> = ({ classroomId, classr
       <header className="mb-8">
         <div className="flex items-center gap-3 mb-2">
           <ClipboardList size={28} className="text-blue-500" />
-          <h1 className="text-3xl font-bold text-white">
-            {classroomName || "Virtual Classroom"}
-          </h1>
+          <h1 className="text-3xl font-bold text-white">Units</h1>
         </div>
         <p className="text-gray-400">
           Manage your units and educational materials
@@ -122,44 +104,28 @@ const VirtualClassroom: React.FC<VirtualClassroomProps> = ({ classroomId, classr
         <UnitDetail
           unit={activeUnit}
           onBack={handleBackToUnits}
-          onAddContent={() => {
-            setIsEditMode(false);
-            setIsUploaderOpen(true);
-          }}
-          onRefresh={fetchUnits}
+          onAddContent={() => setIsUploaderOpen(true)}
+          onRefresh={() => handleRefresh(units)}
         />
       ) : activeUnit && isUploaderOpen ? (
-        isEditMode ? (
-          <ContentUploader
-            unit={activeUnit}
-            onClose={handleCloseUploader}
-            onSuccess={() => {
-              fetchUnits();
-              setIsUploaderOpen(false);
-              setIsEditMode(false);
-            }}
-          />
-        ) : (
-          <AddContentOnlyModal
-            unit={activeUnit}
-            onClose={handleCloseUploader}
-            onSuccess={() => {
-              fetchUnits();
-              setIsUploaderOpen(false);
-            }}
-          />
-        )
+        <ContentUploader
+          unit={activeUnit}
+          onClose={handleCloseUploader}
+          onSuccess={() => {
+            setIsUploaderOpen(false);
+          }}
+        />
       ) : (
         <UnitsList
           units={units}
           classroomId={classroomId}
           onUnitSelect={handleUnitSelect}
           onUnitEdit={handleOpenUploader}
-          onRefresh={fetchUnits}
+          onRefresh={() => handleRefresh(units)}
         />
       )}
     </div>
   );
 };
 
-export default VirtualClassroom;
+export default UnitsTab;

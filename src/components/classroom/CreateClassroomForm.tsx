@@ -1,6 +1,7 @@
-import React, { useState, useEffect, forwardRef } from "react";
-import { X } from "lucide-react";
 import axios from "axios";
+import { X } from "lucide-react";
+import React, { forwardRef, useEffect, useState } from "react";
+import { useToast } from "../../hooks/use-toast";
 
 interface Department {
   id: string;
@@ -52,6 +53,7 @@ const CreateClassroomForm = forwardRef<
   const [loadingDepartments, setLoadingDepartments] = useState(false);
   const [loadingYears, setLoadingYears] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   // Fetch departments on component mount
   useEffect(() => {
@@ -125,42 +127,99 @@ const CreateClassroomForm = forwardRef<
     }));
   };
 
+  const validateForm = () => {
+    if (!formData.name || !formData.departmentId || !formData.yearId) {
+      setError("Please fill in all fields");
+      toast({
+        title: "Error",
+        description: "Please fill in all fields",
+        variant: "destructive",
+      });
+      return false;
+    }
+    return true;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.name || !formData.departmentId || !formData.yearId) {
-      setError("Please fill in all fields");
+    if (!validateForm()) {
       return;
     }
 
     setLoading(true);
-    setError(null);
+
+    // Show loading toast
+    const loadingToast = toast({
+      title: "Creating Classroom",
+      description: "Please wait while we set up your new classroom...",
+    });
 
     try {
       const token = localStorage.getItem("token");
 
-      // Send the form data with departmentId and yearId
-      const payload = {
-        name: formData.name,
+      const classroomData = {
+        name: formData.name.trim(),
         departmentId: formData.departmentId,
         yearId: formData.yearId,
       };
 
-      console.log("Creating classroom with payload:", payload);
+      console.log("Creating classroom with data:", classroomData);
 
-      await axios.post("http://localhost:3000/api/v1/classroom", payload, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
+      const response = await axios.post(
+        "http://localhost:3000/api/v1/classroom",
+        classroomData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      console.log("Classroom created successfully:", response.data);
+
+      // Dismiss loading toast and show success
+      loadingToast.dismiss();
+      toast({
+        title: "Classroom Created Successfully! 🎉",
+        description: `"${formData.name.trim()}" is now ready for your students.`,
       });
 
-      setFormData({ name: "", departmentId: "", yearId: "" });
+      // Call the callback
       onClassroomCreated();
-      onClose();
-    } catch (err: any) {
-      console.error("Error creating classroom:", err);
-      setError(err.response?.data?.message || "Failed to create classroom");
+
+      // Reset form
+      setFormData({
+        name: "",
+        departmentId: "",
+        yearId: "",
+      });
+    } catch (error) {
+      console.error("Error creating classroom:", error);
+
+      // Dismiss loading toast and show error
+      loadingToast.dismiss();
+
+      if (axios.isAxiosError(error)) {
+        const errorMessage =
+          error.response?.data?.message ||
+          error.response?.data?.error ||
+          "Failed to create classroom";
+        console.error("Server error:", error.response?.data);
+
+        toast({
+          title: "Failed to Create Classroom",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Failed to Create Classroom",
+          description: "An unexpected error occurred. Please try again.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setLoading(false);
     }

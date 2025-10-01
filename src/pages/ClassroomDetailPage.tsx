@@ -1,5 +1,5 @@
 import axios from "axios";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 
 import AssignmentsTab from "../components/classroom/Tabs/AssignmentsTab";
@@ -9,12 +9,23 @@ import StudentsTab from "../components/classroom/Tabs/StudentsTab";
 import ThreadsTab from "../components/classroom/Tabs/ThreadsTab";
 import UnitsTab from "../components/classroom/Tabs/UnitsTab";
 import { ClassroomProvider } from "../context/ClassroomContext";
+import { useToast } from "../hooks/use-toast";
+import { getUnits } from "../services/api";
 
 const ClassroomDetailPage = () => {
   const { id } = useParams();
   const [classroom, setClassroom] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("Units");
+  const [units, setUnits] = useState<any[]>([]);
+  const [unitsLoading, setUnitsLoading] = useState(true);
+  const { toast } = useToast();
+
+  // Memoize the units array to prevent unnecessary re-renders
+  const memoizedUnits = useMemo(
+    () => units.map((unit: any) => ({ id: unit.id, name: unit.name })),
+    [units]
+  );
 
   useEffect(() => {
     const fetchClassroom = async () => {
@@ -35,20 +46,108 @@ const ClassroomDetailPage = () => {
         setLoading(false);
       }
     };
-
-    if (id) fetchClassroom();
+    const fetchUnitsData = async () => {
+      setUnitsLoading(true);
+      try {
+        const data = await getUnits(id!);
+        setUnits(data);
+      } catch (err) {
+        setUnits([]);
+      } finally {
+        setUnitsLoading(false);
+      }
+    };
+    if (id) {
+      fetchClassroom();
+      fetchUnitsData();
+    }
   }, [id]);
+
+  const fetchUnitsData = async () => {
+    setUnitsLoading(true);
+    try {
+      const data = await getUnits(id!);
+      setUnits(data);
+    } catch (err) {
+      setUnits([]);
+    } finally {
+      setUnitsLoading(false);
+    }
+  };
+
+  const handleUnitsRefresh = () => {
+    fetchUnitsData();
+  };
+
+  const handleClassroomRefresh = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get(
+        `http://localhost:3000/api/v1/classroom/${id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      setClassroom(response.data);
+    } catch (error) {
+      console.error("Error refreshing classroom:", error);
+    }
+  };
+
+  const handleRefreshAll = () => {
+    // Show loading toast
+    const loadingToast = toast({
+      title: "Refreshing Data",
+      description: "Please wait while we fetch the latest information...",
+    });
+
+    try {
+      handleClassroomRefresh();
+      handleUnitsRefresh();
+
+      // Dismiss loading toast and show success
+      loadingToast.dismiss();
+      toast({
+        title: "Data Refreshed Successfully! 🔄",
+        description: "Your classroom information is now up to date.",
+      });
+    } catch (error) {
+      // Dismiss loading toast and show error
+      loadingToast.dismiss();
+
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to refresh data. Please try again.";
+
+      toast({
+        title: "Failed to Refresh Data",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    }
+  };
 
   const renderTab = () => {
     switch (activeTab) {
       case "Units":
-        return <UnitsTab classroomId={id!} classroomName={classroom?.name} />;
+        return (
+          <UnitsTab
+            classroomId={id!}
+            units={units}
+            setUnits={setUnits}
+            loading={unitsLoading}
+            onUnitsRefresh={handleUnitsRefresh}
+          />
+        );
       case "Threads":
         return (
           <ThreadsTab
             classroomId={id!}
-            classroomName={classroom.name}
-            units={classroom.units || []}
+            classroomName={classroom?.name}
+            units={memoizedUnits}
           />
         );
       case "Assignments":

@@ -1,6 +1,239 @@
+// Toggle like for a thread (POST /threads/like/:threadId)
+export const toggleThreadLike = async (threadId: string): Promise<any> => {
+  try {
+    console.log("🔄 Toggling thread like for threadId:", threadId);
+
+    // Ensure token is valid and available
+    ensureToken();
+
+    const response = await api.post(`/threads/like/${threadId}`);
+    console.log("✅ Thread like toggled successfully:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("❌ Error toggling thread like:", error);
+    throw error;
+  }
+};
+// Accept answer for a thread
+export const acceptAnswer = async (
+  threadId: string,
+  replyId: string
+): Promise<any> => {
+  try {
+    console.log("🔄 Accepting answer:", { threadId, replyId });
+
+    // Ensure token is valid and available
+    ensureToken();
+
+    // Use the correct endpoint: /threads/:threadId/accept-answer/:replyId
+    const response = await api.patch(
+      `/threads/${threadId}/accept-answer/${replyId}`
+    );
+    console.log("✅ Answer accepted successfully:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("❌ Error accepting answer:", error);
+    throw error;
+  }
+};
+
+// Unmark answer for a thread (pass the currently accepted reply ID to toggle it off)
+export const unmarkAnswer = async (
+  threadId: string,
+  replyId: string
+): Promise<any> => {
+  try {
+    console.log("🔄 Unmarking answer:", { threadId, replyId });
+
+    // Ensure token is valid and available
+    ensureToken();
+
+    // Use the same endpoint with the reply ID - backend will toggle it off
+    const response = await api.patch(
+      `/threads/${threadId}/accept-answer/${replyId}`
+    );
+    console.log("✅ Answer unmarked successfully:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("❌ Error unmarking answer:", error);
+    throw error;
+  }
+};
+// Delete a thread
+export const deleteThread = async (threadId: string): Promise<any> => {
+  try {
+    console.log("🔄 Deleting thread:", { threadId });
+
+    // Ensure token is valid and available
+    ensureToken();
+
+    const response = await api.delete(`/threads/${threadId}`);
+    console.log("✅ Thread deleted successfully:", response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error("❌ Error deleting thread:", error);
+    console.error("Error details:", {
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message,
+    });
+    throw error;
+  }
+};
+// Fetch thread detail (with replies, paginated)
+export const fetchThreadDetail = async (
+  threadId: string,
+  page = 1,
+  limit = 10,
+  filters?: {
+    sortBy?: string;
+  }
+): Promise<any> => {
+  try {
+    const params = new URLSearchParams();
+    params.append("page", page.toString());
+    params.append("limit", limit.toString());
+
+    if (filters?.sortBy) {
+      params.append("sortBy", filters.sortBy);
+    }
+
+    console.log("🔄 API Call - fetchThreadDetail:", {
+      url: `/threads/${threadId}?${params.toString()}`,
+      threadId,
+      page,
+      limit,
+      filters,
+    });
+
+    const response = await api.get(`/threads/${threadId}?${params.toString()}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching thread detail:", error);
+    throw error;
+  }
+};
+// Fetch generic threads (all, paginated)
+export const fetchThreads = async (
+  page = 1,
+  limit = 10,
+  filters?: {
+    sortBy?: string;
+    limit?: number;
+  }
+): Promise<any> => {
+  try {
+    const params = new URLSearchParams();
+    params.append("page", page.toString());
+
+    if (filters?.sortBy) {
+      params.append("sortBy", filters.sortBy);
+    }
+    if (filters?.limit) {
+      params.append("limit", filters.limit.toString());
+    } else {
+      params.append("limit", limit.toString());
+    }
+
+    console.log("🔄 API Call - fetchThreads:", {
+      url: `/threads?${params.toString()}`,
+      filters,
+      params: Object.fromEntries(params.entries()),
+    });
+
+    const response = await api.get(`/threads?${params.toString()}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching threads:", error);
+    throw error;
+  }
+};
+
+// Fetch unit-based threads (paginated)
+export const fetchUnitThreads = async (
+  unitId: string,
+  page = 1,
+  limit = 10
+): Promise<any> => {
+  try {
+    const response = await api.get(
+      `/threads/unit/${unitId}?page=${page}&limit=${limit}`
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching unit threads:", error);
+    throw error;
+  }
+};
+
+// Fetch classroom-based threads (paginated)
+export const fetchClassroomThreads = async (
+  classroomId: string,
+  page = 1,
+  limit = 10,
+  filters?: {
+    sortBy?: string;
+    limit?: number;
+  }
+): Promise<any> => {
+  try {
+    const params = new URLSearchParams();
+    params.append("classroomId", classroomId);
+    params.append("page", page.toString());
+
+    if (filters?.sortBy) {
+      params.append("sortBy", filters.sortBy);
+    }
+    if (filters?.limit) {
+      params.append("limit", filters.limit.toString());
+    } else {
+      params.append("limit", limit.toString());
+    }
+
+    console.log("🔄 API Call - fetchClassroomThreads:", {
+      url: `/threads?${params.toString()}`,
+      filters,
+      params: Object.fromEntries(params.entries()),
+    });
+
+    const response = await api.get(`/threads?${params.toString()}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching classroom threads:", error);
+    throw error;
+  }
+};
+// Create a new thread (unit-based or generic)
+export const createThread = async (data: CreateThreadPayload): Promise<any> => {
+  try {
+    const payload: any = {
+      title: data.title,
+      content: data.content,
+    };
+    if (data.unitId) payload.unitId = data.unitId;
+    if (data.classroomId) payload.classroomId = data.classroomId;
+    const response = await api.post("/threads", payload, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error creating thread:", error);
+    throw error;
+  }
+};
 import axios from "axios";
-import { LikeRequest, LikeResponse } from "../components/threads/threadTypes";
+import {
+  CreateReplyPayload,
+  CreateThreadPayload,
+  Like,
+  LikeRequest,
+  LikeResponse,
+  ThreadReply,
+} from "../components/threads/threadTypes";
 import { ContentType, Unit } from "../types";
+import { ensureToken } from "../utils/authUtils";
 import { mockUnits } from "./mockData";
 
 // Base URL for API requests
@@ -24,11 +257,127 @@ api.interceptors.request.use((config) => {
   const token = getToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+    // Debug logging for like endpoints
+    if (config.url?.includes("/like") || config.url?.includes("/likes")) {
+      console.log("🔐 Token being sent for like request:", {
+        url: config.url,
+        method: config.method,
+        hasToken: !!token,
+        tokenLength: token.length,
+      });
+    }
+  } else {
+    console.warn("⚠️ No token found for request:", config.url);
   }
   return config;
 });
 
+// Handle response errors (especially token expiry)
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      // Token expired or invalid
+      console.log("Authentication error detected:", error.response.status);
+
+      // Clear local storage
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      localStorage.removeItem("role");
+      localStorage.removeItem("userId");
+
+      // Use custom event to notify the app about authentication failure
+      // This will be handled by the AuthContext to show the proper session expiry modal
+      if (
+        window.location.pathname !== "/login" &&
+        window.location.pathname !== "/signup"
+      ) {
+        const authErrorEvent = new CustomEvent("auth-error", {
+          detail: {
+            status: error.response?.status,
+            message:
+              error.response?.status === 401
+                ? "Your session has expired. Please login again."
+                : "Access denied. Please login again.",
+          },
+        });
+        window.dispatchEvent(authErrorEvent);
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
+
 // API functions
+
+// Get current user info
+export const getCurrentUser = async () => {
+  try {
+    console.log("🔐 Getting current user info...");
+
+    // Ensure token is valid and available
+    ensureToken();
+
+    const response = await api.get("/auth/me");
+    console.log("✅ Current user info retrieved:", response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error("❌ Error getting current user:", error);
+    throw error;
+  }
+};
+
+// Update thread
+export const updateThread = async (
+  threadId: string,
+  updateData: { title?: string; content?: string }
+) => {
+  try {
+    console.log("🔄 Updating thread:", { threadId, updateData });
+
+    // Ensure token is valid and available
+    ensureToken();
+
+    const response = await api.patch(`/threads/${threadId}`, updateData);
+    console.log("✅ Thread updated successfully:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("❌ Error updating thread:", error);
+    throw error;
+  }
+};
+
+// Update reply
+export const updateReply = async (
+  threadId: string,
+  replyId: string,
+  content: string
+) => {
+  try {
+    console.log("🔄 Updating reply:", { threadId, replyId, content });
+
+    // Ensure token is valid and available
+    ensureToken();
+
+    // According to user requirement: use /threads/:threadId with content payload
+    const response = await api.patch(`/threads/${threadId}`, {
+      content,
+      replyId, // Include replyId in payload if backend needs it
+    });
+
+    console.log("✅ Reply updated successfully:", response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error("❌ Error updating reply:", error);
+    console.error("Error details:", {
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message,
+    });
+    throw error;
+  }
+};
 
 // Get all units for a classroom
 export const getUnits = async (classroomId: string): Promise<Unit[]> => {
@@ -53,10 +402,9 @@ export const createUnit = async (data: {
   }[];
 }): Promise<Unit> => {
   try {
-    const token = localStorage.getItem("token");
+    // Token is automatically added by the request interceptor
     const response = await api.post("/unit", data, {
       headers: {
-        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
     });
@@ -174,10 +522,16 @@ export const createLike = async (
   likeData: LikeRequest
 ): Promise<LikeResponse> => {
   try {
+    console.log("🔄 Creating like for:", likeData);
+
+    // Ensure token is valid and available
+    ensureToken();
+
     const response = await api.post("/likes", likeData);
+    console.log("✅ Like created successfully:", response.data);
     return response.data;
   } catch (error) {
-    console.error("Error creating like:", error);
+    console.error("❌ Error creating like:", error);
     throw error;
   }
 };
@@ -214,15 +568,98 @@ export const getReplyLikes = async (replyId: string): Promise<Like[]> => {
   }
 };
 
-// Toggle like (like if not liked, unlike if already liked)
-export const toggleLike = async (
-  likeData: LikeRequest
+// Check if current user can like content
+export const checkLikePermission = (): {
+  canLike: boolean;
+  reason?: string;
+} => {
+  try {
+    ensureToken();
+    return { canLike: true };
+  } catch (error: any) {
+    return {
+      canLike: false,
+      reason: error.message || "Authentication required",
+    };
+  }
+};
+
+// Toggle like for a reply
+export const toggleReplyLike = async (
+  replyId: string
 ): Promise<{ liked: boolean; likesCount: number; likeId?: string }> => {
   try {
-    const response = await api.post("/likes/toggle", likeData);
+    console.log("🔄 Toggling like for reply:", replyId);
+
+    // Ensure token is valid and available
+    ensureToken();
+
+    // Use the correct endpoint: /threads/like/:replyId with replyId in body
+    const response = await api.post(`/threads/like/${replyId}`, {
+      replyId: replyId,
+      threadId: undefined, // Ensure only reply like
+    });
+    console.log("✅ Reply like toggled successfully:", response.data);
     return response.data;
   } catch (error) {
-    console.error("Error toggling like:", error);
+    console.error("❌ Error toggling reply like:", error);
     throw error;
+  }
+};
+
+// ============= REPLIES API =============
+
+// Create a new reply
+export const createReply = async (
+  replyData: CreateReplyPayload
+): Promise<ThreadReply> => {
+  try {
+    console.log("🔄 Creating reply:", replyData);
+
+    // Ensure token is valid and available
+    ensureToken();
+
+    // Use the correct endpoint: /threads/:threadId/reply
+    const response = await api.post(`/threads/${replyData.threadId}/reply`, {
+      content: replyData.content,
+    });
+    console.log("✅ Reply created successfully:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("❌ Error creating reply:", error);
+    throw error;
+  }
+};
+
+// Delete a reply
+export const deleteReply = async (
+  threadId: string,
+  replyId: string
+): Promise<void> => {
+  try {
+    console.log("🔄 Deleting reply:", { threadId, replyId });
+
+    // Ensure token is valid and available
+    ensureToken();
+
+    // Use the endpoint structure: /threads/:threadId?replyId=${replyId}
+    // This matches the user's requirement for the delete endpoint
+    const response = await api.delete(
+      `/threads/${threadId}?replyId=${replyId}`
+    );
+    console.log("✅ Reply deleted successfully:", response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error("❌ Error deleting reply:", error);
+    console.error("Error details:", {
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message,
+    });
+    const errorMessage =
+      error.response?.data?.message ||
+      error.message ||
+      "Failed to delete reply";
+    throw new Error(errorMessage);
   }
 };

@@ -1,10 +1,11 @@
 import axios from "axios";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import React, { useState } from "react";
-import { toast, Toaster } from "../components/ui/toast";
 import { Link, useNavigate } from "react-router-dom";
 import Logo from "../components/Logo";
-import Button from "../components/ui/button";
+import Button from "../components/ui/Button";
+import { toast, Toaster } from "../components/ui/toast";
+import { useAuth } from "../context/AuthContext";
 import { useUserContext } from "../context/UserContext";
 import { UserRole } from "../types/attendance";
 
@@ -12,12 +13,14 @@ const Login: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-
+  const [isLoading, setIsLoading] = useState(false);
   const { setUserRole } = useUserContext();
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
 
     try {
       const response = await axios.post(
@@ -28,16 +31,29 @@ const Login: React.FC = () => {
         }
       );
 
-      const { token, role } = response.data;
+      const { token, role, user } = response.data;
 
-      localStorage.setItem("token", token);
-      localStorage.setItem("role", role);
+      // Use the new AuthContext login function
+      login(token, {
+        id: user?.id || "",
+        email: user?.email || email,
+        role: role as UserRole,
+        name: user?.name || "",
+      });
+
+      // Also update the UserContext for backward compatibility
       setUserRole(role as UserRole);
+
       console.log("Login successful");
       navigate("/dashboard");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login failed", error);
-  toast.error("Login failed. Please check your credentials.");
+      const errorMessage =
+        error.response?.data?.message ||
+        "Login failed. Please check your credentials.";
+      toast.error(errorMessage);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -148,13 +164,19 @@ const Login: React.FC = () => {
               </div>
             </div>
 
-            <Button type="submit" variant="primary" size="lg" fullWidth className="cursor-pointer">
-              Sign in
+            <Button
+              type="submit"
+              variant="primary"
+              size="lg"
+              fullWidth
+              disabled={isLoading}
+            >
+              {isLoading ? "Signing in..." : "Sign in"}
             </Button>
           </form>
         </div>
       </div>
-  </>
+    </>
   );
 };
 

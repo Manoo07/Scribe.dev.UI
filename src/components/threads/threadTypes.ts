@@ -3,13 +3,31 @@ export interface BaseThread {
   id: string;
   title: string;
   content: string;
-  authorId: string;
-  authorName: string;
+  user: {
+    id: string;
+    name: string;
+  };
+  threadStatus: "UNANSWERED" | "ANSWERED" | "RESOLVED" | "CLOSED";
   createdAt: string;
-  updatedAt: string;
-  isResolved: boolean;
-  repliesCount: number;
-  tags: string[];
+  updatedAt?: string;
+  acceptedAnswerId?: string | null;
+  likesCount: number;
+  isLikedByMe: boolean;
+  replies?: {
+    data: ThreadReply[];
+    pagination: {
+      total: number;
+      page: number;
+      limit: number;
+      hasNext: boolean;
+    };
+  };
+  // Legacy fields for backward compatibility
+  authorId?: string;
+  authorName?: string;
+  isResolved?: boolean;
+  repliesCount?: number;
+  tags?: string[];
   lastReplyAt?: string;
   lastReplyBy?: string;
   aiSummary?: string;
@@ -38,12 +56,20 @@ export type Thread = ClassroomThread | GenericThread;
 
 export interface ThreadReply {
   id: string;
-  threadId: string;
   content: string;
-  authorId: string;
-  authorName: string;
+  user: {
+    id: string;
+    name: string;
+  };
   createdAt: string;
-  isMarkedAsAnswer: boolean;
+  likesCount: number;
+  isAccepted: boolean;
+  isLikedByMe: boolean;
+  // Legacy fields for backward compatibility
+  threadId?: string;
+  authorId?: string;
+  authorName?: string;
+  isMarkedAsAnswer?: boolean;
   isFromAi?: boolean;
   parentReplyId?: string; // for nested replies
 }
@@ -66,13 +92,35 @@ export interface LikeRequest {
 // Like response
 export interface LikeResponse extends Like {}
 
+// Thread creation payload interface
+export interface CreateThreadPayload {
+  title: string;
+  content: string;
+  unitId?: string;
+  classroomId?: string;
+}
+
+// Reply creation payload
+export interface CreateReplyPayload {
+  content: string;
+  threadId: string;
+  parentReplyId?: string;
+}
+
 // Enhanced thread and reply interfaces with like counts and user like status
-export interface ThreadWithLikes extends Thread {
-  likesCount: number;
-  isLikedByUser: boolean;
+export interface ThreadWithLikes extends BaseThread {
+  threadType: "classroom" | "generic";
+  // Classroom-specific fields
+  classroomId?: string;
+  classroomName?: string;
+  unitId?: string;
+  unitName?: string;
+  // Generic-specific fields
+  category?: string;
+  visibility?: "public" | "restricted";
+  allowedRoles?: string[];
 }
 
 export interface ThreadReplyWithLikes extends ThreadReply {
-  likesCount: number;
-  isLikedByUser: boolean;
+  // Already includes likesCount and isLikedByMe
 }

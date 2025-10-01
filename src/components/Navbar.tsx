@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Logo from "./Logo";
-import Button from "./ui/button";
+import Button from "./ui/Button";
 
 const Navbar: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -64,6 +64,7 @@ const Navbar: React.FC = () => {
             >
               Features
             </a>
+
             <a
               href="#how-it-works"
               className="text-gray-300 hover:text-white transition-colors duration-300"
@@ -115,6 +116,7 @@ const Navbar: React.FC = () => {
             >
               Features
             </a>
+
             <a
               href="#how-it-works"
               className="text-xl hover:text-blue-400 transition-colors duration-300"

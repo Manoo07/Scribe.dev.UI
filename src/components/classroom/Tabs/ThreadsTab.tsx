@@ -19,6 +19,8 @@ const ThreadsTab: React.FC<ThreadsTabProps> = ({
     units: units,
   };
 
+  console.log("Threads Tab Units ", units);
+
   return <ThreadsManager context="classroom" classroomData={classroomData} />;
 };
 

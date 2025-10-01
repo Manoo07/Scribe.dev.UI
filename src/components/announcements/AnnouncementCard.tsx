@@ -68,7 +68,7 @@ AnnouncementCardProps) => {
   return (
     <>
       <Card
-        className={`w-full max-w-md sm:max-w-full mx-auto sm:mx-0 group transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 border border-gray-200 dark:border-gray-800 shadow-sm bg-white/90 backdrop-blur-sm dark:bg-gray-900/80 cursor-pointer ${
+        className={`w-full max-w-md sm:max-w-full mx-auto sm:mx-0 group transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 border border-gray-200 dark:border-gray-800 shadow-sm bg-white/90 backdrop-blur-sm dark:bg-gray-800 cursor-pointer ${
           isMyAnnouncement ? "ring-1 ring-blue-200 dark:ring-blue-800" : ""
         }`}
         onClick={() => setIsDetailModalOpen(true)}

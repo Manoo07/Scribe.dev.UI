@@ -1,6 +1,6 @@
+import { BookOpen, ChevronRight, FileText, Users } from "lucide-react";
 import React from "react";
-import Button from "./ui/button";
-import { ChevronRight, BookOpen, Users, FileText } from "lucide-react";
+import Button from "./ui/Button";
 
 const Hero: React.FC = () => {
   return (

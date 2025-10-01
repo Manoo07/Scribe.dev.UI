@@ -4,17 +4,17 @@ import {
   BookOpen,
   CheckCircle,
   ChevronRight,
+  Eye,
+  EyeOff,
   GraduationCap,
   Lock,
   Mail,
   User,
-  Eye,
-  EyeOff,
 } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Logo from "../components/Logo";
-import Button from "../components/ui/button";
+import Button from "../components/ui/Button";
 import InputField from "../components/ui/InputField";
 import RoleCard from "../components/ui/RoleCard";
 import SelectField from "../components/ui/SelectField";
@@ -23,7 +23,6 @@ import { toast, Toaster } from "../components/ui/toast";
 const Signup: React.FC = () => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
-
 
   // Form state
   const [role, setRole] = useState("STUDENT");
@@ -47,15 +46,13 @@ const Signup: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-
-
   useEffect(() => {
     axios
       .get("http://localhost:3000/api/v1/college")
       .then((res) => setColleges(res.data))
       .catch((err) => {
         console.error("Error fetching colleges", err);
-  toast.error("Failed to load colleges");
+        toast.error("Failed to load colleges");
       });
   }, []);
 
@@ -66,7 +63,7 @@ const Signup: React.FC = () => {
       .then((res) => setDepartments(res.data))
       .catch((err) => {
         console.error("Error fetching departments", err);
-  toast.error("Failed to load departments");
+        toast.error("Failed to load departments");
       });
   }, [collegeId]);
 
@@ -77,7 +74,7 @@ const Signup: React.FC = () => {
       .then((res) => setYears(res.data))
       .catch((err) => {
         console.error("Error fetching years", err);
-  toast.error("Failed to load years");
+        toast.error("Failed to load years");
       });
   }, [departmentId]);
 
@@ -189,7 +186,7 @@ const Signup: React.FC = () => {
       } else if (err.message) {
         errorMessage = err.message;
       }
-  toast.error(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -332,7 +329,11 @@ const Signup: React.FC = () => {
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   {/* Eye is closed when password is hidden, open when visible */}
-                  {!showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {!showPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
                 </button>
               </div>
               {/* Confirm Password Field with Eye Icon */}
@@ -352,10 +353,16 @@ const Signup: React.FC = () => {
                   tabIndex={-1}
                   className="absolute right-3 top-3/5 -translate-y-1/2 text-gray-400 hover:text-gray-200 focus:outline-none"
                   onClick={() => setShowConfirmPassword((v) => !v)}
-                  aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                  aria-label={
+                    showConfirmPassword ? "Hide password" : "Show password"
+                  }
                 >
                   {/* Eye is closed when password is hidden, open when visible */}
-                  {!showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {!showConfirmPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
                 </button>
               </div>
             </div>
@@ -575,7 +582,7 @@ const Signup: React.FC = () => {
           </div>
         </div>
       </div>
-  </>
+    </>
   );
 };
 

@@ -1,6 +1,6 @@
 import { Plus } from "lucide-react";
 import React, { useState } from "react";
-import { toast, Toaster } from "./ui/toast";
+import { useToast } from "../hooks/use-toast";
 import { deleteUnit } from "../services/api";
 import { ContentType, Unit } from "../types";
 import { formatDistanceToNow } from "../utils/dateUtils";
@@ -37,7 +37,7 @@ const UnitsList: React.FC<UnitsListProps> = ({
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [localUnits, setLocalUnits] = useState<Unit[]>(units);
-
+  const { toast } = useToast();
 
   // Keep localUnits in sync with props.units if they change externally
   React.useEffect(() => {
@@ -51,13 +51,41 @@ const UnitsList: React.FC<UnitsListProps> = ({
 
   const confirmDeleteUnit = async () => {
     if (!pendingDeleteId) return;
+
     setDeletingUnitId(pendingDeleteId);
+
+    // Show loading toast
+    const loadingToast = toast({
+      title: "Deleting Unit",
+      description: "Please wait while we remove the unit...",
+    });
+
     try {
       await deleteUnit(pendingDeleteId);
+
+      // Dismiss loading toast and show success
+      loadingToast.dismiss();
+      toast({
+        title: "Unit Deleted Successfully! 🗑️",
+        description:
+          "The unit has been permanently removed from your classroom.",
+      });
+
       setLocalUnits((prev) => prev.filter((u) => u.id !== pendingDeleteId));
-      toast.success("Unit deleted successfully");
     } catch (err) {
-      toast.error("Failed to delete unit. Please try again.");
+      // Dismiss loading toast and show error
+      loadingToast.dismiss();
+
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "Failed to delete unit. Please try again.";
+
+      toast({
+        title: "Failed to Delete Unit",
+        description: errorMessage,
+        variant: "destructive",
+      });
     } finally {
       setDeletingUnitId(null);
       setPendingDeleteId(null);
@@ -233,8 +261,13 @@ const UnitsList: React.FC<UnitsListProps> = ({
         <CreateUnitModal
           classroomId={classroomId}
           onClose={() => setIsCreateModalOpen(false)}
-          onSuccess={() => {
+          onSuccess={(newUnit) => {
             setIsCreateModalOpen(false);
+            // Add the new unit to local state immediately
+            if (newUnit) {
+              setLocalUnits((prev) => [...prev, newUnit]);
+            }
+            // Also call the parent refresh to ensure consistency
             onRefresh();
           }}
         />
