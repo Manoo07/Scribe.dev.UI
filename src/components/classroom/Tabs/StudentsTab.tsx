@@ -20,7 +20,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "../../ui/alert-dialog";
-import Button from "../../ui/Button";
+import Button from "../../ui/button";
 import { Card, CardContent } from "../../ui/card";
 import { Checkbox } from "../../ui/checkbox";
 import { Input } from "../../ui/input";

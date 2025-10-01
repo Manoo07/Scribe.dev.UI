@@ -2,7 +2,7 @@ import { Building, Megaphone, PlusCircle, User, Users } from "lucide-react";
 import { useState } from "react";
 import AnnouncementCard from "../components/announcements/AnnouncementCard";
 import CreateAnnouncementModal from "../components/announcements/CreateAnnouncement";
-import Button from "../components/ui/Button";
+import Button from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { mockAnnouncements } from "../data/mockAnnouncement";
 

@@ -3,7 +3,7 @@ import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Logo from "../components/Logo";
-import Button from "../components/ui/Button";
+import Button from "../components/ui/button";
 import { toast, Toaster } from "../components/ui/toast";
 import { useAuth } from "../context/AuthContext";
 import { useUserContext } from "../context/UserContext";

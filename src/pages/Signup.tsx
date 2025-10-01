@@ -14,7 +14,7 @@ import {
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Logo from "../components/Logo";
-import Button from "../components/ui/Button";
+import Button from "../components/ui/button";
 import InputField from "../components/ui/InputField";
 import RoleCard from "../components/ui/RoleCard";
 import SelectField from "../components/ui/SelectField";
