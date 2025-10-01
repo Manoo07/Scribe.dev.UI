@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useClassroomContext } from "../../../context/ClassroomContext";
-import { useToast } from "../../../hooks/use-toast";
+import { toast, Toaster } from "../../ui/toast";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -58,7 +58,7 @@ const StudentsTab = ({ classroomId }: { classroomId: string }) => {
   >(new Set());
   const [bulkProcessing, setBulkProcessing] = useState(false);
 
-  const { toast } = useToast();
+
 
   // Use classroom context for students data
   const {
@@ -84,11 +84,7 @@ const StudentsTab = ({ classroomId }: { classroomId: string }) => {
   // Fetch students data on component mount
   useEffect(() => {
     fetchStudentsData(classroomId).catch(() => {
-      toast({
-        title: "Error",
-        description: "Failed to fetch students. Please try again.",
-        variant: "destructive",
-      });
+      toast.error("Failed to fetch students. Please try again.");
     });
   }, [classroomId]); // Removed fetchStudentsData and toast from dependencies
 
@@ -115,17 +111,10 @@ const StudentsTab = ({ classroomId }: { classroomId: string }) => {
         updateStudentsAfterAdd(addedStudent);
       }
 
-      toast({
-        title: "Success",
-        description: "Student added to the classroom",
-      });
+      toast.success("Student added to the classroom");
     } catch (error) {
       console.error("Failed to add student:", error);
-      toast({
-        title: "Error",
-        description: "Failed to add student to the classroom",
-        variant: "destructive",
-      });
+      toast.error("Failed to add student to the classroom");
     } finally {
       setProcessingStudentId(null);
     }

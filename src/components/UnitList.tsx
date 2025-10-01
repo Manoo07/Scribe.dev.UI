@@ -1,6 +1,6 @@
 import { Plus } from "lucide-react";
 import React, { useState } from "react";
-import { useToast } from "../hooks/use-toast";
+import { toast, Toaster } from "./ui/toast";
 import { deleteUnit } from "../services/api";
 import { ContentType, Unit } from "../types";
 import { formatDistanceToNow } from "../utils/dateUtils";
@@ -37,7 +37,7 @@ const UnitsList: React.FC<UnitsListProps> = ({
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [localUnits, setLocalUnits] = useState<Unit[]>(units);
-  const { toast } = useToast();
+
 
   // Keep localUnits in sync with props.units if they change externally
   React.useEffect(() => {
@@ -55,16 +55,9 @@ const UnitsList: React.FC<UnitsListProps> = ({
     try {
       await deleteUnit(pendingDeleteId);
       setLocalUnits((prev) => prev.filter((u) => u.id !== pendingDeleteId));
-      toast({
-        title: "Success",
-        description: "Unit deleted successfully",
-      });
+      toast.success("Unit deleted successfully");
     } catch (err) {
-      toast({
-        title: "Error",
-        description: "Failed to delete unit. Please try again.",
-        variant: "destructive",
-      });
+      toast.error("Failed to delete unit. Please try again.");
     } finally {
       setDeletingUnitId(null);
       setPendingDeleteId(null);

@@ -42,7 +42,7 @@ const ClassroomDetailPage = () => {
   const renderTab = () => {
     switch (activeTab) {
       case "Units":
-        return <UnitsTab classroomId={id!} />;
+        return <UnitsTab classroomId={id!} classroomName={classroom?.name} />;
       case "Threads":
         return (
           <ThreadsTab

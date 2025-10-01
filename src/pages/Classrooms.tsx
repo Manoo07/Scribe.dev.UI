@@ -16,7 +16,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "../components/ui/alert-dialog";
-import { useToast } from "../hooks/use-toast";
+import { toast, Toaster } from "../components/ui/toast";
 
 const MyClassroomsPage = () => {
   const [classrooms, setClassrooms] = useState<any[]>([]);
@@ -31,7 +31,7 @@ const MyClassroomsPage = () => {
     string | null
   >(null);
   const { userRole } = useUserContext();
-  const { toast } = useToast();
+
   const createModalRef = useRef<HTMLDivElement>(null);
   const editModalRef = useRef<HTMLDivElement>(null);
 
@@ -149,10 +149,7 @@ const MyClassroomsPage = () => {
     setShowEditForm(false);
     setClassroomToEdit(null);
 
-    toast({
-      title: "Success",
-      description: "Classroom updated successfully",
-    });
+    toast.success("Classroom updated successfully");
   };
 
   const confirmDeleteClassroom = (event: React.MouseEvent, classroom: any) => {
@@ -187,19 +184,12 @@ const MyClassroomsPage = () => {
         )
       );
 
-      toast({
-        title: "Success",
-        description: "Classroom deleted successfully",
-      });
+      toast.success("Classroom deleted successfully");
 
       console.log("Classroom deleted successfully");
     } catch (err) {
       console.error("Error deleting classroom:", err);
-      toast({
-        title: "Error",
-        description: "Failed to delete classroom. Please try again.",
-        variant: "destructive",
-      });
+      toast.error("Failed to delete classroom. Please try again.");
     } finally {
       setProcessingClassroomId(null);
       setClassroomToDelete(null);
@@ -212,7 +202,9 @@ const MyClassroomsPage = () => {
   };
 
   return (
-    <div
+    <>
+      <Toaster position="top-right" richColors />
+      <div
       className={`p-6 md:p-8 transition-opacity duration-300 ${
         showCreateForm || showEditForm ? "opacity-70" : "opacity-100"
       }`}
@@ -362,7 +354,8 @@ const MyClassroomsPage = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+      </div>
+    </>
   );
 };
 

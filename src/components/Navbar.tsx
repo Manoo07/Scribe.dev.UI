@@ -78,8 +78,9 @@ const Navbar: React.FC = () => {
             </a>
             <div className="flex space-x-3">
               <Button
-                variant="outline"
+                variant="primary"
                 size="sm"
+                className="cursor-pointer"
                 onClick={() => (window.location.href = "/login")}
               >
                 Log In
@@ -87,6 +88,7 @@ const Navbar: React.FC = () => {
               <Button
                 variant="primary"
                 size="sm"
+                className="cursor-pointer"
                 onClick={() => (window.location.href = "/signup")}
               >
                 Sign Up
@@ -125,9 +127,9 @@ const Navbar: React.FC = () => {
             >
               Testimonials
             </a>
-            <div className="flex flex-col space-y-4 w-64 px-6">
+            <div className="flex flex-col space-y-4 w-64 px-6 ">
               <Button
-                variant="outline"
+                variant="primary"
                 size="lg"
                 fullWidth
                 onClick={() => (window.location.href = "/login")}

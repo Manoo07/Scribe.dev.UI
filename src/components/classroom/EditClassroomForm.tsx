@@ -1,7 +1,7 @@
 import React, { useState, useEffect, forwardRef } from "react";
 import axios from "axios";
 import { X } from "lucide-react";
-import { useToast } from "../../hooks/use-toast";
+import { toast, Toaster } from "../ui/toast";
 
 interface EditClassroomFormProps {
   isOpen: boolean;
@@ -18,7 +18,7 @@ const EditClassroomForm = forwardRef<HTMLDivElement, EditClassroomFormProps>(
     });
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
-    const { toast } = useToast();
+
 
     // Update form data when classroom prop changes
     useEffect(() => {
@@ -104,6 +104,7 @@ const EditClassroomForm = forwardRef<HTMLDivElement, EditClassroomFormProps>(
         onClassroomUpdated(
           response.data.classroom || { ...classroom, ...updateData }
         );
+        toast.success("Classroom updated successfully");
       } catch (error) {
         console.error("Error updating classroom:", error);
 
@@ -114,17 +115,9 @@ const EditClassroomForm = forwardRef<HTMLDivElement, EditClassroomFormProps>(
             "Failed to update classroom";
           console.error("Server error:", error.response?.data);
 
-          toast({
-            title: "Error",
-            description: errorMessage,
-            variant: "destructive",
-          });
+          toast.error(errorMessage);
         } else {
-          toast({
-            title: "Error",
-            description: "An unexpected error occurred. Please try again.",
-            variant: "destructive",
-          });
+          toast.error("An unexpected error occurred. Please try again.");
         }
       } finally {
         setLoading(false);
