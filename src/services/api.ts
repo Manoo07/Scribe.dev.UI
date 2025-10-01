@@ -1,12 +1,16 @@
 // Toggle like for a thread (POST /threads/like/:threadId)
 export const toggleThreadLike = async (threadId: string): Promise<any> => {
   try {
-    console.log("Hello test toggle threadLike");
-    console.log(threadId);
+    console.log("🔄 Toggling thread like for threadId:", threadId);
+
+    // Ensure token is valid and available
+    ensureToken();
+
     const response = await api.post(`/threads/like/${threadId}`);
+    console.log("✅ Thread like toggled successfully:", response.data);
     return response.data;
   } catch (error) {
-    console.error("Error toggling thread like:", error);
+    console.error("❌ Error toggling thread like:", error);
     throw error;
   }
 };
@@ -14,20 +18,65 @@ export const toggleThreadLike = async (threadId: string): Promise<any> => {
 export const acceptAnswer = async (
   threadId: string,
   replyId: string
-): Promise<void> => {
+): Promise<any> => {
   try {
-    await api.patch(`/threads/${threadId}/accept-answer/${replyId}`);
+    console.log("🔄 Accepting answer:", { threadId, replyId });
+
+    // Ensure token is valid and available
+    ensureToken();
+
+    // Use the correct endpoint: /threads/:threadId/accept-answer/:replyId
+    const response = await api.patch(
+      `/threads/${threadId}/accept-answer/${replyId}`
+    );
+    console.log("✅ Answer accepted successfully:", response.data);
+    return response.data;
   } catch (error) {
-    console.error("Error accepting answer:", error);
+    console.error("❌ Error accepting answer:", error);
+    throw error;
+  }
+};
+
+// Unmark answer for a thread (pass the currently accepted reply ID to toggle it off)
+export const unmarkAnswer = async (
+  threadId: string,
+  replyId: string
+): Promise<any> => {
+  try {
+    console.log("🔄 Unmarking answer:", { threadId, replyId });
+
+    // Ensure token is valid and available
+    ensureToken();
+
+    // Use the same endpoint with the reply ID - backend will toggle it off
+    const response = await api.patch(
+      `/threads/${threadId}/accept-answer/${replyId}`
+    );
+    console.log("✅ Answer unmarked successfully:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("❌ Error unmarking answer:", error);
     throw error;
   }
 };
 // Delete a thread
-export const deleteThread = async (threadId: string): Promise<void> => {
+export const deleteThread = async (threadId: string): Promise<any> => {
   try {
-    await api.delete(`/threads/${threadId}`);
-  } catch (error) {
-    console.error("Error deleting thread:", error);
+    console.log("🔄 Deleting thread:", { threadId });
+
+    // Ensure token is valid and available
+    ensureToken();
+
+    const response = await api.delete(`/threads/${threadId}`);
+    console.log("✅ Thread deleted successfully:", response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error("❌ Error deleting thread:", error);
+    console.error("Error details:", {
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message,
+    });
     throw error;
   }
 };
@@ -74,18 +123,32 @@ export const fetchUnitThreads = async (
     throw error;
   }
 };
+
+// Fetch classroom-based threads (paginated)
+export const fetchClassroomThreads = async (
+  classroomId: string,
+  page = 1,
+  limit = 10
+): Promise<any> => {
+  try {
+    const response = await api.get(
+      `/threads?classroomId=${classroomId}&page=${page}&limit=${limit}`
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching classroom threads:", error);
+    throw error;
+  }
+};
 // Create a new thread (unit-based or generic)
-export const createThread = async (data: {
-  title: string;
-  content: string;
-  unitId?: string;
-}): Promise<any> => {
+export const createThread = async (data: CreateThreadPayload): Promise<any> => {
   try {
     const payload: any = {
       title: data.title,
       content: data.content,
     };
     if (data.unitId) payload.unitId = data.unitId;
+    if (data.classroomId) payload.classroomId = data.classroomId;
     const response = await api.post("/threads", payload, {
       headers: {
         "Content-Type": "application/json",
@@ -98,9 +161,17 @@ export const createThread = async (data: {
   }
 };
 import axios from "axios";
-import { LikeRequest, LikeResponse } from "../components/threads/threadTypes";
+import {
+  Like,
+  LikeRequest,
+  LikeResponse,
+  CreateThreadPayload,
+  CreateReplyPayload,
+  ThreadReply,
+} from "../components/threads/threadTypes";
 import { ContentType, Unit } from "../types";
 import { mockUnits } from "./mockData";
+import { ensureToken } from "../utils/authUtils";
 
 // Base URL for API requests
 const API_BASE_URL = "http://localhost:3000/api/v1";
@@ -123,11 +194,122 @@ api.interceptors.request.use((config) => {
   const token = getToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+    // Debug logging for like endpoints
+    if (config.url?.includes("/like") || config.url?.includes("/likes")) {
+      console.log("🔐 Token being sent for like request:", {
+        url: config.url,
+        method: config.method,
+        hasToken: !!token,
+        tokenLength: token.length,
+      });
+    }
+  } else {
+    console.warn("⚠️ No token found for request:", config.url);
   }
   return config;
 });
 
+// Handle response errors (especially token expiry)
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      // Token expired or invalid
+      console.log("Authentication error detected:", error.response.status);
+
+      // Clear local storage
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      localStorage.removeItem("role");
+      localStorage.removeItem("userId");
+
+      // Show user-friendly message and redirect
+      if (
+        window.location.pathname !== "/login" &&
+        window.location.pathname !== "/signup"
+      ) {
+        if (error.response?.status === 401) {
+          alert("Your session has expired. Please login again.");
+        } else {
+          alert("Access denied. Please login again.");
+        }
+        window.location.href = "/login";
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
+
 // API functions
+
+// Get current user info
+export const getCurrentUser = async () => {
+  try {
+    console.log("🔐 Getting current user info...");
+
+    // Ensure token is valid and available
+    ensureToken();
+
+    const response = await api.get("/auth/me");
+    console.log("✅ Current user info retrieved:", response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error("❌ Error getting current user:", error);
+    throw error;
+  }
+};
+
+// Update thread
+export const updateThread = async (
+  threadId: string,
+  updateData: { title?: string; content?: string }
+) => {
+  try {
+    console.log("🔄 Updating thread:", { threadId, updateData });
+
+    // Ensure token is valid and available
+    ensureToken();
+
+    const response = await api.patch(`/threads/${threadId}`, updateData);
+    console.log("✅ Thread updated successfully:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("❌ Error updating thread:", error);
+    throw error;
+  }
+};
+
+// Update reply
+export const updateReply = async (
+  threadId: string,
+  replyId: string,
+  content: string
+) => {
+  try {
+    console.log("🔄 Updating reply:", { threadId, replyId, content });
+
+    // Ensure token is valid and available
+    ensureToken();
+
+    // According to user requirement: use /threads/:threadId with content payload
+    const response = await api.patch(`/threads/${threadId}`, {
+      content,
+      replyId, // Include replyId in payload if backend needs it
+    });
+
+    console.log("✅ Reply updated successfully:", response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error("❌ Error updating reply:", error);
+    console.error("Error details:", {
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message,
+    });
+    throw error;
+  }
+};
 
 // Get all units for a classroom
 export const getUnits = async (classroomId: string): Promise<Unit[]> => {
@@ -152,10 +334,9 @@ export const createUnit = async (data: {
   }[];
 }): Promise<Unit> => {
   try {
-    const token = localStorage.getItem("token");
+    // Token is automatically added by the request interceptor
     const response = await api.post("/unit", data, {
       headers: {
-        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
     });
@@ -273,10 +454,16 @@ export const createLike = async (
   likeData: LikeRequest
 ): Promise<LikeResponse> => {
   try {
+    console.log("🔄 Creating like for:", likeData);
+
+    // Ensure token is valid and available
+    ensureToken();
+
     const response = await api.post("/likes", likeData);
+    console.log("✅ Like created successfully:", response.data);
     return response.data;
   } catch (error) {
-    console.error("Error creating like:", error);
+    console.error("❌ Error creating like:", error);
     throw error;
   }
 };
@@ -313,15 +500,65 @@ export const getReplyLikes = async (replyId: string): Promise<Like[]> => {
   }
 };
 
-// Toggle like (like if not liked, unlike if already liked)
-export const toggleLike = async (
-  likeData: LikeRequest
+// Check if current user can like content
+export const checkLikePermission = (): {
+  canLike: boolean;
+  reason?: string;
+} => {
+  try {
+    ensureToken();
+    return { canLike: true };
+  } catch (error: any) {
+    return {
+      canLike: false,
+      reason: error.message || "Authentication required",
+    };
+  }
+};
+
+// Toggle like for a reply
+export const toggleReplyLike = async (
+  replyId: string
 ): Promise<{ liked: boolean; likesCount: number; likeId?: string }> => {
   try {
-    const response = await api.post("/likes/toggle", likeData);
+    console.log("🔄 Toggling like for reply:", replyId);
+
+    // Ensure token is valid and available
+    ensureToken();
+
+    // Use the correct endpoint: /threads/like/:replyId with replyId in body
+    const response = await api.post(`/threads/like/${replyId}`, {
+      replyId: replyId,
+      threadId: undefined, // Ensure only reply like
+    });
+    console.log("✅ Reply like toggled successfully:", response.data);
     return response.data;
   } catch (error) {
-    console.error("Error toggling like:", error);
+    console.error("❌ Error toggling reply like:", error);
+    throw error;
+  }
+};
+
+// ============= REPLIES API =============
+
+// Create a new reply
+export const createReply = async (
+  replyData: CreateReplyPayload
+): Promise<ThreadReply> => {
+  try {
+    console.log("🔄 Creating reply:", replyData);
+
+    // Ensure token is valid and available
+    ensureToken();
+
+    // Use the correct endpoint: /threads/:threadId/reply
+    const response = await api.post(`/threads/${replyData.threadId}/reply`, {
+      content: replyData.content,
+    });
+    console.log("✅ Reply created successfully:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("❌ Error creating reply:", error);
     throw error;
   }
 };

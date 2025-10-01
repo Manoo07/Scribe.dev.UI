@@ -1,714 +1,908 @@
-import axios from "axios";
+import React, { useEffect, useState, useRef } from "react";
 import {
   ArrowLeft,
-  CheckCircle,
-  Clock,
-  Edit,
-  Eye,
   MessageCircle,
-  MoreVertical,
-  Send,
-  Tag,
-  ThumbsUp,
   User,
+  Clock,
+  Tag,
+  Brain,
+  Heart,
+  Loader2,
+  Edit,
+  MoreHorizontal,
+  Share2,
+  Lock,
+  Trash2,
 } from "lucide-react";
-import React, { useEffect, useRef, useState } from "react";
-import ReactMarkdown from "react-markdown";
+import { Thread, ThreadReply } from "./threadTypes";
 import {
-  acceptAnswer,
-  deleteThread,
   fetchThreadDetail,
   toggleThreadLike,
+  updateThread,
+  deleteThread,
 } from "../../services/api";
+import { useToast } from "../../hooks/use-toast";
+import { useAuth } from "../../context/AuthContext";
+import { useOwnership } from "../../hooks/useOwnership";
+import ReplyCard from "./ReplyCard";
+import ReplyForm from "./ReplyForm";
 
 interface ThreadDetailViewProps {
   threadId: string;
   onBack: () => void;
 }
 
-import { formatDistanceToNow } from "../../utils/dateUtils";
-import { Thread, ThreadReply } from "./threadTypes";
-
-// Extend ThreadReply for local state to include like info
-type ThreadReplyWithLike = ThreadReply & {
-  isLikedByMe?: boolean;
-  likesCount?: number;
-};
-
 const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
   threadId,
   onBack,
 }) => {
-  // Like state for thread
-  const [isLikedByMe, setIsLikedByMe] = useState<boolean>(false);
-  const [likesCount, setLikesCount] = useState<number>(0);
-  // State for which reply's menu is open
-  const [replyMenuOpen, setReplyMenuOpen] = useState<string | null>(null);
-  // Ref for reply menu dropdown
-  const replyMenuRef = useRef<HTMLDivElement | null>(null);
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const { isOwner, currentUserId } = useOwnership();
+  const [thread, setThread] = useState<Thread | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isLiking, setIsLiking] = useState(false);
+  const [isEditingThread, setIsEditingThread] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editContent, setEditContent] = useState("");
+  const [isUpdatingThread, setIsUpdatingThread] = useState(false);
+  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+  const [isClosingThread, setIsClosingThread] = useState(false);
+  const [isDeletingThread, setIsDeletingThread] = useState(false);
 
-  // Close reply menu when clicking outside
+  // Ref for click outside handling
+  const moreMenuRef = useRef<HTMLDivElement>(null);
+
+  // Click outside handler to close more menu
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
+    const handleClickOutside = (event: MouseEvent) => {
       if (
-        replyMenuRef.current &&
-        !replyMenuRef.current.contains(event.target as Node)
+        moreMenuRef.current &&
+        !moreMenuRef.current.contains(event.target as Node)
       ) {
-        setReplyMenuOpen(null);
+        setIsMoreMenuOpen(false);
       }
-    }
-    if (replyMenuOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    } else {
-      document.removeEventListener("mousedown", handleClickOutside);
-    }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [replyMenuOpen]);
-
-  // Format a date string to "x time ago"
-  const formatTimeAgo = (dateString: string) => {
-    if (!dateString) return "";
-    return formatDistanceToNow(new Date(dateString));
-  };
-
-  // Handle submit reply
-  const handleSubmitReply = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newReply.trim()) return;
-    const token = localStorage.getItem("token");
-    if (!token) return;
-    try {
-      await axios.post(
-        `http://localhost:3000/api/v1/threads/${threadId}/reply`,
-        { content: newReply },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setNewReply("");
-      setShowReplyPreview(false);
-      // Refresh replies
-      fetchThreadDetail(threadId, replyPage, replyPageSize).then((data) => {
-        const mappedReplies = (data.replies?.data || []).map((reply: any) => ({
-          id: reply.id,
-          content: reply.content,
-          user: reply.user,
-          createdAt: reply.createdAt,
-          isAccepted: reply.isAccepted,
-          likesCount: reply.likesCount,
-        }));
-        setReplies(mappedReplies);
-        setReplyHasNext(data.replies?.pagination?.hasNext || false);
-        setReplyTotal(data.replies?.pagination?.total || 0);
-      });
-    } catch (err) {
-      // Optionally show error toast
-    }
-  };
-  const [thread, setThread] = useState<Thread | null>(null);
-  // Store accepted answer id
-  const [acceptedAnswerId, setAcceptedAnswerId] = useState<string | null>(null);
-  const [replies, setReplies] = useState<ThreadReplyWithLike[]>([]);
-  const [newReply, setNewReply] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
-  const [showReplyPreview, setShowReplyPreview] = useState(false);
-  const [replyPage, setReplyPage] = useState(1);
-  const [replyHasNext, setReplyHasNext] = useState(false);
-  const [replyTotal, setReplyTotal] = useState(0);
-  const [currentUser, setCurrentUser] = useState<{
-    id: string;
-    name: string;
-  } | null>(null);
-  const [showThreadMenu, setShowThreadMenu] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const replyPageSize = 10;
-
-  // Delete thread handler
-  const handleDeleteThread = async () => {
-    if (!thread) return;
-    setDeleting(true);
-    try {
-      await deleteThread(thread.id);
-      // Optionally show a toast here
-      onBack(); // Go back after delete
-    } catch (err) {
-      // Optionally show error toast
-    } finally {
-      setDeleting(false);
-      setShowThreadMenu(false);
-    }
-  };
-
-  // Fetch current user for delete permission
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-    axios
-      .get("http://localhost:3000/api/v1/auth/me", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      .then((res) => setCurrentUser(res.data))
-      .catch(() => setCurrentUser(null));
   }, []);
 
-  // Fetch thread and replies
   useEffect(() => {
-    setIsLoading(true);
-    fetchThreadDetail(threadId, replyPage, replyPageSize)
-      .then((data) => {
-        const threadData = {
-          id: data.id,
-          title: data.title,
-          content: data.content,
-          authorId: data.user?.id || "",
-          authorName: data.user?.name || "",
-          createdAt: data.createdAt,
-          updatedAt: data.updatedAt || data.createdAt,
-          isResolved: data.threadStatus === "ANSWERED" || false,
-          repliesCount: data.replies?.pagination?.total || 0,
-          tags: data.tags || [],
-          lastReplyAt: data.lastReplyAt,
-          lastReplyBy: data.lastReplyBy,
-          threadType: data.threadType || "classroom",
-          classroomId: data.classroomId,
-          classroomName: data.classroomName,
-          unitId: data.unitId,
-          unitName: data.unitName,
-          category: data.category,
-        };
+    const loadThread = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const threadData = await fetchThreadDetail(threadId);
+
+        // Debug: Check initial thread data for multiple accepted replies
+        console.log("🔄 Loaded thread data:", {
+          threadId: threadData.id,
+          acceptedAnswerId: threadData.acceptedAnswerId,
+          replies: threadData.replies?.data.map((r: ThreadReply) => ({
+            id: r.id,
+            isAccepted: r.isAccepted,
+            content: r.content.substring(0, 50) + "...",
+          })),
+        });
+
+        // Check if there are multiple accepted replies (this shouldn't happen)
+        const acceptedReplies =
+          threadData.replies?.data.filter((r: ThreadReply) => r.isAccepted) ||
+          [];
+        if (acceptedReplies.length > 1) {
+          console.error(
+            "🚨 CRITICAL: Multiple replies are already marked as accepted in initial data:",
+            acceptedReplies.map((r: ThreadReply) => ({
+              id: r.id,
+              content: r.content.substring(0, 30) + "...",
+            }))
+          );
+        } else if (acceptedReplies.length === 1) {
+          console.log(
+            "✅ Initial data has one accepted reply:",
+            acceptedReplies[0].id
+          );
+        } else {
+          console.log("ℹ️ Initial data has no accepted replies");
+        }
+
         setThread(threadData);
-        setAcceptedAnswerId(data.acceptedAnswerId || null);
-        setIsLikedByMe(!!data.isLikedByMe);
-        setLikesCount(data.likesCount || 0);
-        // Map replies with like state
-        const mappedReplies: ThreadReplyWithLike[] = (
-          data.replies?.data || []
-        ).map((reply: any) => ({
-          id: reply.id,
-          content: reply.content,
-          user: reply.user,
-          createdAt: reply.createdAt,
-          isAccepted: reply.isAccepted,
-          likesCount: reply.likesCount || 0,
-          isLikedByMe: !!reply.isLikedByMe,
-        }));
-        setReplies(mappedReplies);
-        setReplyHasNext(data.replies?.pagination?.hasNext || false);
-        setReplyTotal(data.replies?.pagination?.total || 0);
-      })
-      .catch(() => {
-        setThread(null);
-        setReplies([]);
-      })
-      .finally(() => setIsLoading(false));
-  }, [threadId, replyPage]);
-  // Handle like toggle for reply
-  const handleReplyLike = async (replyId: string) => {
+      } catch (err: any) {
+        const errorMessage =
+          err?.response?.data?.message ||
+          err?.message ||
+          "Failed to load thread";
+        setError(errorMessage);
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadThread();
+  }, [threadId, toast]);
+
+  const handleThreadLikeToggle = async () => {
+    if (!thread || isLiking) return;
+
+    setIsLiking(true);
     try {
-      // Use the same endpoint as thread like, but with replyId
-      const res = await axios.post(
-        `http://localhost:3000/api/v1/threads/like/${replyId}`
+      const response = await toggleThreadLike(thread.id);
+
+      // Update local state optimistically
+      setThread((prev) =>
+        prev
+          ? {
+              ...prev,
+              likesCount: response.likesCount,
+              isLikedByMe: response.liked,
+            }
+          : null
       );
-      setReplies((prevReplies) =>
-        prevReplies.map((reply) =>
-          reply.id === replyId
-            ? {
-                ...reply,
-                isLikedByMe: res.data.liked,
-                likesCount: res.data.likesCount,
-              }
-            : reply
-        )
-      );
-    } catch (e) {
-      // Optionally show error toast
+
+      toast({
+        title: "Success",
+        description: response.liked ? "Thread liked!" : "Thread unliked!",
+        variant: "default",
+      });
+    } catch (error: any) {
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Failed to toggle like";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLiking(false);
     }
   };
-  // Handle like toggle
-  const handleThreadLike = async () => {
-    if (!thread) return;
-    try {
-      const res = await toggleThreadLike(thread.id);
-      setIsLikedByMe(res.liked);
-      setLikesCount(res.likesCount);
-    } catch (e) {
-      // Optionally show error toast
-    }
-  };
-  // Accept or unmark answer handler
-  const handleAcceptAnswer = async (
+
+  const handleReplyLikeToggle = (
     replyId: string,
-    isCurrentlyAccepted: boolean
+    newLikeCount: number,
+    isLiked: boolean
   ) => {
     if (!thread) return;
-    const token = localStorage.getItem("token");
-    if (!token) return;
-    try {
-      await acceptAnswer(thread.id, replyId);
-      setAcceptedAnswerId(isCurrentlyAccepted ? null : replyId);
-      // Optionally, refetch thread/replies for up-to-date state
-      fetchThreadDetail(threadId, replyPage, replyPageSize).then((data) => {
-        setAcceptedAnswerId(
-          data.acceptedAnswerId || (isCurrentlyAccepted ? null : replyId)
-        );
-        const mappedReplies = (data.replies?.data || []).map((reply: any) => ({
-          id: reply.id,
-          content: reply.content,
-          user: reply.user,
-          createdAt: reply.createdAt,
-          isAccepted: reply.isAccepted,
-          likesCount: reply.likesCount,
-        }));
-        setReplies(mappedReplies);
-      });
-    } catch (err) {
-      // Optionally show error toast
-    }
+
+    setThread((prev) =>
+      prev
+        ? {
+            ...prev,
+            replies: prev.replies
+              ? {
+                  ...prev.replies,
+                  data: prev.replies.data.map((reply) =>
+                    reply.id === replyId
+                      ? {
+                          ...reply,
+                          likesCount: newLikeCount,
+                          isLikedByMe: isLiked,
+                        }
+                      : reply
+                  ),
+                }
+              : undefined,
+          }
+        : null
+    );
   };
 
-  // Delete reply handler
+  const handleReplyCreated = (newReply: ThreadReply) => {
+    if (!thread) return;
+
+    setThread((prev) =>
+      prev
+        ? {
+            ...prev,
+            replies: prev.replies
+              ? {
+                  ...prev.replies,
+                  data: [newReply, ...prev.replies.data],
+                  pagination: {
+                    ...prev.replies.pagination,
+                    total: prev.replies.pagination.total + 1,
+                  },
+                }
+              : {
+                  data: [newReply],
+                  pagination: {
+                    total: 1,
+                    page: 1,
+                    limit: 10,
+                    hasNext: false,
+                  },
+                },
+          }
+        : null
+    );
+  };
+
+  const handleAnswerAccepted = (replyId: string) => {
+    if (!thread) return;
+
+    console.log("🎯 Marking reply as accepted:", replyId);
+    console.log("🔍 Current thread state:", {
+      acceptedAnswerId: thread.acceptedAnswerId,
+      replies: thread.replies?.data.map((r) => ({
+        id: r.id,
+        isAccepted: r.isAccepted,
+      })),
+    });
+
+    // Check if there's already an accepted answer
+    const currentAcceptedReply = thread.replies?.data.find((r) => r.isAccepted);
+    if (currentAcceptedReply) {
+      console.log(
+        `⚠️ Found existing accepted reply: ${currentAcceptedReply.id}, will unmark it`
+      );
+    }
+
+    setThread((prev) => {
+      if (!prev) return null;
+
+      console.log("🔄 Updating thread state...");
+
+      const updatedThread = {
+        ...prev,
+        threadStatus: "RESOLVED" as const,
+        acceptedAnswerId: replyId,
+        replies: prev.replies
+          ? {
+              ...prev.replies,
+              data: prev.replies.data.map((reply) => {
+                const newIsAccepted = reply.id === replyId;
+                console.log(
+                  `📝 Reply ${reply.id}: isAccepted = ${newIsAccepted} (was ${reply.isAccepted})`
+                );
+                return {
+                  ...reply,
+                  isAccepted: newIsAccepted,
+                };
+              }),
+            }
+          : undefined,
+      };
+
+      console.log("✅ New thread state:", {
+        acceptedAnswerId: updatedThread.acceptedAnswerId,
+        replies: updatedThread.replies?.data.map((r) => ({
+          id: r.id,
+          isAccepted: r.isAccepted,
+        })),
+      });
+
+      return updatedThread;
+    });
+
+    console.log(
+      "✅ Thread state updated - only one reply should be accepted now"
+    );
+  };
+
+  const handleAnswerUnmarked = () => {
+    if (!thread) return;
+
+    console.log("🚫 Unmarking all accepted answers");
+    console.log("🔍 Current thread state before unmarking:", {
+      acceptedAnswerId: thread.acceptedAnswerId,
+      replies: thread.replies?.data.map((r) => ({
+        id: r.id,
+        isAccepted: r.isAccepted,
+      })),
+    });
+
+    setThread((prev) =>
+      prev
+        ? {
+            ...prev,
+            threadStatus: "UNANSWERED",
+            acceptedAnswerId: null,
+            replies: prev.replies
+              ? {
+                  ...prev.replies,
+                  data: prev.replies.data.map((reply) => {
+                    console.log(
+                      `📝 Reply ${reply.id}: setting isAccepted = false`
+                    );
+                    return {
+                      ...reply,
+                      isAccepted: false,
+                    };
+                  }),
+                }
+              : undefined,
+          }
+        : null
+    );
+
+    console.log("✅ All replies unmarked - thread is now unanswered");
+  };
+
+  const handleEditReply = async (replyId: string, newContent: string) => {
+    if (!thread) return;
+
+    // Update local state optimistically
+    setThread((prev) =>
+      prev
+        ? {
+            ...prev,
+            replies: prev.replies
+              ? {
+                  ...prev.replies,
+                  data: prev.replies.data.map((reply) =>
+                    reply.id === replyId
+                      ? { ...reply, content: newContent }
+                      : reply
+                  ),
+                }
+              : undefined,
+          }
+        : null
+    );
+
+    // TODO: Implement API call to update reply
+    // await updateReply(replyId, newContent);
+  };
+
   const handleDeleteReply = async (replyId: string) => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
+    if (!thread) return;
+
+    // Remove reply from local state
+    setThread((prev) =>
+      prev
+        ? {
+            ...prev,
+            replies: prev.replies
+              ? {
+                  ...prev.replies,
+                  data: prev.replies.data.filter(
+                    (reply) => reply.id !== replyId
+                  ),
+                  pagination: {
+                    ...prev.replies.pagination,
+                    total: prev.replies.pagination.total - 1,
+                  },
+                }
+              : undefined,
+          }
+        : null
+    );
+
+    // TODO: Implement API call to delete reply
+    // await deleteReply(replyId);
+  };
+
+  const handleEditThread = () => {
+    if (!thread) return;
+    setEditTitle(thread.title);
+    setEditContent(thread.content);
+    setIsEditingThread(true);
+  };
+
+  const handleUpdateThread = async () => {
+    if (!thread || !editTitle.trim() || !editContent.trim()) return;
+
+    setIsUpdatingThread(true);
     try {
-      await axios.delete(`http://localhost:3000/api/v1/threads/${replyId}`, {
-        headers: {
-          "Content-Type": "text/plain",
-          Authorization: `Bearer ${token}`,
-        },
+      const updatedThread = await updateThread(thread.id, {
+        title: editTitle.trim(),
+        content: editContent.trim(),
       });
-      // Refresh replies after delete
-      fetchThreadDetail(threadId, replyPage, replyPageSize).then((data) => {
-        const mappedReplies = (data.replies?.data || []).map((reply: any) => ({
-          id: reply.id,
-          content: reply.content,
-          user: reply.user,
-          createdAt: reply.createdAt,
-          isAccepted: reply.isAccepted,
-          likesCount: reply.likesCount,
-        }));
-        setReplies(mappedReplies);
-        setReplyHasNext(data.replies?.pagination?.hasNext || false);
-        setReplyTotal(data.replies?.pagination?.total || 0);
+
+      // Update local state
+      setThread((prev) =>
+        prev
+          ? {
+              ...prev,
+              title: updatedThread.title || editTitle.trim(),
+              content: updatedThread.content || editContent.trim(),
+              updatedAt: new Date().toISOString(),
+            }
+          : null
+      );
+
+      setIsEditingThread(false);
+      toast({
+        title: "Success",
+        description: "Thread updated successfully!",
+        variant: "default",
       });
-    } catch (err) {
-      // Optionally show error toast
+    } catch (error: any) {
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Failed to update thread";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdatingThread(false);
     }
   };
 
-  const markdownComponents = {
-    h1: ({ children }: any) => (
-      <h1 className="text-2xl font-bold text-white mb-4">{children}</h1>
-    ),
-    h2: ({ children }: any) => (
-      <h2 className="text-xl font-semibold text-white mb-3">{children}</h2>
-    ),
-    h3: ({ children }: any) => (
-      <h3 className="text-lg font-medium text-white mb-2">{children}</h3>
-    ),
-    p: ({ children }: any) => <p className="mb-3 text-gray-300">{children}</p>,
-    code: ({ children, inline }: any) =>
-      inline ? (
-        <code className="bg-gray-700 px-1.5 py-0.5 rounded text-sm text-blue-300">
-          {children}
-        </code>
-      ) : (
-        <pre className="bg-gray-900 border border-gray-700 rounded-lg p-4 overflow-x-auto mb-4">
-          <code className="text-green-300 text-sm">{children}</code>
-        </pre>
-      ),
-    blockquote: ({ children }: any) => (
-      <blockquote className="border-l-4 border-blue-500 pl-4 py-2 bg-gray-800/50 rounded-r-lg mb-4 italic text-gray-300">
-        {children}
-      </blockquote>
-    ),
-    ul: ({ children }: any) => (
-      <ul className="list-disc list-inside mb-4 text-gray-300 space-y-1">
-        {children}
-      </ul>
-    ),
-    ol: ({ children }: any) => (
-      <ol className="list-decimal list-inside mb-4 text-gray-300 space-y-1">
-        {children}
-      </ol>
-    ),
-    li: ({ children }: any) => <li className="text-gray-300">{children}</li>,
-    strong: ({ children }: any) => (
-      <strong className="text-white font-semibold">{children}</strong>
-    ),
-    em: ({ children }: any) => <em className="text-gray-200">{children}</em>,
-    a: ({ children, href }: any) => (
-      <a
-        href={href}
-        className="text-blue-400 hover:text-blue-300 underline"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        {children}
-      </a>
-    ),
+  const handleCancelEditThread = () => {
+    setIsEditingThread(false);
+    setEditTitle("");
+    setEditContent("");
+  };
+
+  const handleCloseThread = async () => {
+    if (!thread) return;
+
+    setIsClosingThread(true);
+    try {
+      // TODO: Implement close thread API endpoint
+      // await closeThread(thread.id);
+
+      // Update local state optimistically
+      setThread((prev) =>
+        prev
+          ? {
+              ...prev,
+              threadStatus: "CLOSED",
+            }
+          : null
+      );
+
+      setIsMoreMenuOpen(false);
+      toast({
+        title: "Success",
+        description: "Thread closed successfully!",
+        variant: "default",
+      });
+    } catch (error: any) {
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Failed to close thread";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsClosingThread(false);
+    }
+  };
+
+  const handleDeleteThread = async () => {
+    if (!thread) return;
+
+    if (
+      !confirm(
+        "Are you sure you want to delete this thread? This action cannot be undone."
+      )
+    ) {
+      return;
+    }
+
+    setIsDeletingThread(true);
+    try {
+      console.log("🗑️ Deleting thread:", thread.id);
+
+      // Call the delete thread API endpoint
+      await deleteThread(thread.id);
+
+      toast({
+        title: "Success",
+        description: "Thread deleted successfully!",
+        variant: "default",
+      });
+
+      // Navigate back to threads list
+      onBack();
+    } catch (error: any) {
+      console.error("❌ Error deleting thread:", error);
+
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Failed to delete thread";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeletingThread(false);
+    }
   };
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-gray-400">Loading thread...</div>
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={onBack}
+            className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Threads
+          </button>
+        </div>
+        <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 animate-pulse">
+          <div className="space-y-4">
+            <div className="h-6 bg-gray-700 rounded w-3/4"></div>
+            <div className="h-4 bg-gray-700 rounded w-1/2"></div>
+            <div className="h-4 bg-gray-700 rounded w-2/3"></div>
+          </div>
+        </div>
       </div>
     );
   }
 
-  if (!thread) {
+  if (error || !thread) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-gray-400">Thread not found</div>
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={onBack}
+            className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Threads
+          </button>
+        </div>
+        <div className="bg-red-900/20 border border-red-600/30 rounded-lg p-6">
+          <div className="text-center">
+            <p className="text-red-400 text-lg mb-2">Failed to load thread</p>
+            <p className="text-red-300 text-sm">
+              {error || "Thread not found"}
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
+
+  const replies = thread.replies?.data || [];
+  const totalReplies = thread.replies?.pagination?.total || 0;
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6 relative">
+      <div className="flex items-center gap-4">
         <button
           onClick={onBack}
-          className="text-gray-400 hover:text-white transition-colors"
+          className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
         >
-          <ArrowLeft className="w-6 h-6" />
+          <ArrowLeft className="w-4 h-4" />
+          Back to Threads
         </button>
-        <div className="flex-1">
-          {/* Like button */}
-          <button
-            className={`flex items-center gap-1 px-2 py-1 rounded text-sm transition-colors ${
-              isLikedByMe
-                ? "bg-blue-700/30 text-blue-400"
-                : "text-gray-400 hover:text-blue-400 hover:bg-gray-700/40"
-            }`}
-            onClick={handleThreadLike}
-            aria-label={isLikedByMe ? "Unlike" : "Like"}
-          >
-            <ThumbsUp
-              className={`w-5 h-5 ${isLikedByMe ? "fill-blue-400" : ""}`}
-            />
-            <span>{likesCount}</span>
-          </button>
-          <div className="flex items-center gap-2 mb-2">
-            <h1 className="text-2xl font-semibold text-white">
-              {thread.title}
-            </h1>
-            {thread.isResolved && (
-              <CheckCircle className="w-6 h-6 text-green-400" />
-            )}
-          </div>
-          <div className="flex items-center gap-4 text-sm text-gray-400">
-            <div className="flex items-center gap-1">
-              <User className="w-4 h-4" />
-              <span>{thread.authorName}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Clock className="w-4 h-4" />
-              <span>{formatTimeAgo(thread.createdAt)}</span>
-            </div>
-            <span className="bg-blue-600/20 text-blue-400 px-2 py-1 rounded text-xs">
-              {thread.threadType === "classroom"
-                ? thread.unitName
-                : thread.category}
-            </span>
-            <div className="flex items-center gap-1">
-              <MessageCircle className="w-4 h-4" />
-              <span>{replies.length} replies</span>
-            </div>
-          </div>
-        </div>
-        {/* 3-dot menu for thread actions */}
-        <div className="relative">
-          <button
-            className="text-gray-400 hover:text-white p-2 rounded-full focus:outline-none"
-            onClick={() => setShowThreadMenu((v) => !v)}
-            aria-label="Thread actions"
-          >
-            <MoreVertical className="w-6 h-6" />
-          </button>
-          {showThreadMenu && (
-            <div className="absolute right-0 mt-2 w-40 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-20">
-              <ul className="py-1">
-                {/* Only show delete if current user is thread author */}
-                {currentUser && thread.authorId === currentUser.id && (
-                  <li>
-                    <button
-                      className="w-full text-left px-4 py-2 text-red-500 hover:bg-gray-700 hover:text-red-600 text-sm disabled:opacity-60"
-                      onClick={handleDeleteThread}
-                      disabled={deleting}
-                    >
-                      {deleting ? "Deleting..." : "Delete"}
-                    </button>
-                  </li>
-                )}
-                <li>
-                  <button className="w-full text-left px-4 py-2 text-gray-300 hover:bg-gray-700 text-sm">
-                    Update
-                  </button>
-                </li>
-                <li>
-                  <button className="w-full text-left px-4 py-2 text-gray-300 hover:bg-gray-700 text-sm">
-                    Report
-                  </button>
-                </li>
-              </ul>
-            </div>
-          )}
-        </div>
       </div>
 
-      {/* Reply Form with Markdown Preview (moved above replies) */}
+      {/* Thread Content */}
+      <div className="bg-gray-900/50 border border-gray-700/50 rounded-xl p-6 hover:border-gray-600/70 hover:bg-gray-900/70 transition-all duration-200 shadow-sm">
+        {/* Thread Header */}
+        <div className="mb-5">
+          <div className="flex items-center justify-between mb-3">
+            <h1 className="text-xl font-semibold text-white">{thread.title}</h1>
 
-      {/* Thread Content with Markdown */}
-      <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
-        <div className="prose prose-invert prose-lg max-w-none">
-          <ReactMarkdown components={markdownComponents}>
-            {thread.content}
-          </ReactMarkdown>
+            <div className="flex items-center gap-2">
+              {/* Thread Status Badge */}
+              <span
+                className={`px-3 py-1.5 rounded-full text-sm font-medium ${
+                  thread.threadStatus === "RESOLVED"
+                    ? "bg-green-600/20 text-green-400 border border-green-500/30"
+                    : thread.threadStatus === "ANSWERED"
+                    ? "bg-blue-600/20 text-blue-400 border border-blue-500/30"
+                    : thread.threadStatus === "CLOSED"
+                    ? "bg-gray-600/20 text-gray-400 border border-gray-500/30"
+                    : "bg-yellow-600/20 text-yellow-400 border border-yellow-500/30"
+                }`}
+              >
+                {thread.threadStatus === "RESOLVED" && "✓ Resolved"}
+                {thread.threadStatus === "ANSWERED" && "○ Answered"}
+                {thread.threadStatus === "CLOSED" && "🔒 Closed"}
+                {thread.threadStatus === "UNANSWERED" && "○ Unanswered"}
+              </span>
+
+              {/* 3-dots Menu - Only visible to thread owner */}
+              {isOwner(thread.user.id) && (
+                <div className="relative" ref={moreMenuRef}>
+                  <button
+                    onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
+                    className="p-1.5 bg-gray-800/60 text-gray-400 rounded-md hover:bg-gray-800/80 hover:text-gray-200 transition-all duration-200 border border-gray-600/30"
+                    title="More options"
+                  >
+                    <MoreHorizontal className="w-3 h-3" />
+                  </button>
+
+                  {/* Dropdown Menu */}
+                  {isMoreMenuOpen && (
+                    <div className="absolute right-0 top-full mt-1 w-40 bg-gray-800 border border-gray-600 rounded-lg shadow-lg z-10">
+                      <button
+                        onClick={handleCloseThread}
+                        disabled={isClosingThread}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-left text-yellow-400 hover:bg-gray-700/50 transition-colors text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Lock className="w-3 h-3" />
+                        <span>
+                          {isClosingThread ? "Closing..." : "Close Thread"}
+                        </span>
+                      </button>
+                      <button
+                        onClick={handleDeleteThread}
+                        disabled={isDeletingThread}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-left text-red-400 hover:bg-gray-700/50 transition-colors text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        <span>
+                          {isDeletingThread ? "Deleting..." : "Delete Thread"}
+                        </span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Thread Meta with Edit Button */}
+          <div className="flex items-center gap-3 text-xs text-gray-400 flex-wrap">
+            <div className="flex items-center gap-1">
+              <User className="w-3.5 h-3.5" />
+              <span>{thread.user.name}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Clock className="w-3.5 h-3.5" />
+              <span>{new Date(thread.createdAt).toLocaleDateString()}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <MessageCircle className="w-3.5 h-3.5" />
+              <span>{totalReplies} replies</span>
+            </div>
+
+            {/* Edit Button - Beside timestamp like replies */}
+            {isOwner(thread.user.id) && (
+              <button
+                onClick={handleEditThread}
+                disabled={isEditingThread}
+                className="ml-2 p-1.5 bg-blue-600/20 text-blue-400 rounded-md hover:bg-blue-600/30 transition-all duration-200 border border-blue-500/30"
+                title="Edit thread"
+              >
+                <Edit className="w-3 h-3" />
+              </button>
+            )}
+
+            {thread.threadType === "classroom" && (
+              <span className="bg-purple-600/20 text-purple-400 px-1.5 py-0.5 rounded text-xs">
+                {thread.classroomName}
+              </span>
+            )}
+            {thread.threadType === "generic" && (
+              <span className="bg-blue-600/20 text-blue-400 px-1.5 py-0.5 rounded text-xs">
+                {thread.category}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Thread Content */}
+        {isEditingThread ? (
+          <div className="mb-6 space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Title
+              </label>
+              <input
+                type="text"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                className="w-full bg-gray-700 border border-gray-600 rounded-lg p-3 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                placeholder="Thread title..."
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Content
+              </label>
+              <textarea
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                className="w-full bg-gray-700 border border-gray-600 rounded-lg p-3 text-white resize-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                rows={6}
+                placeholder="Thread content..."
+              />
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={handleUpdateThread}
+                disabled={
+                  isUpdatingThread || !editTitle.trim() || !editContent.trim()
+                }
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {isUpdatingThread ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  <>
+                    <Edit className="w-4 h-4" />
+                    Update Thread
+                  </>
+                )}
+              </button>
+              <button
+                onClick={handleCancelEditThread}
+                disabled={isUpdatingThread}
+                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="text-gray-300 mb-5 prose prose-invert prose-sm max-w-none">
+            <div className="whitespace-pre-wrap text-sm leading-relaxed">
+              {thread.content}
+            </div>
+          </div>
+        )}
+
+        {/* Thread Actions */}
+        <div className="flex items-center justify-between border-t border-gray-700/30 pt-4">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleThreadLikeToggle}
+              disabled={isLiking}
+              className={`flex items-center gap-1 px-2 py-1 rounded-md transition-all duration-200 font-medium text-sm ${
+                thread.isLikedByMe
+                  ? "bg-gradient-to-r from-red-500/20 to-pink-500/20 text-red-400 hover:from-red-500/30 hover:to-pink-500/30 border border-red-500/30"
+                  : "bg-gray-800/60 text-gray-300 hover:bg-gray-800/80 hover:text-gray-200 border border-gray-600/30"
+              }`}
+            >
+              <Heart
+                className={`w-2.5 h-2.5 ${
+                  thread.isLikedByMe ? "fill-current" : ""
+                }`}
+              />
+              <span className="font-medium">{thread.likesCount}</span>
+              {isLiking && <Loader2 className="w-2 h-2 animate-spin" />}
+            </button>
+
+            <button className="flex items-center gap-1 px-2 py-1 bg-gray-800/60 text-gray-300 rounded-md hover:bg-gray-800/80 hover:text-gray-200 transition-all duration-200 font-medium border border-gray-600/30 text-sm">
+              <Share2 className="w-2.5 h-2.5" />
+              <span>Share</span>
+            </button>
+          </div>
+
+          {/* Space for future actions */}
+          <div className="flex items-center gap-2">
+            {/* Future actions can be added here */}
+          </div>
         </div>
 
         {/* Tags */}
-        {thread.tags.length > 0 && (
-          <div className="flex items-center gap-2 mt-6 pt-4 border-t border-gray-700">
+        {Array.isArray(thread.tags) && thread.tags.length > 0 && (
+          <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-700">
             <Tag className="w-4 h-4 text-gray-400" />
-            <div className="flex flex-wrap gap-1">
-              {thread.tags.map((tag: string) => (
+            <div className="flex flex-wrap gap-2">
+              {thread.tags.map((tag, index) => (
                 <span
-                  key={tag}
-                  className="bg-gray-700 text-gray-300 px-2 py-1 rounded text-xs hover:bg-gray-600 transition-colors"
+                  key={index}
+                  className="bg-gray-700 text-gray-300 px-2 py-1 rounded text-sm"
                 >
-                  #{tag}
+                  {tag}
                 </span>
               ))}
             </div>
           </div>
         )}
-      </div>
-      <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-        <div className="flex items-center justify-between mb-4">
-          <h4 className="text-lg font-medium text-white">Add a Reply</h4>
-          <button
-            type="button"
-            onClick={() => setShowReplyPreview(!showReplyPreview)}
-            className={`flex items-center gap-1 px-3 py-1 rounded text-xs transition-colors ${
-              showReplyPreview
-                ? "bg-blue-600 text-white"
-                : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-            }`}
-          >
-            {showReplyPreview ? (
-              <Edit className="w-3 h-3" />
-            ) : (
-              <Eye className="w-3 h-3" />
+
+        {/* AI Insights */}
+        {thread.hasAiInsights && (
+          <div className="border-t border-gray-700 pt-6 mt-4">
+            <div className="flex items-center gap-2 mb-4">
+              <Brain className="w-5 h-5 text-purple-400" />
+              <span className="text-purple-400 font-medium">AI Insights</span>
+            </div>
+
+            {thread.aiSummary && (
+              <div className="bg-purple-600/10 border border-purple-600/30 rounded-lg p-4 mb-4">
+                <h3 className="text-purple-400 font-medium mb-2">Summary</h3>
+                <p className="text-purple-200 text-sm">{thread.aiSummary}</p>
+              </div>
             )}
-            {showReplyPreview ? "Edit" : "Preview"}
-          </button>
-        </div>
 
-        <form onSubmit={handleSubmitReply} className="space-y-4">
-          {!showReplyPreview ? (
-            <textarea
-              value={newReply}
-              onChange={(e) => setNewReply(e.target.value)}
-              placeholder="Share your thoughts or help solve this problem... Markdown supported: **bold**, *italic*, `code`, lists, links, images, etc."
-              className="w-full bg-gray-700 border border-gray-600 rounded-lg p-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px] resize-vertical"
-              required
-            />
-          ) : (
-            <div className="bg-gray-700 border border-gray-600 rounded-lg p-3 min-h-[100px] max-h-[300px] overflow-y-auto">
-              {newReply.trim() ? (
-                <div className="prose prose-invert max-w-none">
-                  <ReactMarkdown components={markdownComponents}>
-                    {newReply}
-                  </ReactMarkdown>
-                </div>
-              ) : (
-                <p className="text-gray-400 italic">
-                  Preview will appear here as you type...
+            {thread.aiSuggestedAnswer && (
+              <div className="bg-blue-600/10 border border-blue-600/30 rounded-lg p-4">
+                <h3 className="text-blue-400 font-medium mb-2">
+                  Suggested Answer
+                </h3>
+                <p className="text-blue-200 text-sm">
+                  {thread.aiSuggestedAnswer}
                 </p>
-              )}
-            </div>
-          )}
-
-          <div className="flex justify-between items-center">
-            <div className="text-sm text-gray-400">
-              Supports Markdown formatting • Be respectful and helpful
-            </div>
-            <button
-              type="submit"
-              disabled={!newReply.trim()}
-              className="bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg flex items-center gap-2 transition-colors"
-            >
-              <Send className="w-4 h-4" />
-              Post Reply
-            </button>
+              </div>
+            )}
           </div>
-        </form>
+        )}
       </div>
 
-      {/* Replies with Markdown Support */}
+      {/* Last Updated Info */}
+      <div className="text-sm text-gray-400 text-center">
+        {thread.updatedAt && (
+          <>Last updated: {new Date(thread.updatedAt).toLocaleDateString()}</>
+        )}
+      </div>
+
+      {/* Replies Section */}
       <div className="space-y-4">
-        <h3 className="text-xl font-semibold text-white flex items-center gap-2">
-          <MessageCircle className="w-5 h-5" />
-          Replies ({replyTotal})
-        </h3>
-
-        {replies.map((reply) => {
-          const isAccepted = acceptedAnswerId && reply.id === acceptedAnswerId;
-          return (
-            <div
-              key={reply.id}
-              className={`bg-gray-800 border ${
-                isAccepted ? "border-green-500" : "border-gray-700"
-              } rounded-lg p-4 ${
-                isAccepted ? "shadow-green-700/30 shadow-lg" : ""
-              }`}
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <User className="w-4 h-4 text-gray-400" />
-                    <span className="font-medium text-white">
-                      {reply.user?.name || "Unknown"}
-                    </span>
-                    {isAccepted && (
-                      <span className="bg-green-600/20 text-green-400 px-2 py-1 rounded text-xs">
-                        ✓ Accepted Answer
-                      </span>
-                    )}
-                    {reply.isFromAi && (
-                      <span className="bg-purple-600/20 text-purple-400 px-2 py-1 rounded text-xs">
-                        🤖 AI Response
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1 text-sm text-gray-400">
-                    <Clock className="w-3 h-3" />
-                    <span>{formatTimeAgo(reply.createdAt)}</span>
-                  </div>
-                </div>
-                <div className="relative flex items-center gap-2">
-                  <button
-                    className="text-gray-400 hover:text-white p-2 rounded-full focus:outline-none"
-                    onClick={() =>
-                      setReplyMenuOpen(
-                        replyMenuOpen === reply.id ? null : reply.id
-                      )
-                    }
-                    aria-label="Reply actions"
-                  >
-                    <MoreVertical className="w-4 h-4" />
-                  </button>
-                  {replyMenuOpen === reply.id && (
-                    <div
-                      ref={replyMenuRef}
-                      className="absolute right-0 mt-2 w-36 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-20"
-                    >
-                      <ul className="py-1">
-                        {currentUser && reply.user?.id === currentUser.id && (
-                          <li>
-                            <button
-                              className="w-full text-left px-4 py-2 text-red-500 hover:bg-gray-700 hover:text-red-600 text-sm"
-                              onClick={() => {
-                                setReplyMenuOpen(null);
-                                handleDeleteReply(reply.id);
-                              }}
-                            >
-                              Delete
-                            </button>
-                          </li>
-                        )}
-                        {/* Only thread author can accept or unmark answer */}
-                        {currentUser &&
-                          thread &&
-                          thread.authorId === currentUser.id && (
-                            <li>
-                              {isAccepted ? (
-                                <button
-                                  className="w-full text-left px-4 py-2 text-yellow-500 hover:bg-gray-700 hover:text-yellow-600 text-sm"
-                                  onClick={() => {
-                                    setReplyMenuOpen(null);
-                                    handleAcceptAnswer(reply.id, true);
-                                  }}
-                                >
-                                  Unmark as Answer
-                                </button>
-                              ) : (
-                                <button
-                                  className="w-full text-left px-4 py-2 text-green-500 hover:bg-gray-700 hover:text-green-600 text-sm"
-                                  onClick={() => {
-                                    setReplyMenuOpen(null);
-                                    handleAcceptAnswer(reply.id, false);
-                                  }}
-                                >
-                                  Mark as Answer
-                                </button>
-                              )}
-                            </li>
-                          )}
-                        <li>
-                          <button className="w-full text-left px-4 py-2 text-gray-300 hover:bg-gray-700 text-sm">
-                            Update
-                          </button>
-                        </li>
-                        <li>
-                          <button className="w-full text-left px-4 py-2 text-gray-300 hover:bg-gray-700 text-sm">
-                            Report
-                          </button>
-                        </li>
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="prose prose-invert max-w-none mb-3">
-                <ReactMarkdown components={markdownComponents}>
-                  {reply.content}
-                </ReactMarkdown>
-              </div>
-
-              <div className="flex items-center gap-4">
-                <button
-                  className={`flex items-center gap-1 text-gray-400 hover:text-blue-400 transition-colors ${
-                    reply.isLikedByMe ? "text-blue-400" : ""
-                  }`}
-                  onClick={() => handleReplyLike(reply.id)}
-                  aria-label={reply.isLikedByMe ? "Unlike" : "Like"}
-                >
-                  <ThumbsUp
-                    className={`w-4 h-4 ${
-                      reply.isLikedByMe ? "fill-blue-400" : ""
-                    }`}
-                  />
-                  <span className="text-sm">{reply.likesCount || 0}</span>
-                  <span className="text-xs ml-1">Helpful</span>
-                </button>
-              </div>
-            </div>
-          );
-        })}
-
-        {/* Replies Pagination Controls */}
-        <div className="flex justify-center mt-4">
-          <button
-            className="px-4 py-2 bg-gray-700 text-white rounded mr-2 disabled:opacity-50"
-            disabled={replyPage === 1 || isLoading}
-            onClick={() => setReplyPage((p) => Math.max(1, p - 1))}
-          >
-            Previous
-          </button>
-          <span className="px-4 py-2 text-gray-400">Page {replyPage}</span>
-          <button
-            className="px-4 py-2 bg-gray-700 text-white rounded ml-2 disabled:opacity-50"
-            disabled={!replyHasNext || isLoading}
-            onClick={() => setReplyPage((p) => p + 1)}
-          >
-            Next
-          </button>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl font-semibold text-white">
+              Replies ({totalReplies})
+            </h2>
+            {thread.acceptedAnswerId && (
+              <span className="bg-green-600/20 text-green-400 px-2 py-1 rounded-full text-xs">
+                ✓ Has Accepted Answer
+              </span>
+            )}
+          </div>
         </div>
+
+        {/* Reply Form */}
+        <ReplyForm
+          threadId={thread.id}
+          onReplyCreated={handleReplyCreated}
+          placeholder="Share your thoughts..."
+          className="mb-6"
+        />
+
+        {/* Replies List */}
+        {(() => {
+          // Debug logging for thread ownership
+          console.log("🔍 ThreadDetailView Debug:", {
+            threadId: thread.id,
+            threadUserId: thread.user.id,
+            threadUserName: thread.user.name,
+            currentUserId,
+            isThreadOwner: isOwner(thread.user.id),
+            userFromAuth: user?.id,
+            threadStatus: thread.threadStatus,
+          });
+          return null;
+        })()}
+
+        {replies.length === 0 ? (
+          <div className="text-center py-8">
+            <MessageCircle className="w-12 h-12 mx-auto mb-4 text-gray-500" />
+            <p className="text-gray-400 text-lg">No replies yet</p>
+            <p className="text-gray-500 text-sm">Be the first to respond!</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {replies.map((reply) => (
+              <ReplyCard
+                key={reply.id}
+                reply={reply}
+                threadId={thread.id}
+                isThreadOwner={isOwner(thread.user.id)}
+                threadStatus={thread.threadStatus || "UNANSWERED"}
+                onLikeToggle={handleReplyLikeToggle}
+                onAnswerAccepted={handleAnswerAccepted}
+                onAnswerUnmarked={handleAnswerUnmarked}
+                onEditReply={handleEditReply}
+                onDeleteReply={handleDeleteReply}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

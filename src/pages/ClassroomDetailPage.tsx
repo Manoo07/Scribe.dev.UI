@@ -59,12 +59,7 @@ const ClassroomDetailPage = () => {
     switch (activeTab) {
       case "Units":
         return (
-          <UnitsTab
-            classroomId={id!}
-            units={units}
-            setUnits={setUnits}
-            loading={unitsLoading}
-          />
+          <UnitsTab classroomId={id!} units={units} loading={unitsLoading} />
         );
       case "Threads":
         return (

@@ -9,22 +9,46 @@ import {
   Reply,
   Tag,
   User,
+  Heart,
+  Loader2,
+  Trash2,
+  MoreHorizontal,
 } from "lucide-react";
-import React from "react";
+import React, { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { Thread } from "./threadTypes";
+import { toggleThreadLike, deleteThread } from "../../services/api";
+import { useToast } from "../../hooks/use-toast";
+import { useOwnership } from "../../hooks/useOwnership";
 
 interface EnhancedThreadCardProps {
   thread: Thread;
   onClick?: () => void;
   showClassroomInfo?: boolean;
+  onLikeToggle?: (
+    threadId: string,
+    newLikeCount: number,
+    isLiked: boolean
+  ) => void;
 }
 
 const EnhancedThreadCard: React.FC<EnhancedThreadCardProps> = ({
   thread,
   onClick,
   showClassroomInfo = true,
+  onLikeToggle,
 }) => {
+  const { toast } = useToast();
+  const { isOwner } = useOwnership();
+  const [isLiking, setIsLiking] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteMenu, setShowDeleteMenu] = useState(false);
+  const [localLikeCount, setLocalLikeCount] = useState(thread.likesCount || 0);
+  const [localIsLiked, setLocalIsLiked] = useState(thread.isLikedByMe || false);
+
+  // Check if current user owns this thread
+  const isThreadOwner = isOwner(thread.user.id);
+
   const formatTimeAgo = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -37,6 +61,101 @@ const EnhancedThreadCard: React.FC<EnhancedThreadCardProps> = ({
     const diffInDays = Math.floor(diffInHours / 24);
     if (diffInDays < 7) return `${diffInDays}d ago`;
     return date.toLocaleDateString();
+  };
+
+  const handleLikeToggle = async (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent the card click from triggering
+    if (isLiking) return;
+
+    setIsLiking(true);
+    try {
+      const response = await toggleThreadLike(thread.id);
+
+      // Update local state optimistically
+      const newLikeCount =
+        response.likesCount || localLikeCount + (localIsLiked ? -1 : 1);
+      const newIsLiked =
+        response.liked !== undefined ? response.liked : !localIsLiked;
+
+      setLocalLikeCount(newLikeCount);
+      setLocalIsLiked(newIsLiked);
+
+      // Notify parent component
+      if (onLikeToggle) {
+        onLikeToggle(thread.id, newLikeCount, newIsLiked);
+      }
+
+      toast({
+        title: "Success",
+        description: newIsLiked ? "Thread liked!" : "Thread unliked!",
+        variant: "default",
+      });
+    } catch (error: any) {
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Failed to toggle like";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLiking(false);
+    }
+  };
+
+  const handleDeleteThread = async (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent the card click from triggering
+
+    if (!isThreadOwner) {
+      toast({
+        title: "Error",
+        description: "You can only delete your own threads",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (
+      !confirm(
+        "Are you sure you want to delete this thread? This action cannot be undone."
+      )
+    ) {
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      console.log("🗑️ Deleting thread:", thread.id);
+
+      // Call the delete thread API endpoint
+      await deleteThread(thread.id);
+
+      toast({
+        title: "Success",
+        description: "Thread deleted successfully!",
+        variant: "default",
+      });
+
+      // Reload the page or notify parent to refresh threads list
+      window.location.reload();
+    } catch (error: any) {
+      console.error("❌ Error deleting thread:", error);
+
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Failed to delete thread";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteMenu(false);
+    }
   };
 
   const getThreadTypeIcon = () => {
@@ -65,7 +184,7 @@ const EnhancedThreadCard: React.FC<EnhancedThreadCardProps> = ({
 
   return (
     <div
-      className="bg-gray-800 border border-gray-700 rounded-lg p-6 hover:border-gray-600 transition-colors cursor-pointer"
+      className="bg-gray-700 border border-gray-600 rounded-lg p-6 hover:border-gray-500 hover:bg-gray-600 transition-all duration-200 cursor-pointer shadow-sm"
       onClick={onClick}
     >
       {/* Header */}
@@ -88,7 +207,7 @@ const EnhancedThreadCard: React.FC<EnhancedThreadCardProps> = ({
           <div className="flex items-center gap-3 text-sm text-gray-400 flex-wrap">
             <div className="flex items-center gap-1">
               <User className="w-4 h-4" />
-              <span>{thread.authorName || thread.user?.name || "Unknown"}</span>
+              <span>{thread.user?.name || thread.authorName || "Unknown"}</span>
             </div>
             <div className="flex items-center gap-1">
               <Clock className="w-4 h-4" />
@@ -197,6 +316,23 @@ const EnhancedThreadCard: React.FC<EnhancedThreadCardProps> = ({
       {/* Footer */}
       <div className="flex items-center justify-between pt-3 border-t border-gray-700">
         <div className="flex items-center gap-4">
+          {/* Like Button */}
+          <button
+            onClick={handleLikeToggle}
+            disabled={isLiking}
+            className={`flex items-center gap-1 text-sm transition-colors ${
+              localIsLiked
+                ? "text-red-400 hover:text-red-300"
+                : "text-gray-400 hover:text-gray-300"
+            }`}
+          >
+            <Heart
+              className={`w-4 h-4 ${localIsLiked ? "fill-current" : ""}`}
+            />
+            <span>{localLikeCount || 0}</span>
+            {isLiking && <Loader2 className="w-4 h-4 animate-spin" />}
+          </button>
+
           {thread.lastReplyAt && (
             <div className="flex items-center gap-1 text-sm text-gray-400">
               <Reply className="w-4 h-4" />
@@ -209,18 +345,67 @@ const EnhancedThreadCard: React.FC<EnhancedThreadCardProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          {typeof thread.isResolved === "boolean" &&
+          {/* Thread Status */}
+          {thread.threadStatus === "UNANSWERED" && (
+            <span className="bg-yellow-600/20 text-yellow-400 px-2 py-1 rounded text-xs">
+              Unanswered
+            </span>
+          )}
+          {thread.threadStatus === "ANSWERED" && (
+            <span className="bg-blue-600/20 text-blue-400 px-2 py-1 rounded text-xs">
+              Answered
+            </span>
+          )}
+          {thread.threadStatus === "RESOLVED" && (
+            <span className="bg-green-600/20 text-green-400 px-2 py-1 rounded text-xs">
+              Resolved
+            </span>
+          )}
+
+          {/* Legacy status for backward compatibility */}
+          {!thread.threadStatus &&
+            typeof thread.isResolved === "boolean" &&
             !thread.isResolved &&
-            thread.repliesCount === 0 && (
+            (thread.repliesCount || 0) === 0 && (
               <span className="bg-red-600/20 text-red-400 px-2 py-1 rounded text-xs">
                 Unanswered
               </span>
             )}
 
-          {thread.isResolved && (
+          {!thread.threadStatus && thread.isResolved && (
             <span className="bg-green-600/20 text-green-400 px-2 py-1 rounded text-xs">
               Resolved
             </span>
+          )}
+
+          {/* Delete Button - Only visible to thread owner */}
+          {isThreadOwner && (
+            <div className="relative">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowDeleteMenu(!showDeleteMenu);
+                }}
+                className="p-1.5 bg-gray-800/60 text-gray-400 rounded-md hover:bg-gray-800/80 hover:text-gray-200 transition-all duration-200 border border-gray-600/30"
+                title="More options"
+              >
+                <MoreHorizontal className="w-3 h-3" />
+              </button>
+
+              {/* Delete Menu */}
+              {showDeleteMenu && (
+                <div className="absolute right-0 top-full mt-1 w-32 bg-gray-800 border border-gray-600 rounded-lg shadow-lg z-10">
+                  <button
+                    onClick={handleDeleteThread}
+                    disabled={isDeleting}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-left text-red-400 hover:bg-gray-700/50 transition-colors text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    <span>{isDeleting ? "Deleting..." : "Delete Thread"}</span>
+                  </button>
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>

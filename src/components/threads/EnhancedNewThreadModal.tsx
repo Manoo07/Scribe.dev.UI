@@ -12,6 +12,7 @@ interface EnhancedNewThreadModalProps {
     content: string;
     unitId?: string;
   }) => void;
+  isCreating?: boolean;
 }
 
 const EnhancedNewThreadModal: React.FC<EnhancedNewThreadModalProps> = ({
@@ -20,6 +21,7 @@ const EnhancedNewThreadModal: React.FC<EnhancedNewThreadModalProps> = ({
   threadType,
   onClose,
   onSubmit,
+  isCreating = false,
 }) => {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -46,12 +48,13 @@ const EnhancedNewThreadModal: React.FC<EnhancedNewThreadModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !content.trim()) return;
-    if (showUnitDropdown && !selectedUnitId) return;
-    if (showUnitDropdown) {
+
+    // For classroom threads, unit selection is optional
+    if (threadType === "classroom") {
       onSubmit({
         title: title.trim(),
         content: content.trim(),
-        unitId: selectedUnitId,
+        unitId: selectedUnitId || undefined,
       });
     } else {
       onSubmit({
@@ -64,7 +67,7 @@ const EnhancedNewThreadModal: React.FC<EnhancedNewThreadModalProps> = ({
   const isValid =
     title.trim() &&
     content.trim() &&
-    (showUnitDropdown ? selectedUnitId : true);
+    (threadType === "classroom" ? true : true); // Unit selection is optional for classroom threads
   const wordCount = countWords(content);
   const isContentOverLimit = content.length > CONTENT_LIMIT;
 
@@ -181,21 +184,25 @@ const EnhancedNewThreadModal: React.FC<EnhancedNewThreadModalProps> = ({
           {showUnitDropdown && (
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Select Unit
+                Select Unit{" "}
+                <span className="text-gray-400 text-xs">(Optional)</span>
               </label>
               <select
                 value={selectedUnitId}
                 onChange={(e) => setSelectedUnitId(e.target.value)}
                 className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-green-500"
-                required
               >
-                <option value="">Choose a unit...</option>
+                <option value="">Choose a unit (optional)...</option>
                 {units.map((unit) => (
                   <option key={unit.id} value={unit.id}>
                     {unit.name}
                   </option>
                 ))}
               </select>
+              <p className="text-xs text-gray-400 mt-1">
+                You can optionally associate this thread with a specific unit,
+                or leave it as a general classroom discussion.
+              </p>
             </div>
           )}
 
@@ -316,13 +323,22 @@ const EnhancedNewThreadModal: React.FC<EnhancedNewThreadModalProps> = ({
             </button>
             <button
               type="submit"
-              disabled={!isValid || isContentOverLimit}
+              disabled={!isValid || isContentOverLimit || isCreating}
               className="bg-blue-600 hover:bg-blue-500 disabled:bg-blue-600/50 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg flex items-center gap-2 transition-colors"
             >
-              <Send className="w-4 h-4" />
-              {threadType === "classroom"
-                ? "Post Question"
-                : "Start Discussion"}
+              {isCreating ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <Send className="w-4 h-4" />
+                  {threadType === "classroom"
+                    ? "Post Question"
+                    : "Start Discussion"}
+                </>
+              )}
             </button>
           </div>
         </form>

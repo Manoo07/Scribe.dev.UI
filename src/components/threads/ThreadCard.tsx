@@ -33,7 +33,7 @@ const ThreadCard: React.FC<ThreadCardProps> = ({ thread, onClick }) => {
 
   return (
     <div
-      className="bg-gray-800 border border-gray-700 rounded-lg p-6 hover:border-gray-600 transition-colors cursor-pointer"
+      className="bg-gray-700 border border-gray-600 rounded-lg p-6 hover:border-gray-500 hover:bg-gray-600 transition-all duration-200 cursor-pointer shadow-sm"
       onClick={onClick}
     >
       {/* Header */}
@@ -132,7 +132,7 @@ const ThreadCard: React.FC<ThreadCardProps> = ({ thread, onClick }) => {
       )}
 
       {/* Tags */}
-      {thread.tags.length > 0 && (
+      {Array.isArray(thread.tags) && thread.tags.length > 0 && (
         <div className="flex items-center gap-2 mb-4">
           <Tag className="w-4 h-4 text-gray-400" />
           <div className="flex flex-wrap gap-1">

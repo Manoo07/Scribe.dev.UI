@@ -16,6 +16,10 @@ interface ThreadsListProps {
   };
   selectedUnit?: string;
   setSelectedUnit?: (unitId: string) => void;
+  error?: string | null;
+  success?: string | null;
+  onRefresh?: () => void;
+  isCreating?: boolean;
 }
 
 const ThreadsList: React.FC<ThreadsListProps> = ({
@@ -27,6 +31,10 @@ const ThreadsList: React.FC<ThreadsListProps> = ({
   classroomContext,
   selectedUnit = "all",
   setSelectedUnit,
+  error,
+  success,
+  onRefresh,
+  isCreating = false,
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedThreadType, setSelectedThreadType] = useState<
@@ -57,8 +65,11 @@ const ThreadsList: React.FC<ThreadsListProps> = ({
         (thread) =>
           thread.title.toLowerCase().includes(query) ||
           thread.content.toLowerCase().includes(query) ||
-          thread.authorName.toLowerCase().includes(query) ||
-          thread.tags.some((tag) => tag.toLowerCase().includes(query))
+          (thread.user?.name || thread.authorName || "")
+            .toLowerCase()
+            .includes(query) ||
+          (Array.isArray(thread.tags) &&
+            thread.tags.some((tag) => tag.toLowerCase().includes(query)))
       );
     }
 
@@ -91,10 +102,11 @@ const ThreadsList: React.FC<ThreadsListProps> = ({
       switch (sortBy) {
         case "recent":
           return (
-            new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+            new Date(b.updatedAt || b.createdAt).getTime() -
+            new Date(a.updatedAt || a.createdAt).getTime()
           );
         case "replies":
-          return b.repliesCount - a.repliesCount;
+          return (b.repliesCount || 0) - (a.repliesCount || 0);
         case "created":
           return (
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -126,36 +138,51 @@ const ThreadsList: React.FC<ThreadsListProps> = ({
     return { total, resolved, open, classroom, generic };
   }, [threads]);
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-gray-400">Loading threads...</div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       {/* Header with Stats */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white mb-2">
-            Discussion Threads
+            {isLoading || isCreating ? (
+              <span className="flex items-center gap-2">
+                Discussion Threads
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              </span>
+            ) : (
+              "Discussion Threads"
+            )}
           </h1>
           <div className="flex items-center gap-4 text-sm text-gray-400">
-            <span>• {threadStats.total} Total</span>
-            <span className="text-green-400">
-              • {threadStats.resolved} Resolved
-            </span>
-            <span className="text-red-400">• {threadStats.open} Open</span>
-            {!classroomContext && (
+            {isLoading ? (
               <>
+                <span>• Loading...</span>
+                <span>• Loading...</span>
+                <span>• Loading...</span>
+                {!classroomContext && (
+                  <>
+                    <span>• Loading...</span>
+                    <span>• Loading...</span>
+                  </>
+                )}
+              </>
+            ) : (
+              <>
+                <span>• {threadStats.total} Total</span>
                 <span className="text-green-400">
-                  • {threadStats.classroom} Classroom
+                  • {threadStats.resolved} Resolved
                 </span>
-                <span className="text-blue-400">
-                  • {threadStats.generic} Global
-                </span>
+                <span className="text-red-400">• {threadStats.open} Open</span>
+                {!classroomContext && (
+                  <>
+                    <span className="text-green-400">
+                      • {threadStats.classroom} Classroom
+                    </span>
+                    <span className="text-blue-400">
+                      • {threadStats.generic} Global
+                    </span>
+                  </>
+                )}
               </>
             )}
           </div>
@@ -166,18 +193,38 @@ const ThreadsList: React.FC<ThreadsListProps> = ({
           {classroomContext && (
             <button
               onClick={() => onCreateThread("classroom")}
-              className="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+              className="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isLoading || isCreating}
             >
-              <BookOpen className="w-4 h-4" />
-              New Question
+              {isCreating ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <BookOpen className="w-4 h-4" />
+                  New Question
+                </>
+              )}
             </button>
           )}
           <button
             onClick={() => onCreateThread("generic")}
-            className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+            className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={isLoading || isCreating}
           >
-            <Globe className="w-4 h-4" />
-            New Discussion
+            {isCreating ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                Creating...
+              </>
+            ) : (
+              <>
+                <Globe className="w-4 h-4" />
+                New Discussion
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -195,7 +242,8 @@ const ThreadsList: React.FC<ThreadsListProps> = ({
                   placeholder="Search threads, content, authors, or tags..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-gray-700 border border-gray-600 rounded-lg pl-10 pr-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={isLoading || isCreating}
+                  className="w-full bg-gray-700 border border-gray-600 rounded-lg pl-10 pr-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </div>
             </div>
@@ -207,7 +255,8 @@ const ThreadsList: React.FC<ThreadsListProps> = ({
                 <select
                   value={selectedThreadType}
                   onChange={(e) => setSelectedThreadType(e.target.value as any)}
-                  className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={isLoading || isCreating}
+                  className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <option value="all">All Types</option>
                   <option value="classroom">Classroom Only</option>
@@ -222,7 +271,8 @@ const ThreadsList: React.FC<ThreadsListProps> = ({
                   <select
                     value={selectedUnit}
                     onChange={(e) => setSelectedUnit(e.target.value)}
-                    className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    disabled={isLoading || isCreating}
+                    className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <option value="all">All Units</option>
                     {classroomContext.units.map((unit) => (
@@ -238,7 +288,8 @@ const ThreadsList: React.FC<ThreadsListProps> = ({
                 <select
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={isLoading || isCreating}
+                  className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <option value="all">All Categories</option>
                   {availableCategories.map((category) => (
@@ -253,7 +304,8 @@ const ThreadsList: React.FC<ThreadsListProps> = ({
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}
-                className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={isLoading || isCreating}
+                className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <option value="recent">Most Recent</option>
                 <option value="replies">Most Replies</option>
@@ -302,7 +354,8 @@ const ThreadsList: React.FC<ThreadsListProps> = ({
                     if (setSelectedUnit) setSelectedUnit("all");
                     setSelectedCategory("all");
                   }}
-                  className="text-gray-400 hover:text-white text-xs ml-2"
+                  disabled={isLoading || isCreating}
+                  className="text-gray-400 hover:text-white text-xs ml-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Clear all
                 </button>
@@ -312,41 +365,103 @@ const ThreadsList: React.FC<ThreadsListProps> = ({
         </div>
       )}
 
-      {/* Threads List */}
-      <div className="space-y-4">
-        {filteredThreads.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="text-gray-400 mb-4">
-              {threads.length === 0 ? (
-                <>
-                  <Globe className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p className="text-lg mb-2">No discussions yet</p>
-                  <p className="text-sm">
-                    Start the conversation by creating the first thread!
-                  </p>
-                </>
-              ) : (
-                <>
-                  <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p className="text-lg mb-2">No threads match your filters</p>
-                  <p className="text-sm">
-                    Try adjusting your search or filter criteria
-                  </p>
-                </>
-              )}
+      {/* Error Display */}
+      {error && (
+        <div className="bg-red-900/20 border border-red-600/30 rounded-lg p-4 mb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse"></div>
+              <span className="text-red-400 font-medium">
+                Error loading threads
+              </span>
             </div>
+            {onRefresh && (
+              <button
+                onClick={onRefresh}
+                className="text-red-400 hover:text-red-300 text-sm underline"
+              >
+                Try again
+              </button>
+            )}
           </div>
-        ) : (
-          filteredThreads.map((thread) => (
-            <EnhancedThreadCard
-              key={thread.id}
-              thread={thread}
-              onClick={() => onThreadClick(thread)}
-              showClassroomInfo={!classroomContext}
-            />
-          ))
-        )}
-      </div>
+          <p className="text-red-300 text-sm mt-2">{error}</p>
+        </div>
+      )}
+
+      {/* Success Display */}
+      {success && (
+        <div className="bg-green-900/20 border border-green-600/30 rounded-lg p-4 mb-4">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+            <span className="text-green-400 font-medium">{success}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Loading State */}
+      {isLoading && (
+        <div className="space-y-4">
+          {[...Array(3)].map((_, index) => (
+            <div
+              key={index}
+              className="bg-gray-800 border border-gray-700 rounded-lg p-6 animate-pulse"
+            >
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 bg-gray-700 rounded-full"></div>
+                <div className="flex-1 space-y-3">
+                  <div className="h-4 bg-gray-700 rounded w-3/4"></div>
+                  <div className="h-3 bg-gray-700 rounded w-1/2"></div>
+                  <div className="h-3 bg-gray-700 rounded w-2/3"></div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Threads List */}
+      {!isLoading && (
+        <div className="space-y-4">
+          {filteredThreads.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="text-gray-400 mb-4">
+                {threads.length === 0 ? (
+                  <>
+                    <Globe className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p className="text-lg mb-2">No discussions yet</p>
+                    <p className="text-sm">
+                      Start the conversation by creating the first thread!
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p className="text-lg mb-2">
+                      No threads match your filters
+                    </p>
+                    <p className="text-sm">
+                      Try adjusting your search or filter criteria
+                    </p>
+                  </>
+                )}
+              </div>
+            </div>
+          ) : (
+            filteredThreads.map((thread) => (
+              <EnhancedThreadCard
+                key={thread.id}
+                thread={thread}
+                onClick={() => onThreadClick(thread)}
+                showClassroomInfo={!classroomContext}
+                onLikeToggle={(_threadId, _newLikeCount, _isLiked) => {
+                  // The local state in EnhancedThreadCard handles the UI update
+                  // You can add a callback prop to notify parent component if needed
+                }}
+              />
+            ))
+          )}
+        </div>
+      )}
 
       {/* Load More or Pagination could go here */}
     </div>
