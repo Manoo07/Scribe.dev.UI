@@ -7,6 +7,8 @@ import {
 import DashboardLayout from "../layouts/DashboardLayout";
 import AssignmentsPage from "../pages/Assignment";
 import ClassroomDetailPage from "../pages/ClassroomDetailPage";
+import ClassroomAssignmentsPage from "../pages/ClassroomAssignmentsPage";
+import AssignmentSubmissionsPage from "../pages/AssignmentSubmissionsPage";
 import MyClassroomsPage from "../pages/Classrooms";
 import OverviewPage from "../pages/Dashboard";
 import ForgotPasswordPage from "../pages/ForgotPasswordPage";
@@ -58,6 +60,9 @@ const AppRoutes = () => {
           <Route path="assignments" element={<AssignmentsPage />} />
           <Route path="classrooms" element={<MyClassroomsPage />} />
           <Route path="classrooms/:id" element={<ClassroomDetailPage />} />
+          <Route path="classrooms/:id/assignments" element={<ClassroomAssignmentsPage />} />
+          <Route path="classrooms/:id/assignments/:assignmentId/submissions" element={<AssignmentSubmissionsPage />} />
+          <Route path="assignments/:assignmentId/submissions" element={<AssignmentSubmissionsPage />} />
           <Route path="announcements" element={<Announcements />} />
           <Route path="attendance" element={<AttendanceDashboard />} />
           <Route
