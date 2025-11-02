@@ -3,6 +3,9 @@ import api, { fetchSubmissions, fetchAssignments } from '../../services/api';
 import { useToast } from '../../hooks/use-toast';
 import { useAuth } from '../../context/AuthContext';
 import { Eye, CheckCircle, XCircle } from 'lucide-react';
+import { SubmissionStatus } from '../../constants/submissionStatus';
+import { StatusBadge } from '../ui/SubmissionStatusComponents';
+import SubmissionReviewModal from './SubmissionReviewModal';
 
 interface Props {
   assignmentId: string;
@@ -11,16 +14,13 @@ interface Props {
   asPage?: boolean; // when true, renders as page content instead of modal
 }
 
-const StatusPill = ({ status }: { status: string }) => {
-  const map: Record<string, string> = {
-    SUBMITTED: 'bg-sky-600 text-white',
-    PENDING: 'bg-gray-600 text-white',
-    OVERDUE: 'bg-orange-600 text-white',
-    ACCEPTED: 'bg-green-600 text-white',
-    REJECTED: 'bg-red-600 text-white',
-  };
-  const cls = map[status] || 'bg-gray-600 text-white';
-  return <span className={`px-2 py-0.5 rounded text-xs ${cls}`}>{status}</span>;
+interface AssignmentInfo {
+  title?: string;
+  deadline?: string;
+}
+
+const StatusPill = ({ status, deadline }: { status: string; deadline?: string }) => {
+  return <StatusBadge status={status} isStudent={false} deadline={deadline} />;
 };
 
 const ReviewSubmissions: React.FC<Props> = ({ assignmentId, open, onClose, asPage = false }) => {
@@ -28,7 +28,9 @@ const ReviewSubmissions: React.FC<Props> = ({ assignmentId, open, onClose, asPag
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
-  const [assignmentTitle, setAssignmentTitle] = useState<string>('');
+  const [assignmentInfo, setAssignmentInfo] = useState<AssignmentInfo>({});
+  const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -40,9 +42,9 @@ const ReviewSubmissions: React.FC<Props> = ({ assignmentId, open, onClose, asPag
       try {
         const all = await fetchAssignments();
         const found = (all || []).find((a: any) => a.id === assignmentId || String(a.id) === String(assignmentId));
-        if (found) setAssignmentTitle(found.title || '');
+        if (found) setAssignmentInfo({ title: found.title || '', deadline: found.deadline });
       } catch (e) {
-        // ignore assignment title failure
+        // ignore assignment info failure
       }
     } catch (err) {
       console.error('Failed to load submissions', err);
@@ -70,15 +72,32 @@ const ReviewSubmissions: React.FC<Props> = ({ assignmentId, open, onClose, asPag
     });
   }, [submissions, query, statusFilter]);
 
-  const handleReview = async (submissionId: string, status: 'ACCEPTED' | 'REJECTED') => {
+  const handleStatusChange = async (submissionId: string, newStatus: string) => {
     try {
-      await api.patch(`/assignments/submissions/${submissionId}/review`, { status });
-      toast.success('Updated review');
+      await api.patch(`/assignments/submissions/${submissionId}/review`, { 
+        status: newStatus
+      });
+      toast.success(`Status updated to ${newStatus.toLowerCase()}`);
       await load();
     } catch (err) {
-      console.error('Review failed', err);
-      toast.error('Failed to update review status');
+      console.error('Status change failed', err);
+      toast.error('Failed to update status');
     }
+  };
+
+  const handleAccept = (submissionId: string) => {
+    handleStatusChange(submissionId, SubmissionStatus.ACCEPTED);
+    setReviewModalOpen(false);
+  };
+
+  const handleReject = (submissionId: string) => {
+    handleStatusChange(submissionId, SubmissionStatus.REJECTED);
+    setReviewModalOpen(false);
+  };
+
+  const openReviewModal = (submission: any) => {
+    setSelectedSubmission(submission);
+    setReviewModalOpen(true);
   };
 
   if (!open) return null;
@@ -93,20 +112,46 @@ const ReviewSubmissions: React.FC<Props> = ({ assignmentId, open, onClose, asPag
     
     if (asPage) {
       return (
-        <div className="bg-gray-900 border border-gray-700 rounded shadow-lg p-6">
-          {content}
-          <div className="text-gray-300">You do not have permission to view submissions. This area is restricted to faculty members.</div>
-        </div>
+        <>
+          <div className="bg-gray-900 border border-gray-700 rounded shadow-lg p-6">
+            {content}
+            <div className="text-gray-300">You do not have permission to view submissions. This area is restricted to faculty members.</div>
+          </div>
+          
+          <SubmissionReviewModal
+            submission={selectedSubmission}
+            open={reviewModalOpen}
+            onClose={() => {
+              setReviewModalOpen(false);
+              setSelectedSubmission(null);
+            }}
+            onAccept={handleAccept}
+            onReject={handleReject}
+          />
+        </>
       );
     }
     
     return (
-      <div className="fixed inset-0 z-50 bg-black/60 p-6 overflow-auto">
-        <div className="max-w-[600px] mx-auto bg-gray-900 border border-gray-700 rounded shadow-lg p-6">
-          {content}
-          <div className="text-gray-300">You do not have permission to view submissions. This area is restricted to faculty members.</div>
+      <>
+        <div className="fixed inset-0 z-50 bg-black/60 p-6 overflow-auto">
+          <div className="max-w-[600px] mx-auto bg-gray-900 border border-gray-700 rounded shadow-lg p-6">
+            {content}
+            <div className="text-gray-300">You do not have permission to view submissions. This area is restricted to faculty members.</div>
+          </div>
         </div>
-      </div>
+        
+        <SubmissionReviewModal
+          submission={selectedSubmission}
+          open={reviewModalOpen}
+          onClose={() => {
+            setReviewModalOpen(false);
+            setSelectedSubmission(null);
+          }}
+          onAccept={handleAccept}
+          onReject={handleReject}
+        />
+      </>
     );
   }
 
@@ -116,7 +161,7 @@ const ReviewSubmissions: React.FC<Props> = ({ assignmentId, open, onClose, asPag
         <div className="flex justify-between items-start gap-4">
           <div>
             <h2 className="text-2xl font-semibold text-white">Submissions</h2>
-            <div className="text-sm text-gray-400">{assignmentTitle ? assignmentTitle : `Assignment ID: ${assignmentId}`}</div>
+            <div className="text-sm text-gray-400">{assignmentInfo.title ? assignmentInfo.title : `Assignment ID: ${assignmentId}`}</div>
           </div>
           <div className="flex items-center gap-2">
             <button onClick={onClose} className="text-gray-400 hover:text-white">Close</button>
@@ -129,11 +174,11 @@ const ReviewSubmissions: React.FC<Props> = ({ assignmentId, open, onClose, asPag
           <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by username or email..." className="flex-1 bg-gray-800 border border-gray-700 rounded p-2 text-sm text-gray-200" />
           <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="bg-gray-800 border border-gray-700 rounded p-2 text-sm text-gray-200">
             <option value="ALL">All Status</option>
-            <option value="PENDING">Pending</option>
-            <option value="SUBMITTED">Submitted</option>
-            <option value="OVERDUE">Overdue</option>
-            <option value="ACCEPTED">Accepted</option>
-            <option value="REJECTED">Rejected</option>
+            <option value={SubmissionStatus.PENDING}>Not Submitted</option>
+            <option value={SubmissionStatus.SUBMITTED}>Submitted</option>
+            <option value={SubmissionStatus.OVERDUE}>Late Submission</option>
+            <option value={SubmissionStatus.ACCEPTED}>Accepted</option>
+            <option value={SubmissionStatus.REJECTED}>Rejected</option>
           </select>
         </div>
 
@@ -159,26 +204,22 @@ const ReviewSubmissions: React.FC<Props> = ({ assignmentId, open, onClose, asPag
                 <tr key={s.id} className="border-t border-gray-800">
                   <td className="p-2">{(s.student?.user?.username) || s.student?.username || s.student?.user?.name || s.studentName || '-'}</td>
                   <td className="p-2">{(s.student && s.student.user && s.student.user.email) || s.student?.email || '-'}</td>
-                  <td className="p-2"><StatusPill status={s.status || 'PENDING'} /></td>
+                  <td className="p-2"><StatusPill status={s.status || 'PENDING'} deadline={assignmentInfo.deadline} /></td>
                   <td className="p-2">{s.submittedAt ? new Date(s.submittedAt).toLocaleString() : 'Not submitted'}</td>
                   <td className="p-2">
                     <div className="flex items-center gap-2">
-                      {s.submissionFileUrl && (
-                        <a href={s.submissionFileUrl} target="_blank" rel="noreferrer" className="text-blue-400 p-1 rounded hover:bg-gray-800">
-                          <Eye size={16} />
-                        </a>
-                      )}
-                      {s.content && (
-                        <button onClick={() => toast.success(s.content)} className="text-blue-400 p-1 rounded hover:bg-gray-800" title="View text">
-                          <Eye size={16} />
+                      {/* Review button - opens modal for all submissions with content */}
+                      {(s.submissionFileUrl || s.content) ? (
+                        <button 
+                          onClick={() => openReviewModal(s)}
+                          className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 flex items-center gap-2"
+                        >
+                          <Eye size={14} />
+                          Review
                         </button>
+                      ) : (
+                        <span className="text-gray-500 text-sm">No submission</span>
                       )}
-                      <button onClick={() => handleReview(s.id, 'ACCEPTED')} className="p-1 rounded bg-green-700 text-white" title="Accept">
-                        <CheckCircle size={16} />
-                      </button>
-                      <button onClick={() => handleReview(s.id, 'REJECTED')} className="p-1 rounded bg-red-700 text-white" title="Reject">
-                        <XCircle size={16} />
-                      </button>
                     </div>
                   </td>
                 </tr>
@@ -191,13 +232,40 @@ const ReviewSubmissions: React.FC<Props> = ({ assignmentId, open, onClose, asPag
   );
 
   if (asPage) {
-    return mainContent;
+    return (
+      <>
+        {mainContent}
+        <SubmissionReviewModal
+          submission={selectedSubmission}
+          open={reviewModalOpen}
+          onClose={() => {
+            setReviewModalOpen(false);
+            setSelectedSubmission(null);
+          }}
+          onAccept={handleAccept}
+          onReject={handleReject}
+        />
+      </>
+    );
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 p-6 overflow-auto">
-      {mainContent}
-    </div>
+    <>
+      <div className="fixed inset-0 z-50 bg-black/60 p-6 overflow-auto">
+        {mainContent}
+      </div>
+      
+      <SubmissionReviewModal
+        submission={selectedSubmission}
+        open={reviewModalOpen}
+        onClose={() => {
+          setReviewModalOpen(false);
+          setSelectedSubmission(null);
+        }}
+        onAccept={handleAccept}
+        onReject={handleReject}
+      />
+    </>
   );
 };
 

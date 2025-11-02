@@ -1,34 +1,47 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import ReviewSubmissions from '../components/assignments/ReviewSubmissions';
-import StudentAssignmentSubmissions from '../components/assignments/StudentAssignmentSubmissions';
-import { useAuth } from '../context/AuthContext';
 
 const AssignmentSubmissionsPage: React.FC = () => {
   const { id: classroomId, assignmentId } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
 
-  const handleClose = () => {
-    if (classroomId) navigate(`/dashboard/classrooms/${classroomId}/assignments`);
-    else navigate('/dashboard/assignments');
-  };
+  useEffect(() => {
+    // Redirect to assignments page with modal trigger
+    if (assignmentId) {
+      if (classroomId) {
+        // Redirect to classroom assignments page and let it handle the modal
+        navigate(`/dashboard/classrooms/${classroomId}/assignments`, { 
+          replace: true,
+          state: { 
+            openSubmissionModal: true, 
+            assignmentId: assignmentId,
+            classroomId: classroomId
+          }
+        });
+      } else {
+        // Redirect to general assignments page and let it handle the modal
+        navigate('/dashboard/assignments', { 
+          replace: true,
+          state: { 
+            openSubmissionModal: true, 
+            assignmentId: assignmentId
+          }
+        });
+      }
+    } else {
+      // No assignment ID, just redirect to assignments
+      if (classroomId) {
+        navigate(`/dashboard/classrooms/${classroomId}/assignments`, { replace: true });
+      } else {
+        navigate('/dashboard/assignments', { replace: true });
+      }
+    }
+  }, [assignmentId, classroomId, navigate]);
 
-  if (!assignmentId) return <div className="p-6 text-gray-400">No assignment selected</div>;
-
+  // Show loading while redirecting
   return (
-    <div className="px-3 py-6 max-w-6xl mx-auto">
-      {user?.role === 'FACULTY' ? (
-        <ReviewSubmissions assignmentId={assignmentId} open={true} onClose={handleClose} asPage={true} />
-      ) : (
-        <StudentAssignmentSubmissions
-          assignmentId={assignmentId}
-          classroomId={classroomId}
-          open={true}
-          onClose={handleClose}
-          asPage={true}
-        />
-      )}
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="text-gray-400">Redirecting...</div>
     </div>
   );
 };

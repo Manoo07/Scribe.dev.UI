@@ -2,7 +2,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import api, { fetchAssignments, deleteAssignment } from '../services/api';
 import { useToast } from '../hooks/use-toast';
 import { useAuth } from '../context/AuthContext';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useLocation } from 'react-router-dom';
+import ReviewSubmissions from '../components/assignments/ReviewSubmissions';
+import StudentAssignmentSubmissions from '../components/assignments/StudentAssignmentSubmissions';
 
 type Assignment = {
   id: string | number;
@@ -31,7 +33,31 @@ const daysUntil = (value?: string | number | Date | null) => {
 
 const normalizeStatus = (s: string | undefined | null) => String(s ?? '').trim().toUpperCase();
 
-const statusBadgeClass = (status: Assignment['status']) => {
+const calculateFacultyStatus = (assignment: any) => {
+  const now = new Date();
+  const deadline = assignment.deadline ? new Date(assignment.deadline) : null;
+  const hasSubmissions = (assignment._count?.assignmentSubmissions || 0) > 0;
+  const totalStudents = assignment.classroom?._count?.virtualClassroomStudents || 0;
+  
+  // Before deadline
+  if (!deadline || deadline > now) {
+    return 'OPEN';
+  }
+  
+  // After deadline
+  if (deadline <= now) {
+    // If there are submissions that need review
+    if (hasSubmissions && totalStudents > 0) {
+      return 'PENDING';
+    }
+    // If no submissions or no students
+    return 'OVERDUE';
+  }
+  
+  return 'OPEN';
+};
+
+const statusBadgeClass = (status: string) => {
   const s = normalizeStatus(status);
   switch (s) {
     case 'SUBMITTED':
@@ -39,10 +65,14 @@ const statusBadgeClass = (status: Assignment['status']) => {
     case 'CLOSED':
       return 'bg-gray-600 text-white';
     case 'OPEN':
-    case 'PENDING':
       return 'bg-teal-600 text-white';
-    default:
+    case 'PENDING':
+    case 'PENDING REVIEW':
       return 'bg-yellow-600 text-white';
+    case 'OVERDUE':
+      return 'bg-orange-600 text-white';
+    default:
+      return 'bg-gray-600 text-white';
   }
 };
 
@@ -50,13 +80,22 @@ const AssignmentsPage: React.FC = () => {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [mySubmissionsMap, setMySubmissionsMap] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+
   const [query, setQuery] = useState('');
   const [classroomFilter, setClassroomFilter] = useState<string>('ALL');
+  const [selectedAssignments, setSelectedAssignments] = useState<string[]>([]);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [selectedAction, setSelectedAction] = useState<string>('');
+  
+  // Submission modal state
+  const [showSubmissionModal, setShowSubmissionModal] = useState(false);
+  const [selectedAssignmentId, setSelectedAssignmentId] = useState<string | null>(null);
+  const [selectedClassroomId, setSelectedClassroomId] = useState<string | null>(null);
+  
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const { toast } = useToast();
   const { user } = useAuth();
-  const navigate = useNavigate();
 
 
   const classrooms = useMemo(() => {
@@ -133,21 +172,25 @@ const AssignmentsPage: React.FC = () => {
     const total = list.length;
 
     let open = 0;
-    let submitted = 0;
+    let pending = 0;
 
     if (user?.role === 'STUDENT') {
       for (const a of list) {
         const myStatusRaw = mySubmissionsMap[String(a.id)]?.status || (a as any).studentStatus || a.status;
         const myStatus = String(myStatusRaw || '').toUpperCase();
-        if (myStatus === 'SUBMITTED' || myStatus === 'ACCEPTED') submitted++;
+        if (myStatus === 'SUBMITTED' || myStatus === 'ACCEPTED') pending++;
         else open++;
       }
     } else {
-      open = list.filter((a) => {
-        const s = normalizeStatus(a.status as any);
-        return s === 'OPEN' || s === 'PENDING';
-      }).length;
-      submitted = list.filter((a: any) => (a?._count?.assignmentSubmissions || 0) > 0).length;
+      // Faculty view - calculate based on our new status logic
+      for (const a of list) {
+        const calculatedStatus = calculateFacultyStatus(a);
+        if (calculatedStatus === 'OPEN') {
+          open++;
+        } else if (calculatedStatus === 'PENDING' || calculatedStatus === 'OVERDUE') {
+          pending++;
+        }
+      }
     }
 
     const dueThisWeek = list.filter((a) => {
@@ -155,14 +198,13 @@ const AssignmentsPage: React.FC = () => {
       return d !== null && d >= 0 && d <= 7;
     }).length;
 
-    return { total, open, submitted, dueThisWeek };
+    return { total, open, pending, dueThisWeek };
   }, [filtered, mySubmissionsMap, user?.role]);
 
   useEffect(() => {
     let mounted = true;
     const load = async () => {
       setLoading(true);
-      setError(null);
       try {
         const res = await fetchAssignments();
         if (!mounted) return;
@@ -170,7 +212,7 @@ const AssignmentsPage: React.FC = () => {
       } catch (err: any) {
         console.error('Failed to load assignments', err);
         if (!mounted) return;
-        setError(err?.message || 'Failed to load assignments');
+        toast.error(err?.message || 'Failed to load assignments');
       } finally {
         if (mounted) setLoading(false);
       }
@@ -179,63 +221,80 @@ const AssignmentsPage: React.FC = () => {
     return () => { mounted = false; };
   }, []);
 
-  const handleDelete = async (id: string | number) => {
+  // Handle automatic modal opening from navigation state
+  useEffect(() => {
+    const state = location.state as any;
+    if (state?.openSubmissionModal && state?.assignmentId) {
+      // Clear the navigation state to prevent reopening on page refresh
+      window.history.replaceState({}, document.title);
+      
+      // Open the modal with the provided assignment and classroom IDs
+      openSubmissionModal(state.assignmentId, state.classroomId);
+    }
+  }, [location.state]);
+
+
+
+  const toggleSelectAssignment = (assignmentId: string) => {
+    setSelectedAssignments(prev => 
+      prev.includes(assignmentId) 
+        ? prev.filter(id => id !== assignmentId)
+        : [...prev, assignmentId]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedAssignments.length === filtered.length) {
+      setSelectedAssignments([]);
+    } else {
+      setSelectedAssignments(filtered.map(a => String(a.id)));
+    }
+  };
+
+  const handleActionSelect = (action: string) => {
+    setSelectedAction(action);
+    if (action === 'delete') {
+      if (selectedAssignments.length === 0) {
+        toast.error('Please select assignments to delete');
+        return;
+      }
+      setShowDeleteConfirm(true);
+    }
+    setSelectedAction('');
+  };
+
+  const confirmDelete = async () => {
+    setShowDeleteConfirm(false);
+    const ids = [...selectedAssignments];
+    setSelectedAssignments([]);
+
     try {
       setLoading(true);
-      await deleteAssignment(String(id));
-      toast.success('Assignment deleted');
+      for (const assignmentId of ids) {
+        await deleteAssignment(assignmentId);
+      }
+      toast.success(`${ids.length} assignment(s) deleted successfully`);
       const res = await fetchAssignments();
       setAssignments(Array.isArray(res) ? res : []);
     } catch (err) {
-      console.error('Failed to delete assignment', err);
-      toast.error('Failed to delete assignment');
+      console.error('Failed to delete assignments', err);
+      toast.error('Failed to delete assignments');
     } finally {
       setLoading(false);
     }
   };
 
-  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
-
-  const requestDelete = (id: string | number) => {
-    if (user?.role !== 'FACULTY') {
-      try { toast.error('Only faculty can delete assignments'); } catch {}
-      return;
-    }
-    const sid = String(id);
-    setPendingDeleteId(sid);
-    try {
-      toast({ title: 'Confirm delete', description: 'Click Confirm in the row to permanently delete this assignment' });
-    } catch (e) {
-      toast.success('Click Confirm to permanently delete this assignment');
-    }
+  const openSubmissionModal = (assignmentId: string, classroomId?: string) => {
+    setSelectedAssignmentId(assignmentId);
+    setSelectedClassroomId(classroomId || null);
+    setShowSubmissionModal(true);
   };
 
-  const cancelDelete = () => {
-    setPendingDeleteId(null);
-  try { toast({ title: 'Delete cancelled' }); } catch (e) { toast.error('Delete cancelled'); }
+  const closeSubmissionModal = () => {
+    setShowSubmissionModal(false);
+    setSelectedAssignmentId(null);
+    setSelectedClassroomId(null);
   };
-
-  const confirmDelete = async (id: string | number) => {
-    if (user?.role !== 'FACULTY') {
-      try { toast.error('Only faculty can delete assignments'); } catch {}
-      return;
-    }
-    setLoading(true);
-    try {
-      await deleteAssignment(String(id));
-      toast.success('Assignment deleted');
-      const res = await fetchAssignments();
-      setAssignments(Array.isArray(res) ? res : []);
-    } catch (err) {
-      console.error('Failed to delete assignment', err);
-      toast.error('Failed to delete assignment');
-    } finally {
-      setLoading(false);
-      setPendingDeleteId(null);
-    }
-  };
-
-
 
   return (
     <div className="text-white px-6 py-6">
@@ -249,19 +308,43 @@ const AssignmentsPage: React.FC = () => {
       <div className="grid grid-cols-4 gap-4 mb-6">
         <div className="bg-gray-800 p-4 rounded border border-gray-700">
           <div className="text-sm text-gray-400">Total Assignments</div>
-          <div className="text-2xl font-bold mt-2">{stats.total}</div>
+          <div className="text-2xl font-bold mt-2">
+            {loading ? (
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-400"></div>
+            ) : (
+              stats.total
+            )}
+          </div>
         </div>
         <div className="bg-gray-800 p-4 rounded border border-gray-700">
           <div className="text-sm text-gray-400">Open</div>
-          <div className="text-2xl font-bold mt-2 text-emerald-400">{stats.open}</div>
+          <div className="text-2xl font-bold mt-2 text-emerald-400">
+            {loading ? (
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-400"></div>
+            ) : (
+              stats.open
+            )}
+          </div>
         </div>
         <div className="bg-gray-800 p-4 rounded border border-gray-700">
-          <div className="text-sm text-gray-400">Submitted</div>
-          <div className="text-2xl font-bold mt-2">{stats.submitted}</div>
+          <div className="text-sm text-gray-400">{user?.role === 'STUDENT' ? 'Submitted' : 'Pending Review'}</div>
+          <div className="text-2xl font-bold mt-2">
+            {loading ? (
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-400"></div>
+            ) : (
+              stats.pending
+            )}
+          </div>
         </div>
         <div className="bg-gray-800 p-4 rounded border border-gray-700">
           <div className="text-sm text-gray-400">Due This Week</div>
-          <div className="text-2xl font-bold mt-2 text-yellow-400">{stats.dueThisWeek}</div>
+          <div className="text-2xl font-bold mt-2 text-yellow-400">
+            {loading ? (
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-yellow-400"></div>
+            ) : (
+              stats.dueThisWeek
+            )}
+          </div>
         </div>
       </div>
 
@@ -290,10 +373,64 @@ const AssignmentsPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Actions Section */}
+      {user?.role === 'FACULTY' && selectedAssignments.length > 0 && (
+        <div className="bg-blue-900/20 border border-blue-700/30 rounded-lg p-4 mb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 bg-blue-600 rounded-full flex items-center justify-center">
+                <span className="text-white text-sm font-semibold">{selectedAssignments.length}</span>
+              </div>
+              <div>
+                <h3 className="text-white font-medium">
+                  {selectedAssignments.length} assignment{selectedAssignments.length !== 1 ? 's' : ''} selected
+                </h3>
+                <p className="text-blue-300 text-sm">Choose an action to perform on selected items</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setSelectedAssignments([])}
+                className="text-gray-400 hover:text-gray-300 text-sm px-3 py-1 rounded border border-gray-600 hover:border-gray-500 transition-colors"
+              >
+                Clear Selection
+              </button>
+              <select
+                value={selectedAction}
+                onChange={(e) => handleActionSelect(e.target.value)}
+                className="bg-gray-800 border border-gray-600 rounded-lg px-4 py-2 text-white font-medium min-w-[140px] focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-colors"
+              >
+                <option value="">Select Action</option>
+                <option value="delete">🗑️ Delete Selected</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="bg-gray-900 rounded border border-gray-700 overflow-hidden">
         <table className="min-w-full">
           <thead className="bg-gray-800">
             <tr>
+              {user?.role === 'FACULTY' && (
+                <th className="p-4 w-12">
+                  <label className="inline-flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={filtered.length > 0 && selectedAssignments.length === filtered.length}
+                      onChange={toggleSelectAll}
+                      className="sr-only"
+                    />
+                    <span className="h-4 w-4 inline-block rounded border border-gray-600 bg-gray-700 flex items-center justify-center">
+                      {filtered.length > 0 && selectedAssignments.length === filtered.length && (
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="h-3 w-3 text-gray-100">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </span>
+                  </label>
+                </th>
+              )}
               <th className="text-left p-4 text-sm text-gray-400">Assignment</th>
               <th className="text-left p-4 text-sm text-gray-400">Classroom</th>
               <th className="text-left p-4 text-sm text-gray-400">Deadline</th>
@@ -301,15 +438,17 @@ const AssignmentsPage: React.FC = () => {
                 <th className="text-left p-4 text-sm text-gray-400">Submissions</th>
               )}
               <th className="text-left p-4 text-sm text-gray-400">Status</th>
-              {(user?.role === 'FACULTY' || user?.role === 'STUDENT') && (
-                <th className="text-left p-4 text-sm text-gray-400">Actions</th>
-              )}
             </tr>
           </thead>
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={user?.role === 'FACULTY' ? 6 : 5} className="p-8 text-center text-gray-400">Loading...</td>
+                <td colSpan={user?.role === 'FACULTY' ? 6 : 5} className="p-8 text-center text-gray-400">
+                  <div className="flex items-center justify-center gap-3">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-400"></div>
+                    <span>Loading assignments...</span>
+                  </div>
+                </td>
               </tr>
             )}
             {!loading && filtered.map((a) => {
@@ -322,7 +461,33 @@ const AssignmentsPage: React.FC = () => {
               const progressColor = percent >= 75 ? 'bg-emerald-400' : percent >= 40 ? 'bg-yellow-400' : 'bg-red-500';
 
               return (
-                <tr key={a.id} className="border-t border-gray-800 hover:bg-gray-850">
+                <tr 
+                  key={a.id} 
+                  className="border-t border-gray-800 hover:bg-gray-850 cursor-pointer"
+                  onClick={() => {
+                    const classroomId = (a as any)?.classroom?.id || (a as any)?.classroomId;
+                    openSubmissionModal(String(a.id), classroomId);
+                  }}
+                >
+                  {user?.role === 'FACULTY' && (
+                    <td className="p-4 w-12" onClick={(e) => e.stopPropagation()}>
+                      <label className="inline-flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedAssignments.includes(String(a.id))}
+                          onChange={() => toggleSelectAssignment(String(a.id))}
+                          className="sr-only"
+                        />
+                        <span className="h-4 w-4 inline-block rounded border border-gray-600 bg-gray-700 flex items-center justify-center">
+                          {selectedAssignments.includes(String(a.id)) && (
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="h-3 w-3 text-gray-100">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </span>
+                      </label>
+                    </td>
+                  )}
                   <td className="p-4 align-top">
                     <div className="font-medium">{a.title}</div>
                     <div className="text-sm text-gray-400">{(a.title + ' ').slice(0, 60)}</div>
@@ -347,49 +512,11 @@ const AssignmentsPage: React.FC = () => {
                         {mySubmissionsMap[String(a.id)]?.status || (a as any).studentStatus || 'OPEN'}
                       </span>
                     ) : (
-                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusBadgeClass(a.status)}`}>
-                        {a.status}
+                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusBadgeClass(calculateFacultyStatus(a))}`}>
+                        {calculateFacultyStatus(a)}
                       </span>
                     )}
                   </td>
-                  {(user?.role === 'FACULTY' || user?.role === 'STUDENT') && (
-                    <td className="p-4 align-top text-sm">
-                      <div className="flex items-center gap-2">
-                        {user?.role === 'FACULTY' ? (
-                          <>
-                            <button 
-                              onClick={() => navigate(`/dashboard/assignments/${a.id}/submissions`)} 
-                              className="text-blue-400 hover:text-blue-300"
-                            >
-                              View
-                            </button>
-                            {pendingDeleteId === String(a.id) ? (
-                              <>
-                                <button onClick={() => confirmDelete(a.id)} className="text-red-400 hover:text-red-300">Confirm</button>
-                                <button onClick={cancelDelete} className="text-gray-300 hover:text-gray-200">Cancel</button>
-                              </>
-                            ) : (
-                              <button onClick={() => requestDelete(a.id)} className="text-red-400 hover:text-red-300">Delete</button>
-                            )}
-                          </>
-                        ) : (
-                          <button 
-                            onClick={() => {
-                              const classroomId = (a as any)?.classroom?.id || (a as any)?.classroomId;
-                              if (classroomId) {
-                                navigate(`/dashboard/classrooms/${classroomId}/assignments/${a.id}/submissions`);
-                              } else {
-                                navigate(`/dashboard/assignments/${a.id}/submissions`);
-                              }
-                            }} 
-                            className="text-blue-400 hover:text-blue-300"
-                          >
-                            View
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  )}
                 </tr>
               );
             })}
@@ -401,6 +528,54 @@ const AssignmentsPage: React.FC = () => {
           </tbody>
         </table>
       </div>
+
+      {/* Submission Modal */}
+      {showSubmissionModal && selectedAssignmentId && (
+        <>
+          {user?.role === 'FACULTY' ? (
+            <ReviewSubmissions 
+              assignmentId={selectedAssignmentId}
+              open={showSubmissionModal}
+              onClose={closeSubmissionModal}
+              asPage={false}
+            />
+          ) : (
+            <StudentAssignmentSubmissions
+              assignmentId={selectedAssignmentId}
+              classroomId={selectedClassroomId}
+              open={showSubmissionModal}
+              onClose={closeSubmissionModal}
+              asPage={false}
+            />
+          )}
+        </>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-20 backdrop-blur-sm">
+          <div className="bg-gray-900/95 border border-gray-700/60 rounded-lg p-6 max-w-md mx-4">
+            <h3 className="text-lg font-semibold text-white mb-4">Confirm Delete</h3>
+            <p className="text-gray-300 mb-6">
+              Are you sure you want to delete {selectedAssignments.length} assignment(s)? This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-4 py-2 bg-gray-700 text-gray-200 rounded hover:bg-gray-600"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
