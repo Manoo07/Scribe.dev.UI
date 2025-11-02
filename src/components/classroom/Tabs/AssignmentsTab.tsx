@@ -163,7 +163,9 @@ const AssignmentsTab = ({ classroomId }: { classroomId: string }) => {
               onChange={(e) => handleActionSelect(e.target.value)}
               className="bg-gray-800 border border-gray-600 rounded px-3 py-1 text-sm text-white"
             >
-              <option value="">Actions</option>
+              <option value="" hidden>
+                Actions
+              </option>
               <option value="delete">Delete</option>
             </select>
           )}
@@ -171,7 +173,7 @@ const AssignmentsTab = ({ classroomId }: { classroomId: string }) => {
             <button
               onClick={() => setShowCreate(true)}
               className={`bg-indigo-600 px-3 py-1 rounded text-sm hover:bg-indigo-500`}
-              title={'Create Assignment'}
+              title={"Create Assignment"}
             >
               + Create Assignment
             </button>
@@ -188,16 +190,31 @@ const AssignmentsTab = ({ classroomId }: { classroomId: string }) => {
                   <label className="inline-flex items-center">
                     <input
                       type="checkbox"
-                      checked={assignments.length > 0 && selectedAssignments.length === assignments.length}
+                      checked={
+                        assignments.length > 0 &&
+                        selectedAssignments.length === assignments.length
+                      }
                       onChange={toggleSelectAll}
                       className="sr-only"
                     />
                     <span className="h-4 w-4 inline-block rounded border border-gray-600 bg-gray-700 flex items-center justify-center">
-                      {assignments.length > 0 && selectedAssignments.length === assignments.length && (
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="h-3 w-3 text-gray-100">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                        </svg>
-                      )}
+                      {assignments.length > 0 &&
+                        selectedAssignments.length === assignments.length && (
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            className="h-3 w-3 text-gray-100"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={3}
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                        )}
                     </span>
                   </label>
                 </th>
@@ -212,7 +229,10 @@ const AssignmentsTab = ({ classroomId }: { classroomId: string }) => {
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={isFaculty ? 6 : 5} className="p-4 text-center text-gray-400">
+                <td
+                  colSpan={isFaculty ? 6 : 5}
+                  className="p-4 text-center text-gray-400"
+                >
                   <div className="flex items-center justify-center gap-3">
                     <Loader2 className="h-5 w-5 text-gray-400 animate-spin" />
                     <span>Loading...</span>
@@ -221,125 +241,167 @@ const AssignmentsTab = ({ classroomId }: { classroomId: string }) => {
               </tr>
             )}
             {!loading && assignments.length === 0 && (
-              <tr><td colSpan={isFaculty ? 6 : 5} className="p-4 text-center text-gray-400">No assignments found.</td></tr>
+              <tr>
+                <td
+                  colSpan={isFaculty ? 6 : 5}
+                  className="p-4 text-center text-gray-400"
+                >
+                  No assignments found.
+                </td>
+              </tr>
             )}
 
-            {!loading && assignments.map(a => {
-              const studentStatus = mySubmissionsMap[a.id]?.status || a.studentStatus || 'OPEN';
-              return (
-              <tr 
-                key={a.id} 
-                className="border-b border-gray-700 hover:bg-gray-750 cursor-pointer"
-                onClick={() => openSubmissionModal(a.id)}
-              >
-                {isFaculty && (
-                  <td className="p-2 w-12" onClick={(e) => e.stopPropagation()}>
-                    <label className="inline-flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={selectedAssignments.includes(a.id)}
-                        onChange={() => toggleSelectAssignment(a.id)}
-                        className="sr-only"
-                      />
-                      <span className={`h-4 w-4 inline-block rounded border border-gray-600 bg-gray-700 flex items-center justify-center`}>
-                        {selectedAssignments.includes(a.id) && (
-                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="h-3 w-3 text-gray-100">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                          </svg>
-                        )}
-                      </span>
-                    </label>
-                  </td>
-                )}
-                <td className="p-2 text-white">
-                  <div className="flex items-center gap-2">
-                    <span>{a.title}</span>
+            {!loading &&
+              assignments.map((a) => {
+                const studentStatus =
+                  mySubmissionsMap[a.id]?.status || a.studentStatus || "OPEN";
+                return (
+                  <tr
+                    key={a.id}
+                    className="border-b border-gray-700 hover:bg-gray-750 cursor-pointer"
+                    onClick={() => openSubmissionModal(a.id)}
+                  >
                     {isFaculty && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditingAssignment(a);
-                        }}
-                        className="text-gray-400 hover:text-blue-400 transition-colors"
-                        title="Edit assignment"
+                      <td
+                        className="p-2 w-12"
+                        onClick={(e) => e.stopPropagation()}
                       >
-                        <Edit size={14} />
-                      </button>
+                        <label className="inline-flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={selectedAssignments.includes(a.id)}
+                            onChange={() => toggleSelectAssignment(a.id)}
+                            className="sr-only"
+                          />
+                          <span
+                            className={`h-4 w-4 inline-block rounded border border-gray-600 bg-gray-700 flex items-center justify-center`}
+                          >
+                            {selectedAssignments.includes(a.id) && (
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                className="h-3 w-3 text-gray-100"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={3}
+                                  d="M5 13l4 4L19 7"
+                                />
+                              </svg>
+                            )}
+                          </span>
+                        </label>
+                      </td>
                     )}
-                  </div>
-                </td>
-                <td className="p-2">
-                  <span className="max-w-[200px] truncate">
-                    {a.description || 'No description'}
-                  </span>
-                </td>
-                <td className="p-2">{a.deadline ? new Date(a.deadline).toLocaleDateString() : '-'}</td>
-                <td className="p-2">
-                  {user?.role === 'STUDENT' ? (
-                    <span className={`px-2 py-1 ${statusClass(mySubmissionsMap[a.id]?.status || a.studentStatus)} text-white text-xs rounded`}>
-                      {mySubmissionsMap[a.id]?.status || a.studentStatus || 'OPEN'}
-                    </span>
-                  ) : (
-                    <span className={`px-2 py-1 ${statusClass(a.status)} text-white text-xs rounded`}>
-                      {a.status || 'OPEN'}
-                    </span>
-                  )}
-                </td>
-                <td className="p-2">
-                  {a.content === 'QUESTION_FILE' && a.questionFileUrl ? (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setPreviewAssignment(a);
-                      }}
-                      className="text-blue-400 hover:underline flex items-center gap-2"
-                    >
-                      <Link2 size={16} />
-                      <span>Question File</span>
-                    </button>
-                  ) : (
-                    <div>
+                    <td className="p-2 text-white">
                       <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-1 text-gray-400">
-                          <FileText size={16} />
-                          <span>Note</span>
-                        </div>
-                        {a.noteContent && (
+                        <span>{a.title}</span>
+                        {isFaculty && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              setPreviewAssignment(a);
+                              setEditingAssignment(a);
                             }}
-                            className="text-blue-400 hover:text-blue-300"
-                            title="Preview assignment"
+                            className="text-gray-400 hover:text-blue-400 transition-colors"
+                            title="Edit assignment"
                           >
-                            <Eye size={16} />
+                            <Edit size={14} />
                           </button>
                         )}
                       </div>
-                    </div>
-                  )}
-                </td>
-
-              </tr>
-            );
-          })}
+                    </td>
+                    <td className="p-2">
+                      <span className="max-w-[200px] truncate">
+                        {a.description || "No description"}
+                      </span>
+                    </td>
+                    <td className="p-2">
+                      {a.deadline
+                        ? new Date(a.deadline).toLocaleDateString()
+                        : "-"}
+                    </td>
+                    <td className="p-2">
+                      {user?.role === "STUDENT" ? (
+                        <span
+                          className={`px-2 py-1 ${statusClass(
+                            mySubmissionsMap[a.id]?.status || a.studentStatus
+                          )} text-white text-xs rounded`}
+                        >
+                          {mySubmissionsMap[a.id]?.status ||
+                            a.studentStatus ||
+                            "OPEN"}
+                        </span>
+                      ) : (
+                        <span
+                          className={`px-2 py-1 ${statusClass(
+                            a.status
+                          )} text-white text-xs rounded`}
+                        >
+                          {a.status || "OPEN"}
+                        </span>
+                      )}
+                    </td>
+                    <td className="p-2">
+                      {a.content === "QUESTION_FILE" && a.questionFileUrl ? (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPreviewAssignment(a);
+                          }}
+                          className="text-blue-400 hover:underline flex items-center gap-2"
+                        >
+                          <Link2 size={16} />
+                          <span>Question File</span>
+                        </button>
+                      ) : (
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1 text-gray-400">
+                              <FileText size={16} />
+                              <span>Note</span>
+                            </div>
+                            {a.noteContent && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setPreviewAssignment(a);
+                                }}
+                                className="text-blue-400 hover:text-blue-300"
+                                title="Preview assignment"
+                              >
+                                <Eye size={16} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
           </tbody>
         </table>
       </div>
 
-      <CreateAssignmentModal 
-        open={showCreate} 
-        onClose={() => setShowCreate(false)} 
-        onCreate={async () => { await load(); }} 
-        classroomId={classroomId} 
+      <CreateAssignmentModal
+        open={showCreate}
+        onClose={() => setShowCreate(false)}
+        onCreate={async () => {
+          await load();
+        }}
+        classroomId={classroomId}
       />
 
       {editingAssignment && (
-        <CreateAssignmentModal 
-          open={true} 
-          onClose={() => setEditingAssignment(null)} 
-          onCreate={async () => { await load(); }} 
+        <CreateAssignmentModal
+          open={true}
+          onClose={() => setEditingAssignment(null)}
+          onCreate={async () => {
+            await load();
+          }}
           classroomId={classroomId}
           initialData={editingAssignment}
         />
@@ -350,7 +412,9 @@ const AssignmentsTab = ({ classroomId }: { classroomId: string }) => {
         <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-20 backdrop-blur-sm">
           <div className="bg-gray-900/95 border border-gray-700/60 rounded-lg max-w-2xl mx-4 w-full max-h-[90vh] flex flex-col">
             <div className="flex justify-between items-center p-6 pb-4 border-b border-gray-700/60">
-              <h3 className="text-lg font-semibold text-white">Assignment Details</h3>
+              <h3 className="text-lg font-semibold text-white">
+                Assignment Details
+              </h3>
               <button
                 onClick={() => setPreviewAssignment(null)}
                 className="text-gray-400 hover:text-white"
@@ -358,46 +422,74 @@ const AssignmentsTab = ({ classroomId }: { classroomId: string }) => {
                 X
               </button>
             </div>
-            
+
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
               <div>
-                <label className="text-sm font-medium text-gray-300">Title</label>
+                <label className="text-sm font-medium text-gray-300">
+                  Title
+                </label>
                 <p className="text-white">{previewAssignment.title}</p>
               </div>
-              
+
               <div>
-                <label className="text-sm font-medium text-gray-300">Description</label>
-                <p className="text-gray-200">{previewAssignment.description || 'No description'}</p>
+                <label className="text-sm font-medium text-gray-300">
+                  Description
+                </label>
+                <p className="text-gray-200">
+                  {previewAssignment.description || "No description"}
+                </p>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium text-gray-300">Deadline</label>
+                  <label className="text-sm font-medium text-gray-300">
+                    Deadline
+                  </label>
                   <p className="text-gray-200">
-                    {previewAssignment.deadline ? new Date(previewAssignment.deadline).toLocaleDateString() : '-'}
+                    {previewAssignment.deadline
+                      ? new Date(
+                          previewAssignment.deadline
+                        ).toLocaleDateString()
+                      : "-"}
                   </p>
                 </div>
-                
+
                 <div>
-                  <label className="text-sm font-medium text-gray-300">Status</label>
+                  <label className="text-sm font-medium text-gray-300">
+                    Status
+                  </label>
                   <div className="mt-1">
-                    {user?.role === 'STUDENT' ? (
-                      <span className={`px-2 py-1 ${statusClass(mySubmissionsMap[previewAssignment.id]?.status || previewAssignment.studentStatus)} text-white text-xs rounded`}>
-                        {mySubmissionsMap[previewAssignment.id]?.status || previewAssignment.studentStatus || 'OPEN'}
+                    {user?.role === "STUDENT" ? (
+                      <span
+                        className={`px-2 py-1 ${statusClass(
+                          mySubmissionsMap[previewAssignment.id]?.status ||
+                            previewAssignment.studentStatus
+                        )} text-white text-xs rounded`}
+                      >
+                        {mySubmissionsMap[previewAssignment.id]?.status ||
+                          previewAssignment.studentStatus ||
+                          "OPEN"}
                       </span>
                     ) : (
-                      <span className={`px-2 py-1 ${statusClass(previewAssignment.status)} text-white text-xs rounded`}>
-                        {previewAssignment.status || 'OPEN'}
+                      <span
+                        className={`px-2 py-1 ${statusClass(
+                          previewAssignment.status
+                        )} text-white text-xs rounded`}
+                      >
+                        {previewAssignment.status || "OPEN"}
                       </span>
                     )}
                   </div>
                 </div>
               </div>
-              
+
               <div>
-                <label className="text-sm font-medium text-gray-300">Content Type</label>
+                <label className="text-sm font-medium text-gray-300">
+                  Content Type
+                </label>
                 <div className="mt-2">
-                  {previewAssignment.content === 'QUESTION_FILE' && previewAssignment.questionFileUrl ? (
+                  {previewAssignment.content === "QUESTION_FILE" &&
+                  previewAssignment.questionFileUrl ? (
                     <div className="space-y-3">
                       <div className="flex items-center gap-2">
                         <Link2 size={16} className="text-blue-400" />
@@ -415,26 +507,31 @@ const AssignmentsTab = ({ classroomId }: { classroomId: string }) => {
                         </a>
                       </div>
                       {/* Image Preview */}
-                      {previewAssignment.questionFileUrl && (
-                        previewAssignment.questionFileUrl.match(/\.(jpg|jpeg|png|gif|bmp|webp)$/i) ? (
+                      {previewAssignment.questionFileUrl &&
+                        (previewAssignment.questionFileUrl.match(
+                          /\.(jpg|jpeg|png|gif|bmp|webp)$/i
+                        ) ? (
                           <div className="mt-3">
-                            <img 
-                              src={previewAssignment.questionFileUrl} 
+                            <img
+                              src={previewAssignment.questionFileUrl}
                               alt="Question file preview"
                               className="max-w-full h-auto rounded border border-gray-600 bg-gray-800"
                               onError={(e) => {
-                                e.currentTarget.style.display = 'none';
+                                e.currentTarget.style.display = "none";
                               }}
                             />
                           </div>
                         ) : (
                           <div className="mt-3 p-4 bg-gray-800 border border-gray-600 rounded text-center text-gray-400">
                             <FileText size={24} className="mx-auto mb-2" />
-                            <p className="text-sm">File preview not available</p>
-                            <p className="text-xs">Use the download button to view the file</p>
+                            <p className="text-sm">
+                              File preview not available
+                            </p>
+                            <p className="text-xs">
+                              Use the download button to view the file
+                            </p>
                           </div>
-                        )
-                      )}
+                        ))}
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
@@ -444,22 +541,24 @@ const AssignmentsTab = ({ classroomId }: { classroomId: string }) => {
                   )}
                 </div>
               </div>
-              
+
               {previewAssignment.noteContent && (
                 <div>
-                  <label className="text-sm font-medium text-gray-300">Content</label>
+                  <label className="text-sm font-medium text-gray-300">
+                    Content
+                  </label>
                   <div className="mt-2 p-3 bg-gray-800 rounded border border-gray-600 max-h-48 overflow-y-auto">
                     <div
                       className="prose prose-invert prose-sm max-w-none"
                       dangerouslySetInnerHTML={{
-                        __html: marked(previewAssignment.noteContent)
+                        __html: marked(previewAssignment.noteContent),
                       }}
                     />
                   </div>
                 </div>
               )}
             </div>
-            
+
             <div className="flex justify-end p-6 pt-4 border-t border-gray-700/60">
               <button
                 onClick={() => setPreviewAssignment(null)}
@@ -476,9 +575,12 @@ const AssignmentsTab = ({ classroomId }: { classroomId: string }) => {
       {showDeleteConfirm && (
         <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-20 backdrop-blur-sm">
           <div className="bg-gray-900/95 border border-gray-700/60 rounded-lg p-6 max-w-md mx-4">
-            <h3 className="text-lg font-semibold text-white mb-4">Confirm Delete</h3>
+            <h3 className="text-lg font-semibold text-white mb-4">
+              Confirm Delete
+            </h3>
             <p className="text-gray-300 mb-6">
-              Are you sure you want to delete {selectedAssignments.length} assignment(s)? This action cannot be undone.
+              Are you sure you want to delete {selectedAssignments.length}{" "}
+              assignment(s)? This action cannot be undone.
             </p>
             <div className="flex justify-end gap-3">
               <button
@@ -501,8 +603,8 @@ const AssignmentsTab = ({ classroomId }: { classroomId: string }) => {
       {/* Submission Modal */}
       {showSubmissionModal && selectedAssignmentId && (
         <>
-          {user?.role === 'FACULTY' ? (
-            <ReviewSubmissions 
+          {user?.role === "FACULTY" ? (
+            <ReviewSubmissions
               assignmentId={selectedAssignmentId}
               open={showSubmissionModal}
               onClose={closeSubmissionModal}
@@ -519,7 +621,6 @@ const AssignmentsTab = ({ classroomId }: { classroomId: string }) => {
           )}
         </>
       )}
-
     </div>
   );
 };

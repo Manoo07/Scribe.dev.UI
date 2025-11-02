@@ -400,7 +400,7 @@ const AssignmentsPage: React.FC = () => {
                 onChange={(e) => handleActionSelect(e.target.value)}
                 className="bg-gray-800 border border-gray-600 rounded-lg px-4 py-2 text-white font-medium min-w-[140px] focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-colors"
               >
-                <option value="">Select Action</option>
+                <option value="" hidden>Select Action</option>
                 <option value="delete">🗑️ Delete Selected</option>
               </select>
             </div>
