@@ -663,3 +663,59 @@ export const deleteReply = async (
     throw new Error(errorMessage);
   }
 };
+
+export default api;
+
+// ============= ASSIGNMENTS API =============
+
+export const fetchAssignments = async (): Promise<any[]> => {
+  try {
+    const res = await api.get('/assignments');
+    return res.data;
+  } catch (err) {
+    console.error('Error fetching assignments', err);
+    throw err;
+  }
+};
+
+export const createAssignment = async (payload: any): Promise<any> => {
+  try {
+    const res = await api.post('/assignments', payload);
+    return res.data;
+  } catch (err) {
+    console.error('Error creating assignment', err);
+    throw err;
+  }
+};
+
+export const deleteAssignment = async (id: string): Promise<any> => {
+  try {
+    const res = await api.delete(`/assignments/${id}`);
+    return res.data;
+  } catch (err) {
+    console.error('Error deleting assignment', err);
+    throw err;
+  }
+};
+
+export const fetchSubmissions = async (assignmentId: string): Promise<any[]> => {
+  try {
+    const res = await api.get(`/assignments/${assignmentId}/submissions`);
+    return res.data;
+  } catch (err) {
+    console.error('Error fetching submissions', err);
+    throw err;
+  }
+};
+
+export const uploadGenericFile = async (file: File): Promise<string> => {
+  try {
+    const form = new FormData();
+    form.append('file', file);
+  const res = await api.post('/assignments', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+    return res.data.fileUrl || res.data.url || res.data.path || '';
+  } catch (err) {
+    console.error('Error uploading file', err);
+    throw err;
+  }
+};
