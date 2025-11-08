@@ -1,4 +1,3 @@
-import axios from "axios";
 import {
   Check,
   RefreshCw,
@@ -8,36 +7,26 @@ import {
   Users,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useClassroomContext } from "../../../context/ClassroomContext";
-import { useToast } from "../../../hooks/use-toast";
+import type { Student } from "../../../api/endpoints/classroom.api";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "../../ui/alert-dialog";
+  useAddStudentMutation,
+  useBulkAddStudentsMutation,
+  useBulkRemoveStudentsMutation,
+  useEnrolledStudentsQuery,
+  useEligibleStudentsQuery,
+  useRemoveStudentMutation,
+} from "../../../hooks/classroom";
+import { useToast } from "../../../hooks/use-toast";
 import Button from "../../ui/button";
 import { Card, CardContent } from "../../ui/card";
 import { Checkbox } from "../../ui/checkbox";
+import { ConfirmDialog } from "../../ui/confirm-dialog";
 import { Input } from "../../ui/input";
 
 // Temporary skeleton component (can be moved to /ui/skeleton.tsx)
 const Skeleton = ({ className }: { className?: string }) => (
   <div className={`animate-pulse bg-gray-700 rounded-md ${className}`} />
 );
-
-interface Student {
-  id: string;
-  userId: string;
-  enrollmentNo: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-}
 
 const StudentsTab = ({ classroomId }: { classroomId: string }) => {
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -57,66 +46,75 @@ const StudentsTab = ({ classroomId }: { classroomId: string }) => {
   const [selectedAvailableStudents, setSelectedAvailableStudents] = useState<
     Set<string>
   >(new Set());
-  const [bulkProcessing, setBulkProcessing] = useState(false);
 
-  // Use classroom context for students data
-  const {
-    studentsData,
-    fetchStudentsData,
-    refreshStudentsData,
-    setUpdating,
-    updateStudentsAfterAdd,
-    updateStudentsAfterRemove,
-    updateStudentsAfterBulkAdd,
-    updateStudentsAfterBulkRemove,
-  } = useClassroomContext();
+  // ===== TanStack Query Hooks =====
 
+  // Fetch enrolled students (those already in classroom)
   const {
-    enrolledStudents: students,
-    availableStudents,
-    loading,
-  } = studentsData;
+    data: enrolledStudents = [],
+    isLoading: enrolledLoading,
+    refetch: refetchEnrolled,
+  } = useEnrolledStudentsQuery(classroomId);
+
+  // Fetch eligible students (those who can be added to classroom)
+  const {
+    data: eligibleStudents = [],
+    isLoading: eligibleLoading,
+    refetch: refetchEligible,
+  } = useEligibleStudentsQuery(classroomId);
+
+  // Combined loading state
+  const loading = enrolledLoading || eligibleLoading;
+
+  // For backward compatibility with existing code
+  const students = enrolledStudents;
+  const availableStudents = eligibleStudents;
+
+  // Combined refresh function
+  const refreshStudentsData = () => {
+    refetchEnrolled();
+    refetchEligible();
+  };
+
+  // Mutations
+  const addStudentMutation = useAddStudentMutation();
+  const removeStudentMutation = useRemoveStudentMutation();
+  const bulkAddMutation = useBulkAddStudentsMutation();
+  const bulkRemoveMutation = useBulkRemoveStudentsMutation();
 
   // Get user role from localStorage (or context if you prefer)
   const userRole = (localStorage.getItem("role") || "STUDENT").toUpperCase();
 
-  // Fetch students data on component mount
-  useEffect(() => {
-    fetchStudentsData(classroomId).catch(() => {
-      toast.error("Failed to fetch students. Please try again.");
-    });
-  }, [classroomId]); // Removed fetchStudentsData and toast from dependencies
-
-  // Clear selections when data changes
+  // Clear selections when data changes - use stable IDs to prevent infinite loop
   useEffect(() => {
     setSelectedEnrolledStudents(new Set());
     setSelectedAvailableStudents(new Set());
-  }, [students, availableStudents]);
+  }, [enrolledStudents, eligibleStudents]); // Use the actual data arrays
 
   const handleAddStudent = async (userId: string) => {
-    try {
-      setProcessingStudentId(userId);
-      const token = localStorage.getItem("token");
+    setProcessingStudentId(userId);
 
-      await axios.post(
-        `http://localhost:3000/api/v1/classroom/join`,
-        { classroomId, userId },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      // Find the student from available students and update context
-      const addedStudent = availableStudents.find((s) => s.userId === userId);
-      if (addedStudent) {
-        updateStudentsAfterAdd(addedStudent);
+    addStudentMutation.mutate(
+      { classroomId, userId },
+      {
+        onSuccess: () => {
+          toast({
+            title: "Success",
+            description: "Student added to the classroom",
+          });
+          setProcessingStudentId(null);
+        },
+        onError: (error: any) => {
+          console.error("Failed to add student:", error);
+          toast({
+            title: "Error",
+            description: "Failed to add student to the classroom",
+            variant: "destructive",
+          });
+          setProcessingStudentId(null);
+        },
       }
-
-      toast.success("Student added to the classroom");
-    } catch (error) {
-      console.error("Failed to add student:", error);
-      toast.error("Failed to add student to the classroom");
-    } finally {
-      setProcessingStudentId(null);
-    }
+    );
   };
 
   const confirmRemoveStudent = (student: Student) => {
@@ -127,122 +125,91 @@ const StudentsTab = ({ classroomId }: { classroomId: string }) => {
   const handleRemoveStudent = async () => {
     if (!studentToRemove) return;
 
-    try {
-      setProcessingStudentId(studentToRemove.userId);
-      setDialogOpen(false);
+    setProcessingStudentId(studentToRemove.userId);
+    setDialogOpen(false);
 
-      const token = localStorage.getItem("token");
-
-      await axios.post(
-        `http://localhost:3000/api/v1/classroom/leave`,
-        { classroomId, userId: studentToRemove.userId },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      // Update context with removed student
-      updateStudentsAfterRemove(studentToRemove.userId);
-
-      toast({
-        title: "Success",
-        description: "Student removed from the classroom",
-      });
-    } catch (error) {
-      console.error("Failed to remove student:", error);
-      toast({
-        title: "Error",
-        description: "Failed to remove student from the classroom",
-        variant: "destructive",
-      });
-    } finally {
-      setProcessingStudentId(null);
-      setStudentToRemove(null);
-    }
+    removeStudentMutation.mutate(
+      { classroomId, userId: studentToRemove.userId },
+      {
+        onSuccess: () => {
+          toast({
+            title: "Success",
+            description: "Student removed from the classroom",
+          });
+          setProcessingStudentId(null);
+          setStudentToRemove(null);
+        },
+        onError: (error: any) => {
+          console.error("Failed to remove student:", error);
+          toast({
+            title: "Error",
+            description: "Failed to remove student from the classroom",
+            variant: "destructive",
+          });
+          setProcessingStudentId(null);
+          setStudentToRemove(null);
+        },
+      }
+    );
   };
 
   // Bulk operations
   const handleBulkAdd = async () => {
     if (selectedAvailableStudents.size === 0) return;
 
-    setBulkProcessing(true);
     setBulkDialogOpen(false);
-    setUpdating(true);
+    const userIds = Array.from(selectedAvailableStudents);
+    const count = selectedAvailableStudents.size;
 
-    try {
-      const token = localStorage.getItem("token");
-      const userIds = Array.from(selectedAvailableStudents);
-
-      await axios.post(
-        `http://localhost:3000/api/v1/classroom/bulk-join`,
-        {
-          classroomId,
-          userIds,
+    bulkAddMutation.mutate(
+      { classroomId, userIds },
+      {
+        onSuccess: () => {
+          toast({
+            title: "Success",
+            description: `${count} students added to the classroom`,
+          });
+          setSelectedAvailableStudents(new Set());
         },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      // Find the added students and update context
-      const addedStudents = availableStudents.filter((student) =>
-        userIds.includes(student.userId)
-      );
-      updateStudentsAfterBulkAdd(addedStudents);
-
-      toast({
-        title: "Success",
-        description: `${selectedAvailableStudents.size} students added to the classroom`,
-      });
-    } catch (error) {
-      console.error("Failed to add students:", error);
-      toast({
-        title: "Error",
-        description: "Failed to add some students to the classroom",
-        variant: "destructive",
-      });
-      setUpdating(false);
-    } finally {
-      setBulkProcessing(false);
-      setSelectedAvailableStudents(new Set());
-    }
+        onError: (error: any) => {
+          console.error("Failed to add students:", error);
+          toast({
+            title: "Error",
+            description: "Failed to add some students to the classroom",
+            variant: "destructive",
+          });
+        },
+      }
+    );
   };
 
   const handleBulkRemove = async () => {
     if (selectedEnrolledStudents.size === 0) return;
 
-    setBulkProcessing(true);
     setBulkDialogOpen(false);
-    setUpdating(true);
+    const userIds = Array.from(selectedEnrolledStudents);
+    const count = selectedEnrolledStudents.size;
 
-    try {
-      const token = localStorage.getItem("token");
-      const userIds = Array.from(selectedEnrolledStudents);
-
-      await axios.post(
-        `http://localhost:3000/api/v1/classroom/bulk-leave`,
-        {
-          classroomId,
-          userIds,
+    bulkRemoveMutation.mutate(
+      { classroomId, userIds },
+      {
+        onSuccess: () => {
+          toast({
+            title: "Success",
+            description: `${count} students removed from the classroom`,
+          });
+          setSelectedEnrolledStudents(new Set());
         },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      // Update context with removed students
-      updateStudentsAfterBulkRemove(userIds);
-
-      toast({
-        title: "Success",
-        description: `${selectedEnrolledStudents.size} students removed from the classroom`,
-      });
-    } catch (error) {
-      console.error("Failed to remove students:", error);
-      toast({
-        title: "Error",
-        description: "Failed to remove some students from the classroom",
-        variant: "destructive",
-      });
-      setUpdating(false);
-    } finally {
-      setBulkProcessing(false);
-      setSelectedEnrolledStudents(new Set());
-    }
+        onError: (error: any) => {
+          console.error("Failed to remove students:", error);
+          toast({
+            title: "Error",
+            description: "Failed to remove some students from the classroom",
+            variant: "destructive",
+          });
+        },
+      }
+    );
   };
 
   const confirmBulkOperation = (operation: "add" | "remove") => {
@@ -275,7 +242,9 @@ const StudentsTab = ({ classroomId }: { classroomId: string }) => {
     if (selectedEnrolledStudents.size === students.length) {
       setSelectedEnrolledStudents(new Set());
     } else {
-      setSelectedEnrolledStudents(new Set(students.map((s) => s.userId)));
+      setSelectedEnrolledStudents(
+        new Set(students.map((s: Student) => s.userId))
+      );
     }
   };
 
@@ -284,13 +253,13 @@ const StudentsTab = ({ classroomId }: { classroomId: string }) => {
       setSelectedAvailableStudents(new Set());
     } else {
       setSelectedAvailableStudents(
-        new Set(filteredAvailableStudents.map((s) => s.userId))
+        new Set(filteredAvailableStudents.map((s: Student) => s.userId))
       );
     }
   };
 
   const filteredAvailableStudents = availableStudents.filter(
-    (student) =>
+    (student: Student) =>
       `${student.firstName} ${student.lastName}`
         .toLowerCase()
         .includes(searchQuery.toLowerCase()) ||
@@ -312,7 +281,7 @@ const StudentsTab = ({ classroomId }: { classroomId: string }) => {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => refreshStudentsData(classroomId)}
+              onClick={() => refreshStudentsData()}
               disabled={loading}
               className="border-[#2d3748] hover:bg-[#1a2235] text-white"
             >
@@ -369,7 +338,9 @@ const StudentsTab = ({ classroomId }: { classroomId: string }) => {
                   size="sm"
                   variant="danger"
                   onClick={() => confirmBulkOperation("remove")}
-                  disabled={bulkProcessing}
+                  disabled={
+                    bulkAddMutation.isPending || bulkRemoveMutation.isPending
+                  }
                 >
                   <UserMinus className="h-4 w-4 mr-2" />
                   Remove Selected ({selectedEnrolledStudents.size})
@@ -408,7 +379,7 @@ const StudentsTab = ({ classroomId }: { classroomId: string }) => {
           </div>
         ) : (
           <div className="space-y-3">
-            {students.map((student) => (
+            {students.map((student: Student) => (
               <Card
                 key={`enrolled-${student.id}-${student.userId}`}
                 className={`bg-[#1a2235] border-[#2d3748] transition-all duration-200 hover:border-[#3a4a61] ${
@@ -450,7 +421,8 @@ const StudentsTab = ({ classroomId }: { classroomId: string }) => {
                         onClick={() => confirmRemoveStudent(student)}
                         disabled={
                           processingStudentId === student.userId ||
-                          bulkProcessing
+                          bulkAddMutation.isPending ||
+                          bulkRemoveMutation.isPending
                         }
                       >
                         <UserMinus className="h-4 w-4 mr-2" />
@@ -499,7 +471,9 @@ const StudentsTab = ({ classroomId }: { classroomId: string }) => {
                     size="sm"
                     variant="success"
                     onClick={() => confirmBulkOperation("add")}
-                    disabled={bulkProcessing}
+                    disabled={
+                      bulkAddMutation.isPending || bulkRemoveMutation.isPending
+                    }
                   >
                     <UserPlus className="h-4 w-4 mr-2" />
                     Add Selected ({selectedAvailableStudents.size})
@@ -540,7 +514,7 @@ const StudentsTab = ({ classroomId }: { classroomId: string }) => {
             </div>
           ) : (
             <div className="space-y-3">
-              {filteredAvailableStudents.map((student) => (
+              {filteredAvailableStudents.map((student: Student) => (
                 <Card
                   key={`available-${student.id}-${student.userId}`}
                   className={`bg-[#1a2235] border-[#2d3748] transition-all duration-200 hover:border-[#3a4a61] ${
@@ -579,7 +553,8 @@ const StudentsTab = ({ classroomId }: { classroomId: string }) => {
                         onClick={() => handleAddStudent(student.userId)}
                         disabled={
                           processingStudentId === student.userId ||
-                          bulkProcessing
+                          bulkAddMutation.isPending ||
+                          bulkRemoveMutation.isPending
                         }
                       >
                         <UserPlus className="h-4 w-4 mr-2" />
@@ -598,104 +573,44 @@ const StudentsTab = ({ classroomId }: { classroomId: string }) => {
 
       {/* Single Student Removal Dialog */}
       {canShowBulkActions && (
-        <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <AlertDialogContent className="bg-[#1a2235] border-[#2d3748] text-white">
-            <AlertDialogHeader>
-              <AlertDialogTitle className="flex items-center">
-                <UserMinus className="h-5 w-5 mr-2 text-red-400" />
-                Remove Student
-              </AlertDialogTitle>
-              <AlertDialogDescription className="text-gray-400">
-                Are you sure you want to remove{" "}
-                <strong>
-                  {studentToRemove?.firstName} {studentToRemove?.lastName}
-                </strong>{" "}
-                from this classroom? This action cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel className="bg-[#2d3748] text-white hover:bg-[#3a4a61] border-[#2d3748]">
-                Cancel
-              </AlertDialogCancel>
-              <AlertDialogAction
-                className="bg-red-600 hover:bg-red-700 text-white"
-                onClick={handleRemoveStudent}
-              >
-                <UserMinus className="h-4 w-4 mr-2" />
-                Remove Student
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <ConfirmDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          title="Remove Student"
+          description={`Are you sure you want to remove ${studentToRemove?.firstName} ${studentToRemove?.lastName} from this classroom? This action cannot be undone.`}
+          confirmText="Remove Student"
+          variant="destructive"
+          isLoading={removeStudentMutation.isPending}
+          onConfirm={handleRemoveStudent}
+        />
       )}
 
       {/* Bulk Operation Dialog */}
       {canShowBulkActions && (
-        <AlertDialog open={bulkDialogOpen} onOpenChange={setBulkDialogOpen}>
-          <AlertDialogContent className="bg-[#1a2235] border-[#2d3748] text-white">
-            <AlertDialogHeader>
-              <AlertDialogTitle className="flex items-center">
-                {bulkOperation === "add" ? (
-                  <>
-                    <UserPlus className="h-5 w-5 mr-2 text-green-400" />
-                    Add Students
-                  </>
-                ) : (
-                  <>
-                    <UserMinus className="h-5 w-5 mr-2 text-red-400" />
-                    Remove Students
-                  </>
-                )}
-              </AlertDialogTitle>
-              <AlertDialogDescription className="text-gray-400">
-                {bulkOperation === "add" ? (
-                  <>
-                    Are you sure you want to add{" "}
-                    <strong>{selectedAvailableStudents.size}</strong> students
-                    to this classroom?
-                  </>
-                ) : (
-                  <>
-                    Are you sure you want to remove{" "}
-                    <strong>{selectedEnrolledStudents.size}</strong> students
-                    from this classroom? This action cannot be undone.
-                  </>
-                )}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel className="bg-[#2d3748] text-white hover:bg-[#3a4a61] border-[#2d3748]">
-                Cancel
-              </AlertDialogCancel>
-              <AlertDialogAction
-                className={
-                  bulkOperation === "add"
-                    ? "bg-green-600 hover:bg-green-700 text-white"
-                    : "bg-red-600 hover:bg-red-700 text-white"
-                }
-                onClick={
-                  bulkOperation === "add" ? handleBulkAdd : handleBulkRemove
-                }
-              >
-                {bulkOperation === "add" ? (
-                  <>
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Add Students
-                  </>
-                ) : (
-                  <>
-                    <UserMinus className="h-4 w-4 mr-2" />
-                    Remove Students
-                  </>
-                )}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <ConfirmDialog
+          open={bulkDialogOpen}
+          onOpenChange={setBulkDialogOpen}
+          title={bulkOperation === "add" ? "Add Students" : "Remove Students"}
+          description={
+            bulkOperation === "add"
+              ? `Are you sure you want to add ${selectedAvailableStudents.size} students to this classroom?`
+              : `Are you sure you want to remove ${selectedEnrolledStudents.size} students from this classroom? This action cannot be undone.`
+          }
+          confirmText={
+            bulkOperation === "add" ? "Add Students" : "Remove Students"
+          }
+          variant={bulkOperation === "add" ? "default" : "destructive"}
+          isLoading={
+            bulkOperation === "add"
+              ? bulkAddMutation.isPending
+              : bulkRemoveMutation.isPending
+          }
+          onConfirm={bulkOperation === "add" ? handleBulkAdd : handleBulkRemove}
+        />
       )}
 
       {/* Loader Overlay for Bulk Update */}
-      {studentsData.updating && (
+      {(bulkAddMutation.isPending || bulkRemoveMutation.isPending) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
           <div className="flex flex-col items-center bg-[#1a2235]/90 p-8 rounded-xl border border-[#2d3748]/50 shadow-2xl">
             <svg
