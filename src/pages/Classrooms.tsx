@@ -1,10 +1,9 @@
-import { Edit3, Trash2 } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
 
 import type { Classroom } from "../api/endpoints/classroom.api";
 import CreateClassroomForm from "../components/classroom/CreateClassroomForm";
 import EditClassroomForm from "../components/classroom/EditClassroomForm";
+import { ClassroomGrid, PageHeader } from "../components/classroom/shared";
 import { ConfirmDialog } from "../components/ui/confirm-dialog";
 import { Toaster } from "../components/ui/toast";
 import { useUserContext } from "../context/UserContext";
@@ -127,7 +126,7 @@ const MyClassroomsPage = () => {
 
     setDialogOpen(false);
 
-    deleteClassroomMutation.mutate(classroomToDelete.id, {
+    deleteClassroomMutation.mutate(classroomToDelete._id, {
       onSuccess: () => {
         toast({
           title: "Classroom Deleted Successfully! 🗑️",
@@ -163,117 +162,29 @@ const MyClassroomsPage = () => {
           showCreateForm || showEditForm ? "opacity-70" : "opacity-100"
         }`}
       >
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-white">My Classrooms</h2>
-          {userRole === "FACULTY" && (
-            <button
-              onClick={handleAddClassroom}
-              className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm shadow transition"
-            >
-              + Add Classroom
-            </button>
-          )}
-        </div>
+        <PageHeader
+          title="My Classrooms"
+          showAddButton={userRole === "FACULTY"}
+          addButtonText="Add Classroom"
+          onAddClick={handleAddClassroom}
+          userRole={userRole || undefined}
+        />
 
-        {loading && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {Array(4)
-              .fill(0)
-              .map((_, idx) => (
-                <div
-                  key={idx}
-                  className="bg-gray-800 animate-pulse p-4 rounded-lg h-28"
-                >
-                  <div className="bg-gray-700 h-4 w-3/4 mb-3 rounded" />
-                  <div className="bg-gray-700 h-3 w-1/2 mb-2 rounded" />
-                  <div className="bg-gray-700 h-3 w-1/3 rounded" />
-                </div>
-              ))}
-          </div>
-        )}
-
-        {error && (
-          <p className="text-red-500 mb-4">
-            {error instanceof Error
-              ? error.message
-              : "Failed to fetch classrooms"}
-          </p>
-        )}
-
-        {!loading && !error && (
-          <>
-            {classrooms.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-gray-400 text-lg mb-4">
-                  No classrooms found
-                </p>
-                {userRole === "FACULTY" && (
-                  <p className="text-gray-500">
-                    Click "Add Classroom" to create your first classroom
-                  </p>
-                )}
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {classrooms.map((classroom) => (
-                  <div
-                    key={classroom.id}
-                    className="bg-gray-800 hover:bg-gray-700 transition p-5 rounded-xl shadow-md relative group"
-                  >
-                    <Link
-                      to={`/dashboard/classrooms/${classroom.id}`}
-                      className="block"
-                    >
-                      <h3 className="text-xl font-semibold text-white mb-1 pr-16">
-                        {classroom.name}
-                      </h3>
-                      {classroom.description && (
-                        <p className="text-gray-300 text-sm mb-2 pr-16">
-                          {classroom.description}
-                        </p>
-                      )}
-                      <p className="text-gray-400 text-sm">
-                        Section: {renderValue(classroom.section)}
-                      </p>
-                      <p className="text-gray-400 text-sm">
-                        Faculty: {renderValue(classroom.faculty)}
-                      </p>
-                    </Link>
-
-                    {userRole === "FACULTY" && (
-                      <div className="absolute top-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={(e) => handleEditClassroom(e, classroom)}
-                          className="p-2 text-gray-400 hover:text-blue-400 hover:bg-gray-700 rounded-lg transition"
-                          title="Edit classroom"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={(e) => confirmDeleteClassroom(e, classroom)}
-                          disabled={
-                            deleteClassroomMutation.isPending &&
-                            classroomToDelete?.id === classroom.id
-                          }
-                          className="p-2 text-gray-400 hover:text-red-400 hover:bg-gray-700 rounded-lg transition disabled:opacity-50"
-                          title="Delete classroom"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          {deleteClassroomMutation.isPending &&
-                            classroomToDelete?.id === classroom.id && (
-                              <div className="absolute inset-0 flex items-center justify-center">
-                                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-400"></div>
-                              </div>
-                            )}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </>
-        )}
+        <ClassroomGrid
+          classrooms={classrooms}
+          isLoading={loading}
+          error={error}
+          userRole={userRole || undefined}
+          onEditClassroom={handleEditClassroom}
+          onDeleteClassroom={confirmDeleteClassroom}
+          deletingClassroomId={classroomToDelete?._id}
+          isDeleting={deleteClassroomMutation.isPending}
+          renderValue={renderValue}
+          emptyActionButton={{
+            text: "Add Classroom",
+            onClick: handleAddClassroom,
+          }}
+        />
 
         <CreateClassroomForm
           ref={createModalRef}

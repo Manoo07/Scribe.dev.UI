@@ -1,5 +1,6 @@
 import React from "react";
 import ThreadsManager from "../../threads/ThreadManager";
+import { TabContainer } from "../shared";
 
 interface ThreadsTabProps {
   classroomId: string;
@@ -21,7 +22,11 @@ const ThreadsTab: React.FC<ThreadsTabProps> = ({
 
   console.log("Threads Tab Units ", units);
 
-  return <ThreadsManager context="classroom" classroomData={classroomData} />;
+  return (
+    <TabContainer title="Threads" subtitle={classroomName}>
+      <ThreadsManager context="classroom" classroomData={classroomData} />
+    </TabContainer>
+  );
 };
 
 export default ThreadsTab;
