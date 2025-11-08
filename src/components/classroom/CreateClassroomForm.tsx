@@ -1,36 +1,8 @@
-import axios from "axios";
 import { X } from "lucide-react";
-import React, { forwardRef, useEffect, useState } from "react";
+import React, { forwardRef, useState } from "react";
+import { useCreateClassroomMutation } from "../../hooks/classroom";
+import { useDepartmentsQuery, useYearsQuery } from "../../hooks/department";
 import { useToast } from "../../hooks/use-toast";
-
-interface Department {
-  id: string;
-  name: string;
-  collegeId: string;
-  createdAt: string;
-  updatedAt: string;
-  college: {
-    id: string;
-    name: string;
-    createdAt: string;
-    updatedAt: string;
-  };
-}
-
-interface Year {
-  id: string;
-  name: string;
-  departmentId: string;
-  createdAt: string;
-  updatedAt: string;
-  department: {
-    id: string;
-    name: string;
-    collegeId: string;
-    createdAt: string;
-    updatedAt: string;
-  };
-}
 
 interface CreateClassroomFormProps {
   isOpen: boolean;
@@ -47,84 +19,41 @@ const CreateClassroomForm = forwardRef<
     departmentId: "",
     yearId: "",
   });
-  const [departments, setDepartments] = useState<Department[]>([]);
-  const [years, setYears] = useState<Year[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [loadingDepartments, setLoadingDepartments] = useState(false);
-  const [loadingYears, setLoadingYears] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Fetch departments on component mount
-  useEffect(() => {
-    if (isOpen) {
-      fetchDepartments();
-    }
-  }, [isOpen]);
+  // ===== TanStack Query Hooks =====
 
-  // Fetch years when department changes
-  useEffect(() => {
-    if (formData.departmentId) {
-      fetchYears(formData.departmentId);
-      // Reset year selection when department changes
-      setFormData((prev) => ({ ...prev, yearId: "" }));
-    } else {
-      setYears([]);
-    }
-  }, [formData.departmentId]);
+  // Fetch departments
+  const { data: departments = [], isLoading: loadingDepartments } =
+    useDepartmentsQuery();
 
-  const fetchDepartments = async () => {
-    setLoadingDepartments(true);
-    try {
-      const token = localStorage.getItem("token");
-      const response = await axios.get(
-        "http://localhost:3000/api/v1/department",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      console.log("Departments fetched:", response.data);
-      setDepartments(response.data || []);
-    } catch (err) {
-      console.error("Error fetching departments:", err);
-      setError("Failed to fetch departments");
-    } finally {
-      setLoadingDepartments(false);
-    }
-  };
+  // Fetch years for selected department
+  const { data: years = [], isLoading: loadingYears } = useYearsQuery(
+    formData.departmentId
+  );
 
-  const fetchYears = async (departmentId: string) => {
-    setLoadingYears(true);
-    try {
-      const token = localStorage.getItem("token");
-      const response = await axios.get(
-        `http://localhost:3000/api/v1/year?departmentId=${departmentId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      console.log("Years fetched for department:", departmentId, response.data);
-      setYears(response.data || []);
-    } catch (err) {
-      console.error("Error fetching years:", err);
-      setError("Failed to fetch years");
-    } finally {
-      setLoadingYears(false);
-    }
-  };
+  // Create classroom mutation
+  const createClassroomMutation = useCreateClassroomMutation();
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+
+    // Reset yearId when department changes
+    if (name === "departmentId") {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+        yearId: "", // Reset year selection
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
   };
 
   const validateForm = () => {
@@ -147,88 +76,62 @@ const CreateClassroomForm = forwardRef<
       return;
     }
 
-    setLoading(true);
-
     // Show loading toast
     const loadingToast = toast({
       title: "Creating Classroom",
       description: "Please wait while we set up your new classroom...",
     });
 
-    try {
-      const token = localStorage.getItem("token");
+    const classroomData = {
+      name: formData.name.trim(),
+      departmentId: formData.departmentId,
+      yearId: formData.yearId,
+    };
 
-      const classroomData = {
-        name: formData.name.trim(),
-        departmentId: formData.departmentId,
-        yearId: formData.yearId,
-      };
+    createClassroomMutation.mutate(classroomData, {
+      onSuccess: () => {
+        console.log("Classroom created successfully");
 
-      console.log("Creating classroom with data:", classroomData);
+        // Dismiss loading toast and show success
+        loadingToast.dismiss();
+        toast({
+          title: "Classroom Created Successfully! 🎉",
+          description: `"${formData.name.trim()}" is now ready for your students.`,
+        });
 
-      const response = await axios.post(
-        "http://localhost:3000/api/v1/classroom",
-        classroomData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+        // Call the callback
+        onClassroomCreated();
 
-      console.log("Classroom created successfully:", response.data);
+        // Reset form
+        setFormData({
+          name: "",
+          departmentId: "",
+          yearId: "",
+        });
+      },
+      onError: (error: any) => {
+        console.error("Error creating classroom:", error);
 
-      // Dismiss loading toast and show success
-      loadingToast.dismiss();
-      toast({
-        title: "Classroom Created Successfully! 🎉",
-        description: `"${formData.name.trim()}" is now ready for your students.`,
-      });
+        // Dismiss loading toast and show error
+        loadingToast.dismiss();
 
-      // Call the callback
-      onClassroomCreated();
-
-      // Reset form
-      setFormData({
-        name: "",
-        departmentId: "",
-        yearId: "",
-      });
-    } catch (error) {
-      console.error("Error creating classroom:", error);
-
-      // Dismiss loading toast and show error
-      loadingToast.dismiss();
-
-      if (axios.isAxiosError(error)) {
         const errorMessage =
-          error.response?.data?.message ||
-          error.response?.data?.error ||
+          error?.response?.data?.message ||
+          error?.response?.data?.error ||
           "Failed to create classroom";
-        console.error("Server error:", error.response?.data);
 
         toast({
           title: "Failed to Create Classroom",
           description: errorMessage,
           variant: "destructive",
         });
-      } else {
-        toast({
-          title: "Failed to Create Classroom",
-          description: "An unexpected error occurred. Please try again.",
-          variant: "destructive",
-        });
-      }
-    } finally {
-      setLoading(false);
-    }
+      },
+    });
   };
 
   const handleClose = () => {
     setFormData({ name: "", departmentId: "", yearId: "" });
     setError(null);
-    setYears([]);
     onClose();
   };
 
@@ -335,10 +238,14 @@ const CreateClassroomForm = forwardRef<
             </button>
             <button
               type="submit"
-              disabled={loading || loadingDepartments || loadingYears}
+              disabled={
+                createClassroomMutation.isPending ||
+                loadingDepartments ||
+                loadingYears
+              }
               className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition"
             >
-              {loading ? "Creating..." : "Create"}
+              {createClassroomMutation.isPending ? "Creating..." : "Create"}
             </button>
           </div>
         </form>

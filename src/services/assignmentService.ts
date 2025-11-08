@@ -1,4 +1,3 @@
-import axios from "axios";
 import {
   getAssignmentsForClassroom,
   getSubmissionsForAssignment,
@@ -7,6 +6,7 @@ import {
   mockSubmissions,
   simulateApiDelay,
 } from "../data/mockAssignmentData";
+import axiosInstance from "../lib/axiosInstance";
 import {
   Assignment,
   AssignmentFilters,
@@ -20,10 +20,8 @@ import {
   UpdateSubmissionPayload,
 } from "../types/assignment";
 
-const API_BASE_URL = "http://localhost:3000/api/v1";
-
-// Get auth token from localStorage
-const getAuthToken = () => localStorage.getItem("token");
+// Use the centralized axios instance
+const api = axiosInstance;
 
 // Assignment API calls
 export const assignmentAPI = {
@@ -124,23 +122,13 @@ export const assignmentAPI = {
     assignmentId: string,
     payload: UpdateAssignmentPayload
   ): Promise<Assignment> => {
-    const token = getAuthToken();
-    const response = await axios.put(
-      `${API_BASE_URL}/assignments/${assignmentId}`,
-      payload,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
+    const response = await api.put(`/assignments/${assignmentId}`, payload);
     return response.data;
   },
 
   // Delete assignment (Faculty only)
   deleteAssignment: async (assignmentId: string): Promise<void> => {
-    const token = getAuthToken();
-    await axios.delete(`${API_BASE_URL}/assignments/${assignmentId}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    await api.delete(`/assignments/${assignmentId}`);
   },
 
   // Get classroom assignments

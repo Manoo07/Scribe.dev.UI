@@ -1,39 +1,31 @@
 import { Link, useLocation } from "react-router-dom";
-import { useEffect, useState } from "react";
-import axios from "axios";
+import { useClassroomQuery } from "../hooks/classroom";
 
 const Breadcrumb = () => {
   const location = useLocation();
   // Filter out 'dashboard' from pathnames since we always show it as the home
-  const pathnames = location.pathname.split("/").filter(Boolean).filter(segment => segment.toLowerCase() !== 'dashboard');
-  console.log(pathnames); // Debug log to ensure it's splitting correctly
-  // State to store classroom name if available
-  const [classroomName, setClassroomName] = useState<string | null>(null);
+  const pathnames = location.pathname
+    .split("/")
+    .filter(Boolean)
+    .filter((segment) => segment.toLowerCase() !== "dashboard");
 
-  useEffect(() => {
-    if (pathnames.length >= 2) {
-      const idx = pathnames.findIndex((seg) => seg === "classrooms");
-      if (idx !== -1 && pathnames[idx + 1]) {
-        const classroomId = pathnames[idx + 1];
-        if (/^[a-f0-9\-]{24,}$/i.test(classroomId)) {
-          axios
-            .get(`http://localhost:3000/api/v1/classroom/${classroomId}`, {
-              headers: {
-                Authorization: `Bearer ${localStorage.getItem("token")}`,
-              },
-            })
-            .then((res) => setClassroomName(res.data.name))
-            .catch(() => setClassroomName(null));
-        } else {
-          setClassroomName(null);
-        }
-      } else {
-        setClassroomName(null);
-      }
-    } else {
-      setClassroomName(null);
-    }
-  }, [location.pathname]);
+  // Extract classroom ID from path if present
+  const classroomIdx = pathnames.findIndex((seg) => seg === "classrooms");
+  const classroomId =
+    classroomIdx !== -1 && pathnames[classroomIdx + 1]
+      ? pathnames[classroomIdx + 1]
+      : undefined;
+
+  // Check if it's a valid classroom ID
+  const isValidClassroomId =
+    classroomId && /^[a-f0-9\-]{24,}$/i.test(classroomId);
+
+  // Fetch classroom data using TanStack Query (only if valid ID)
+  const { data: classroom } = useClassroomQuery(
+    isValidClassroomId ? classroomId : undefined
+  );
+
+  const classroomName = classroom?.name || null;
 
   return (
     <nav className="text-sm text-white">

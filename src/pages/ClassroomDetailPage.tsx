@@ -1,5 +1,4 @@
-import axios from "axios";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 
 import AssignmentsTab from "../components/classroom/Tabs/AssignmentsTab";
@@ -8,16 +7,22 @@ import ClassroomTabs from "../components/classroom/Tabs/ClassroomTabs";
 import StudentsTab from "../components/classroom/Tabs/StudentsTab";
 import ThreadsTab from "../components/classroom/Tabs/ThreadsTab";
 import UnitsTab from "../components/classroom/Tabs/UnitsTab";
-import { ClassroomProvider } from "../context/ClassroomContext";
-import { getUnits } from "../services/api";
+import {
+  useClassroomQuery,
+  useClassroomUnitsQuery,
+} from "../hooks/classroom/useClassroomQueries";
 
 const ClassroomDetailPage = () => {
   const { id } = useParams();
-  const [classroom, setClassroom] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("Units");
-  const [units, setUnits] = useState<any[]>([]);
-  const [unitsLoading, setUnitsLoading] = useState(true);
+
+  // TanStack Query hooks - automatic fetching, caching, and loading states
+  const { data: classroom, isLoading: loading } = useClassroomQuery(id);
+  const {
+    data: units = [],
+    isLoading: unitsLoading,
+    refetch: refetchUnits,
+  } = useClassroomUnitsQuery(id);
 
   // Memoize the units array to prevent unnecessary re-renders
   const memoizedUnits = useMemo(
@@ -25,61 +30,19 @@ const ClassroomDetailPage = () => {
     [units]
   );
 
-  useEffect(() => {
-    const fetchClassroom = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const response = await axios.get(
-          `http://localhost:3000/api/v1/classroom/${id}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-        setClassroom(response.data);
-      } catch (error) {
-        console.error("Error fetching classroom:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    const fetchUnitsData = async () => {
-      setUnitsLoading(true);
-      try {
-        const data = await getUnits(id!);
-        setUnits(data);
-      } catch (err) {
-        setUnits([]);
-      } finally {
-        setUnitsLoading(false);
-      }
-    };
-    if (id) {
-      fetchClassroom();
-      fetchUnitsData();
-    }
-  }, [id]);
-
-  const fetchUnitsData = async () => {
-    setUnitsLoading(true);
-    try {
-      const data = await getUnits(id!);
-      setUnits(data);
-    } catch (err) {
-      setUnits([]);
-    } finally {
-      setUnitsLoading(false);
-    }
-  };
-
   const handleUnitsRefresh = () => {
-    fetchUnitsData();
+    refetchUnits();
   };
 
-  // Removed handleClassroomRefresh as it's not used
-
-  // Removed handleRefreshAll as it's not used
+  // Helper function to safely render section/faculty values
+  const renderValue = (value: any, key?: string): string => {
+    if (!value) return "";
+    if (typeof value === "string") return value;
+    if (typeof value === "object") {
+      return value[key || "name"] || value.name || value.specialization || "";
+    }
+    return "";
+  };
 
   const renderTab = () => {
     switch (activeTab) {
@@ -88,7 +51,7 @@ const ClassroomDetailPage = () => {
           <UnitsTab
             classroomId={id!}
             units={units}
-            setUnits={setUnits}
+            setUnits={() => {}} // No-op since TanStack Query manages state
             loading={unitsLoading}
             onUnitsRefresh={handleUnitsRefresh}
           />
@@ -137,27 +100,26 @@ const ClassroomDetailPage = () => {
   }
 
   return (
-    <ClassroomProvider classroomId={id!}>
-      <div className="px-3 py-4 sm:px-4 md:px-6 lg:px-8 max-w-6xl mx-auto">
-        <div className="mb-4 sm:mb-6">
-          <h1 className="text-lg sm:text-xl md:text-2xl font-semibold text-white break-words">
-            {classroom.name}{" "}
-            {classroom.section?.name && `(${classroom.section.name})`}
-          </h1>
-          <p className="text-sm sm:text-base text-gray-400">
-            {classroom.faculty?.specialization ? (
-              <>Faculty: {classroom.faculty.specialization}</>
-            ) : (
-              "No faculty assigned"
-            )}
-          </p>
-        </div>
-
-        <ClassroomTabs activeTab={activeTab} setActiveTab={setActiveTab} />
-
-        <div className="mt-4 sm:mt-6">{renderTab()}</div>
+    <div className="px-3 py-4 sm:px-4 md:px-6 lg:px-8 max-w-6xl mx-auto">
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-lg sm:text-xl md:text-2xl font-semibold text-white break-words">
+          {classroom.name}{" "}
+          {renderValue(classroom.section, "name") &&
+            `(${renderValue(classroom.section, "name")})`}
+        </h1>
+        <p className="text-sm sm:text-base text-gray-400">
+          {renderValue(classroom.faculty, "specialization") ? (
+            <>Faculty: {renderValue(classroom.faculty, "specialization")}</>
+          ) : (
+            "No faculty assigned"
+          )}
+        </p>
       </div>
-    </ClassroomProvider>
+
+      <ClassroomTabs activeTab={activeTab} setActiveTab={setActiveTab} />
+
+      <div className="mt-4 sm:mt-6">{renderTab()}</div>
+    </div>
   );
 };
 
