@@ -7,11 +7,11 @@
 export {
   classroomKeys,
   useClassroomQuery,
+  useClassroomsQuery,
   useClassroomStudentsQuery,
   useClassroomUnitsQuery,
-  useClassroomsQuery,
-  useEnrolledStudentsQuery,
   useEligibleStudentsQuery,
+  useEnrolledStudentsQuery,
 } from "./useClassroomQueries";
 
 // Mutation hooks

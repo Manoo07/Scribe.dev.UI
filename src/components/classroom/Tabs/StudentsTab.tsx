@@ -12,8 +12,8 @@ import {
   useAddStudentMutation,
   useBulkAddStudentsMutation,
   useBulkRemoveStudentsMutation,
-  useEnrolledStudentsQuery,
   useEligibleStudentsQuery,
+  useEnrolledStudentsQuery,
   useRemoveStudentMutation,
 } from "../../../hooks/classroom";
 import { useToast } from "../../../hooks/use-toast";

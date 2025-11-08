@@ -24,8 +24,10 @@ export const API_CONFIG = {
       BULK_JOIN: "/classroom/bulk-join",
       BULK_LEAVE: "/classroom/bulk-leave",
       STUDENTS: (classroomId: string) => `/classroom/${classroomId}/students`,
-      ENROLLED_STUDENTS: (classroomId: string) => `/classroom/enrolled-students/${classroomId}`,
-      ELIGIBLE_STUDENTS: (classroomId: string) => `/classroom/eligible-students/${classroomId}`,
+      ENROLLED_STUDENTS: (classroomId: string) =>
+        `/classroom/enrolled-students/${classroomId}`,
+      ELIGIBLE_STUDENTS: (classroomId: string) =>
+        `/classroom/eligible-students/${classroomId}`,
       UNITS: (classroomId: string) => `/classroom/${classroomId}/units`,
       DETAIL: (classroomId: string) => `/classroom/${classroomId}`,
     },
