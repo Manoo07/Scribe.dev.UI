@@ -9,7 +9,6 @@ import StudentsTab from "../components/classroom/Tabs/StudentsTab";
 import ThreadsTab from "../components/classroom/Tabs/ThreadsTab";
 import UnitsTab from "../components/classroom/Tabs/UnitsTab";
 import { ClassroomProvider } from "../context/ClassroomContext";
-import { useToast } from "../hooks/use-toast";
 import { getUnits } from "../services/api";
 
 const ClassroomDetailPage = () => {
@@ -19,7 +18,6 @@ const ClassroomDetailPage = () => {
   const [activeTab, setActiveTab] = useState("Units");
   const [units, setUnits] = useState<any[]>([]);
   const [unitsLoading, setUnitsLoading] = useState(true);
-  const { toast } = useToast();
 
   // Memoize the units array to prevent unnecessary re-renders
   const memoizedUnits = useMemo(
@@ -79,56 +77,9 @@ const ClassroomDetailPage = () => {
     fetchUnitsData();
   };
 
-  const handleClassroomRefresh = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await axios.get(
-        `http://localhost:3000/api/v1/classroom/${id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      setClassroom(response.data);
-    } catch (error) {
-      console.error("Error refreshing classroom:", error);
-    }
-  };
+  // Removed handleClassroomRefresh as it's not used
 
-  const handleRefreshAll = () => {
-    // Show loading toast
-    const loadingToast = toast({
-      title: "Refreshing Data",
-      description: "Please wait while we fetch the latest information...",
-    });
-
-    try {
-      handleClassroomRefresh();
-      handleUnitsRefresh();
-
-      // Dismiss loading toast and show success
-      loadingToast.dismiss();
-      toast({
-        title: "Data Refreshed Successfully! 🔄",
-        description: "Your classroom information is now up to date.",
-      });
-    } catch (error) {
-      // Dismiss loading toast and show error
-      loadingToast.dismiss();
-
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Failed to refresh data. Please try again.";
-
-      toast({
-        title: "Failed to Refresh Data",
-        description: errorMessage,
-        variant: "destructive",
-      });
-    }
-  };
+  // Removed handleRefreshAll as it's not used
 
   const renderTab = () => {
     switch (activeTab) {
@@ -151,7 +102,9 @@ const ClassroomDetailPage = () => {
           />
         );
       case "Assignments":
-        return <AssignmentsTab classroomId={id!} />;
+        return (
+          <AssignmentsTab classroomId={id!} classroomName={classroom?.name} />
+        );
       case "Students":
         return <StudentsTab classroomId={id!} />;
       case "Attendance":

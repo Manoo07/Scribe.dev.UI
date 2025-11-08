@@ -4,7 +4,8 @@ import axios from "axios";
 
 const Breadcrumb = () => {
   const location = useLocation();
-  const pathnames = location.pathname.split("/").filter(Boolean);
+  // Filter out 'dashboard' from pathnames since we always show it as the home
+  const pathnames = location.pathname.split("/").filter(Boolean).filter(segment => segment.toLowerCase() !== 'dashboard');
   console.log(pathnames); // Debug log to ensure it's splitting correctly
   // State to store classroom name if available
   const [classroomName, setClassroomName] = useState<string | null>(null);

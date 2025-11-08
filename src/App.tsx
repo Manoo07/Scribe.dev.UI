@@ -9,12 +9,12 @@ const App: React.FC = () => {
     // Global error handler to prevent HTML alert dialogs
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
       console.error("Unhandled promise rejection:", event.reason);
-      event.preventDefault(); // Prevent the default browser behavior
+      event.preventDefault();
     };
 
     const handleError = (event: ErrorEvent) => {
       console.error("Unhandled error:", event.error);
-      event.preventDefault(); // Prevent the default browser behavior
+      event.preventDefault();
     };
 
     // Add global error handlers

@@ -23,7 +23,10 @@ const ReplyForm: React.FC<ReplyFormProps> = ({
     e.preventDefault();
     console.log("🔄 ReplyForm handleSubmit called with content:", content);
     if (!content.trim() || isSubmitting) {
-      console.log("❌ Form submission blocked:", { hasContent: !!content.trim(), isSubmitting });
+      console.log("❌ Form submission blocked:", {
+        hasContent: !!content.trim(),
+        isSubmitting,
+      });
       return;
     }
 

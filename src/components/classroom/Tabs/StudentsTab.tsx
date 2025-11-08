@@ -356,7 +356,7 @@ const StudentsTab = ({ classroomId }: { classroomId: string }) => {
                 variant="outline"
                 size="sm"
                 onClick={selectAllEnrolled}
-                className="border-[#2d3748] hover:bg-[#1a2235] text-white"
+                className="border-[#2d3748] bg-gray-700 hover:bg-[#1a2235] text-white"
               >
                 <Check className="h-4 w-4 mr-2" />
                 {selectedEnrolledStudents.size === students.length
@@ -367,9 +367,9 @@ const StudentsTab = ({ classroomId }: { classroomId: string }) => {
               {selectedEnrolledStudents.size > 0 && (
                 <Button
                   size="sm"
+                  variant="danger"
                   onClick={() => confirmBulkOperation("remove")}
                   disabled={bulkProcessing}
-                  className="bg-red-600 hover:bg-red-700 text-white"
                 >
                   <UserMinus className="h-4 w-4 mr-2" />
                   Remove Selected ({selectedEnrolledStudents.size})
@@ -446,12 +446,12 @@ const StudentsTab = ({ classroomId }: { classroomId: string }) => {
                     {canShowBulkActions && (
                       <Button
                         size="sm"
+                        variant="danger"
                         onClick={() => confirmRemoveStudent(student)}
                         disabled={
                           processingStudentId === student.userId ||
                           bulkProcessing
                         }
-                        className="bg-red-600 hover:bg-red-700 text-white"
                       >
                         <UserMinus className="h-4 w-4 mr-2" />
                         {processingStudentId === student.userId
@@ -485,7 +485,7 @@ const StudentsTab = ({ classroomId }: { classroomId: string }) => {
                   variant="outline"
                   size="sm"
                   onClick={selectAllAvailable}
-                  className="border-[#2d3748] hover:bg-[#1a2235] text-white"
+                  className="border-[#2d3748] bg-gray-700 hover:bg-[#1a2235] text-white"
                 >
                   <Check className="h-4 w-4 mr-2" />
                   {selectedAvailableStudents.size ===
@@ -497,9 +497,9 @@ const StudentsTab = ({ classroomId }: { classroomId: string }) => {
                 {selectedAvailableStudents.size > 0 && (
                   <Button
                     size="sm"
+                    variant="success"
                     onClick={() => confirmBulkOperation("add")}
                     disabled={bulkProcessing}
-                    className="bg-green-600 hover:bg-green-700 text-white"
                   >
                     <UserPlus className="h-4 w-4 mr-2" />
                     Add Selected ({selectedAvailableStudents.size})
@@ -575,12 +575,12 @@ const StudentsTab = ({ classroomId }: { classroomId: string }) => {
 
                       <Button
                         size="sm"
+                        variant="success"
                         onClick={() => handleAddStudent(student.userId)}
                         disabled={
                           processingStudentId === student.userId ||
                           bulkProcessing
                         }
-                        className="bg-green-600 hover:bg-green-700 text-white"
                       >
                         <UserPlus className="h-4 w-4 mr-2" />
                         {processingStudentId === student.userId

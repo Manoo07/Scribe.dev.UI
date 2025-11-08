@@ -92,7 +92,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             localStorage.setItem("user", JSON.stringify(user));
             localStorage.setItem("role", user.role);
             localStorage.setItem("userId", user.id);
-            localStorage.setItem("lastUserFetch", now.toString()); // Update last fetch time
+            localStorage.setItem("lastUserFetch", now.toString());
 
             setUser(user);
             console.log("✅ Fresh user data loaded from /auth/me:", user);

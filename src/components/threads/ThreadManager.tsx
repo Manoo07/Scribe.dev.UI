@@ -52,7 +52,6 @@ const ThreadsManager: React.FC<ThreadsManagerProps> = ({
   const classroomDataRef = useRef(classroomData);
 
   // Track if data needs refresh
-  const [lastRefreshTime, setLastRefreshTime] = useState<number>(Date.now());
   const [hasChanges, setHasChanges] = useState<boolean>(false);
 
   // Fetch threads from API
