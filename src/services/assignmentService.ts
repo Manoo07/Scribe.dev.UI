@@ -6,7 +6,7 @@ import {
   mockSubmissions,
   simulateApiDelay,
 } from "../data/mockAssignmentData";
-import axiosInstance from "../lib/axiosInstance";
+import api from "../lib/axiosInstance";
 import {
   Assignment,
   AssignmentFilters,
@@ -21,7 +21,6 @@ import {
 } from "../types/assignment";
 
 // Use the centralized axios instance
-const api = axiosInstance;
 
 // Assignment API calls
 export const assignmentAPI = {

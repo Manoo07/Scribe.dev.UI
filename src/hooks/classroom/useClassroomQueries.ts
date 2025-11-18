@@ -12,6 +12,7 @@ import {
   getEligibleStudents,
   getEnrolledStudents,
 } from "../../api/endpoints/classroom.api";
+import { CACHE_TIME } from "../../constants/cache";
 
 // ==================== Query Keys ====================
 export const classroomKeys = {
@@ -35,7 +36,7 @@ export const useClassroomsQuery = () => {
   return useQuery({
     queryKey: classroomKeys.list(),
     queryFn: getClassrooms,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: CACHE_TIME.MEDIUM,
   });
 };
 
@@ -49,7 +50,7 @@ export const useClassroomQuery = (classroomId?: string) => {
     queryKey: classroomKeys.detail(classroomId!),
     queryFn: () => getClassroom(classroomId!),
     enabled: !!classroomId, // Only fetch if classroomId is provided
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: CACHE_TIME.MEDIUM,
   });
 };
 
@@ -61,7 +62,7 @@ export const useClassroomUnitsQuery = (classroomId: string) => {
     queryKey: ["classrooms", classroomId, "units"],
     queryFn: () => getClassroomUnits(classroomId),
     enabled: !!classroomId,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: CACHE_TIME.MEDIUM,
   });
 };
 
@@ -73,7 +74,7 @@ export const useClassroomStudentsQuery = (classroomId: string) => {
     queryKey: ["classrooms", classroomId, "students"],
     queryFn: () => getClassroomStudents(classroomId),
     enabled: !!classroomId,
-    staleTime: 2 * 60 * 1000, // 2 minutes (students data changes more frequently)
+    staleTime: CACHE_TIME.SHORT,
   });
 };
 
@@ -85,7 +86,7 @@ export const useEnrolledStudentsQuery = (classroomId: string) => {
     queryKey: ["classrooms", classroomId, "enrolled-students"],
     queryFn: () => getEnrolledStudents(classroomId),
     enabled: !!classroomId,
-    staleTime: 2 * 60 * 1000, // 2 minutes
+    staleTime: CACHE_TIME.SHORT,
   });
 };
 
@@ -97,6 +98,6 @@ export const useEligibleStudentsQuery = (classroomId: string) => {
     queryKey: ["classrooms", classroomId, "eligible-students"],
     queryFn: () => getEligibleStudents(classroomId),
     enabled: !!classroomId,
-    staleTime: 2 * 60 * 1000, // 2 minutes
+    staleTime: CACHE_TIME.SHORT,
   });
 };

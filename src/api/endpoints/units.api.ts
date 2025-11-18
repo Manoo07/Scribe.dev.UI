@@ -4,7 +4,7 @@
  */
 
 import { API_CONFIG } from "../../config/api.config";
-import axiosInstance from "../../lib/axiosInstance";
+import api from "../../lib/api";
 import { ContentType, EducationalContent, Unit } from "../../types";
 
 // ==================== Types ====================
@@ -40,7 +40,7 @@ export interface UpdateContentPayload {
  * Get all units for a classroom
  */
 export const getUnits = async (classroomId: string): Promise<Unit[]> => {
-  const { data } = await axiosInstance.get(
+  const { data } = await api.get(
     API_CONFIG.ENDPOINTS.CLASSROOM.UNITS(classroomId)
   );
   return data;
@@ -50,10 +50,7 @@ export const getUnits = async (classroomId: string): Promise<Unit[]> => {
  * Create new unit
  */
 export const createUnit = async (payload: CreateUnitPayload): Promise<Unit> => {
-  const { data } = await axiosInstance.post(
-    API_CONFIG.ENDPOINTS.UNIT.BASE,
-    payload
-  );
+  const { data } = await api.post(API_CONFIG.ENDPOINTS.UNIT.BASE, payload);
   return data;
 };
 
@@ -64,7 +61,7 @@ export const updateUnit = async (
   unitId: string,
   payload: UpdateUnitPayload
 ): Promise<Unit> => {
-  const { data } = await axiosInstance.put(
+  const { data } = await api.put(
     API_CONFIG.ENDPOINTS.UNIT.DETAIL(unitId),
     payload
   );
@@ -75,7 +72,7 @@ export const updateUnit = async (
  * Delete unit
  */
 export const deleteUnit = async (unitId: string): Promise<void> => {
-  await axiosInstance.delete(API_CONFIG.ENDPOINTS.UNIT.DETAIL(unitId));
+  await api.delete(API_CONFIG.ENDPOINTS.UNIT.DETAIL(unitId));
 };
 
 /**
@@ -94,7 +91,7 @@ export const createContent = async (
     formData.append("type", payload.type);
     formData.append("file", payload.content);
 
-    const { data } = await axiosInstance.post(
+    const { data } = await api.post(
       API_CONFIG.ENDPOINTS.CONTENT.BASE(unitId),
       formData,
       {
@@ -106,13 +103,10 @@ export const createContent = async (
     return data;
   } else {
     // Handle text-based content
-    const { data } = await axiosInstance.post(
-      API_CONFIG.ENDPOINTS.CONTENT.BASE(unitId),
-      {
-        type: payload.type,
-        content: payload.content,
-      }
-    );
+    const { data } = await api.post(API_CONFIG.ENDPOINTS.CONTENT.BASE(unitId), {
+      type: payload.type,
+      content: payload.content,
+    });
     return data;
   }
 };
@@ -124,7 +118,7 @@ export const updateContent = async (
   contentId: string,
   payload: UpdateContentPayload
 ): Promise<EducationalContent> => {
-  const { data } = await axiosInstance.put(
+  const { data } = await api.put(
     API_CONFIG.ENDPOINTS.CONTENT.DETAIL(contentId),
     payload
   );
@@ -135,7 +129,7 @@ export const updateContent = async (
  * Delete educational content
  */
 export const deleteContent = async (contentId: string): Promise<void> => {
-  await axiosInstance.delete(API_CONFIG.ENDPOINTS.CONTENT.DETAIL(contentId));
+  await api.delete(API_CONFIG.ENDPOINTS.CONTENT.DETAIL(contentId));
 };
 
 /**
@@ -149,7 +143,7 @@ export const uploadFile = async (
   formData.append("file", file);
   formData.append("type", ContentType.DOCUMENT);
 
-  const { data } = await axiosInstance.post(
+  const { data } = await api.post(
     API_CONFIG.ENDPOINTS.CONTENT.BASE(unitId),
     formData,
     {

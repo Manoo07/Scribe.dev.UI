@@ -10,7 +10,7 @@ import { API_CONFIG } from "../config/api.config";
 const getToken = (): string | null => localStorage.getItem("token");
 
 // Create axios instance with default configuration
-export const axiosInstance = axios.create({
+export const api = axios.create({
   baseURL: API_CONFIG.BASE_URL,
   timeout: API_CONFIG.TIMEOUT,
   headers: {
@@ -19,7 +19,7 @@ export const axiosInstance = axios.create({
 });
 
 // Request interceptor - Add authentication token to all requests
-axiosInstance.interceptors.request.use(
+api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const token = getToken();
 
@@ -48,7 +48,7 @@ axiosInstance.interceptors.request.use(
 );
 
 // Response interceptor - Handle authentication errors globally
-axiosInstance.interceptors.response.use(
+api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
     if (error.response?.status === 401 || error.response?.status === 403) {
@@ -84,4 +84,4 @@ axiosInstance.interceptors.response.use(
   }
 );
 
-export default axiosInstance;
+export default api;

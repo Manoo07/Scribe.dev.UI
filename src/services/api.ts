@@ -231,13 +231,12 @@ import {
   LikeResponse,
   ThreadReply,
 } from "../components/threads/threadTypes";
-import axiosInstance from "../lib/axiosInstance";
+import api from "../lib/axiosInstance";
 import { ContentType, Unit } from "../types";
 import { ensureToken } from "../utils/authUtils";
 import { mockUnits } from "./mockData";
 
 // Use the centralized axios instance
-const api = axiosInstance;
 
 interface UpdateContentPayload {
   type: ContentType;

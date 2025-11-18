@@ -4,7 +4,6 @@
  */
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
 import {
   addStudentToClassroom,
   bulkAddStudentsToClassroom,
@@ -35,18 +34,13 @@ import { classroomKeys } from "./useClassroomQueries";
  */
 export const useCreateClassroomMutation = () => {
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
 
   return useMutation({
     mutationFn: (payload: CreateClassroomPayload) => createClassroom(payload),
-    onSuccess: (newClassroom) => {
-      // Invalidate classrooms list to refetch
+    onSuccess: () => {
+      // Invalidate classrooms list to refetch and show the new classroom
       queryClient.invalidateQueries({ queryKey: classroomKeys.lists() });
-
-      // Support both id formats (API may return 'id' or '_id')
-      const classroomId = newClassroom.id || newClassroom._id;
-      // Optionally navigate to the new classroom
-      navigate(`/dashboard/classrooms/${classroomId}`);
+      // Don't navigate - let user click on the classroom to view details
     },
     onError: (error: any) => {
       console.error(
@@ -102,7 +96,6 @@ export const useUpdateClassroomMutation = () => {
  */
 export const useDeleteClassroomMutation = () => {
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
 
   return useMutation({
     mutationFn: (classroomId: string) => deleteClassroom(classroomId),
@@ -116,7 +109,7 @@ export const useDeleteClassroomMutation = () => {
       queryClient.invalidateQueries({ queryKey: classroomKeys.lists() });
 
       // Navigate back to classrooms list
-      navigate("/dashboard/classrooms");
+      // navigate("/dashboard/classrooms");
     },
     onError: (error: any) => {
       console.error(
@@ -137,18 +130,13 @@ export const useDeleteClassroomMutation = () => {
  */
 export const useJoinClassroomMutation = () => {
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
 
   return useMutation({
     mutationFn: (payload: JoinClassroomPayload) => joinClassroom(payload),
-    onSuccess: (data) => {
+    onSuccess: () => {
       // Invalidate classrooms list to show new classroom
       queryClient.invalidateQueries({ queryKey: classroomKeys.lists() });
-
-      // Support both id formats (API may return 'id' or '_id')
-      const classroomId = data.classroom.id || data.classroom._id;
-      // Navigate to the joined classroom
-      navigate(`/dashboard/classrooms/${classroomId}`);
+      // Don't auto-navigate - user can click to view the classroom
     },
     onError: (error: any) => {
       console.error(

@@ -4,7 +4,7 @@
  */
 
 import { API_CONFIG } from "../../config/api.config";
-import axiosInstance from "../../lib/axiosInstance";
+import api from "../../lib/axiosInstance";
 
 // ==================== Types ====================
 
@@ -100,7 +100,7 @@ export const getThreads = async (
     searchParams.append("classroomId", params.classroomId);
   if (params?.unitId) searchParams.append("unitId", params.unitId);
 
-  const { data } = await axiosInstance.get(
+  const { data } = await api.get(
     `${API_CONFIG.ENDPOINTS.THREADS.BASE}?${searchParams.toString()}`
   );
   return data;
@@ -120,7 +120,7 @@ export const getThread = async (
   searchParams.append("limit", limit.toString());
   if (sortBy) searchParams.append("sortBy", sortBy);
 
-  const { data } = await axiosInstance.get(
+  const { data } = await api.get(
     `${API_CONFIG.ENDPOINTS.THREADS.DETAIL(
       threadId
     )}?${searchParams.toString()}`
@@ -136,7 +136,7 @@ export const getUnitThreads = async (
   page = 1,
   limit = 10
 ): Promise<ThreadsResponse> => {
-  const { data } = await axiosInstance.get(
+  const { data } = await api.get(
     `${API_CONFIG.ENDPOINTS.THREADS.UNIT(unitId)}?page=${page}&limit=${limit}`
   );
   return data;
@@ -148,10 +148,7 @@ export const getUnitThreads = async (
 export const createThread = async (
   payload: CreateThreadPayload
 ): Promise<Thread> => {
-  const { data } = await axiosInstance.post(
-    API_CONFIG.ENDPOINTS.THREADS.BASE,
-    payload
-  );
+  const { data } = await api.post(API_CONFIG.ENDPOINTS.THREADS.BASE, payload);
   return data;
 };
 
@@ -162,7 +159,7 @@ export const updateThread = async (
   threadId: string,
   payload: UpdateThreadPayload
 ): Promise<Thread> => {
-  const { data } = await axiosInstance.patch(
+  const { data } = await api.patch(
     API_CONFIG.ENDPOINTS.THREADS.DETAIL(threadId),
     payload
   );
@@ -173,7 +170,7 @@ export const updateThread = async (
  * Delete thread
  */
 export const deleteThread = async (threadId: string): Promise<void> => {
-  await axiosInstance.delete(API_CONFIG.ENDPOINTS.THREADS.DETAIL(threadId));
+  await api.delete(API_CONFIG.ENDPOINTS.THREADS.DETAIL(threadId));
 };
 
 /**
@@ -182,9 +179,7 @@ export const deleteThread = async (threadId: string): Promise<void> => {
 export const toggleThreadLike = async (
   threadId: string
 ): Promise<{ liked: boolean; likesCount: number }> => {
-  const { data } = await axiosInstance.post(
-    API_CONFIG.ENDPOINTS.THREADS.LIKE(threadId)
-  );
+  const { data } = await api.post(API_CONFIG.ENDPOINTS.THREADS.LIKE(threadId));
   return data;
 };
 
@@ -194,7 +189,7 @@ export const toggleThreadLike = async (
 export const createReply = async (
   payload: CreateReplyPayload
 ): Promise<ThreadReply> => {
-  const { data } = await axiosInstance.post(
+  const { data } = await api.post(
     API_CONFIG.ENDPOINTS.THREADS.REPLY(payload.threadId),
     { content: payload.content }
   );
@@ -209,7 +204,7 @@ export const updateReply = async (
   replyId: string,
   content: string
 ): Promise<ThreadReply> => {
-  const { data } = await axiosInstance.patch(
+  const { data } = await api.patch(
     API_CONFIG.ENDPOINTS.THREADS.DETAIL(threadId),
     { content, replyId }
   );
@@ -223,7 +218,7 @@ export const deleteReply = async (
   threadId: string,
   replyId: string
 ): Promise<void> => {
-  await axiosInstance.delete(
+  await api.delete(
     `${API_CONFIG.ENDPOINTS.THREADS.DETAIL(threadId)}?replyId=${replyId}`
   );
 };
@@ -234,10 +229,9 @@ export const deleteReply = async (
 export const toggleReplyLike = async (
   replyId: string
 ): Promise<{ liked: boolean; likesCount: number }> => {
-  const { data } = await axiosInstance.post(
-    API_CONFIG.ENDPOINTS.THREADS.LIKE(replyId),
-    { replyId }
-  );
+  const { data } = await api.post(API_CONFIG.ENDPOINTS.THREADS.LIKE(replyId), {
+    replyId,
+  });
   return data;
 };
 
@@ -248,7 +242,7 @@ export const acceptAnswer = async (
   threadId: string,
   replyId: string
 ): Promise<Thread> => {
-  const { data } = await axiosInstance.patch(
+  const { data } = await api.patch(
     API_CONFIG.ENDPOINTS.THREADS.ACCEPT_ANSWER(threadId, replyId)
   );
   return data;
@@ -261,7 +255,7 @@ export const unmarkAnswer = async (
   threadId: string,
   replyId: string
 ): Promise<Thread> => {
-  const { data } = await axiosInstance.patch(
+  const { data } = await api.patch(
     API_CONFIG.ENDPOINTS.THREADS.ACCEPT_ANSWER(threadId, replyId)
   );
   return data;

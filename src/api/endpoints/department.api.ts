@@ -4,7 +4,7 @@
  */
 
 import { API_CONFIG } from "../../config/api.config";
-import axiosInstance from "../../lib/axiosInstance";
+import api from "../../lib/axiosInstance";
 
 // ==================== Types ====================
 
@@ -45,7 +45,7 @@ export interface Year {
  * Get all departments
  */
 export const getDepartments = async (): Promise<Department[]> => {
-  const { data } = await axiosInstance.get(API_CONFIG.ENDPOINTS.DEPARTMENT);
+  const { data } = await api.get(API_CONFIG.ENDPOINTS.DEPARTMENT);
   return data || [];
 };
 
@@ -55,7 +55,7 @@ export const getDepartments = async (): Promise<Department[]> => {
 export const getYearsByDepartment = async (
   departmentId: string
 ): Promise<Year[]> => {
-  const { data } = await axiosInstance.get(
+  const { data } = await api.get(
     `${API_CONFIG.ENDPOINTS.YEAR}?departmentId=${departmentId}`
   );
   return data || [];

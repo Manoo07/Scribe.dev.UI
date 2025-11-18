@@ -12,8 +12,8 @@ interface ClassroomGridProps {
     text: string;
     onClick: () => void;
   };
-  onEditClassroom?: (event: React.MouseEvent, classroom: any) => void;
-  onDeleteClassroom?: (event: React.MouseEvent, classroom: any) => void;
+  onEditClassroom?: (classroom: any) => void;
+  onDeleteClassroom?: (classroom: any) => void;
   deletingClassroomId?: string;
   isDeleting?: boolean;
   renderValue?: (value: any, fallback?: string) => string;
@@ -103,12 +103,12 @@ const ClassroomGrid: React.FC<ClassroomGridProps> = ({
             userRole={userRole}
             onEdit={
               onEditClassroom
-                ? (classroom) => onEditClassroom(classroom as any, classroom)
+                ? (classroom) => onEditClassroom(classroom)
                 : undefined
             }
             onDelete={
               onDeleteClassroom
-                ? (classroom) => onDeleteClassroom(classroom as any, classroom)
+                ? (classroom) => onDeleteClassroom(classroom)
                 : undefined
             }
             isDeleting={isDeleting && deletingClassroomId === classroomId}

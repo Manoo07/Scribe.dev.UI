@@ -4,7 +4,7 @@
  */
 
 import { API_CONFIG } from "../../config/api.config";
-import axiosInstance from "../../lib/axiosInstance";
+import api from "../../lib/api";
 
 // ==================== Types ====================
 
@@ -65,10 +65,7 @@ export interface ResetPasswordPayload {
  * Login user
  */
 export const login = async (payload: LoginPayload): Promise<LoginResponse> => {
-  const { data } = await axiosInstance.post(
-    API_CONFIG.ENDPOINTS.AUTH.SIGNIN,
-    payload
-  );
+  const { data } = await api.post(API_CONFIG.ENDPOINTS.AUTH.SIGNIN, payload);
   return data;
 };
 
@@ -78,10 +75,7 @@ export const login = async (payload: LoginPayload): Promise<LoginResponse> => {
 export const signup = async (
   payload: SignupPayload
 ): Promise<SignupResponse> => {
-  const { data } = await axiosInstance.post(
-    API_CONFIG.ENDPOINTS.AUTH.SIGNUP,
-    payload
-  );
+  const { data } = await api.post(API_CONFIG.ENDPOINTS.AUTH.SIGNUP, payload);
   return data;
 };
 
@@ -89,7 +83,7 @@ export const signup = async (
  * Get current logged-in user info
  */
 export const getCurrentUser = async (): Promise<CurrentUserResponse> => {
-  const { data } = await axiosInstance.get(API_CONFIG.ENDPOINTS.AUTH.ME);
+  const { data } = await api.get(API_CONFIG.ENDPOINTS.AUTH.ME);
   return data;
 };
 
@@ -97,7 +91,7 @@ export const getCurrentUser = async (): Promise<CurrentUserResponse> => {
  * Logout user
  */
 export const logout = async (): Promise<void> => {
-  await axiosInstance.post(API_CONFIG.ENDPOINTS.AUTH.LOGOUT);
+  await api.post(API_CONFIG.ENDPOINTS.AUTH.LOGOUT);
 };
 
 /**
@@ -106,7 +100,7 @@ export const logout = async (): Promise<void> => {
 export const forgotPassword = async (
   payload: ForgotPasswordPayload
 ): Promise<{ message: string }> => {
-  const { data } = await axiosInstance.post(
+  const { data } = await api.post(
     API_CONFIG.ENDPOINTS.AUTH.FORGOT_PASSWORD,
     payload
   );
@@ -119,7 +113,7 @@ export const forgotPassword = async (
 export const resetPassword = async (
   payload: ResetPasswordPayload
 ): Promise<{ message: string }> => {
-  const { data } = await axiosInstance.post(
+  const { data } = await api.post(
     API_CONFIG.ENDPOINTS.AUTH.RESET_PASSWORD,
     payload
   );
@@ -132,7 +126,7 @@ export const resetPassword = async (
 export const getColleges = async (): Promise<
   Array<{ id: string; name: string }>
 > => {
-  const { data } = await axiosInstance.get(API_CONFIG.ENDPOINTS.COLLEGE);
+  const { data } = await api.get(API_CONFIG.ENDPOINTS.COLLEGE);
   return data;
 };
 
@@ -142,7 +136,7 @@ export const getColleges = async (): Promise<
 export const getDepartments = async (
   collegeId: string
 ): Promise<Array<{ id: string; name: string }>> => {
-  const { data } = await axiosInstance.get(
+  const { data } = await api.get(
     `${API_CONFIG.ENDPOINTS.DEPARTMENT}?collegeId=${collegeId}`
   );
   return data;
@@ -154,7 +148,7 @@ export const getDepartments = async (
 export const getYears = async (
   departmentId: string
 ): Promise<Array<{ id: string; name: string }>> => {
-  const { data } = await axiosInstance.get(
+  const { data } = await api.get(
     `${API_CONFIG.ENDPOINTS.YEAR}?departmentId=${departmentId}`
   );
   return data;

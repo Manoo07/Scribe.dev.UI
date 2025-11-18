@@ -4,7 +4,7 @@
  */
 
 import { API_CONFIG } from "../../config/api.config";
-import axiosInstance from "../../lib/axiosInstance";
+import api from "../../lib/axiosInstance";
 import { Unit } from "../../types";
 
 // ==================== Types ====================
@@ -33,8 +33,7 @@ export interface Student {
 }
 
 export interface Classroom {
-  _id?: string;
-  id?: string; // API now returns 'id' instead of '_id'
+  id?: string;
   name: string;
   section: Section;
   faculty: Faculty;
@@ -97,7 +96,7 @@ export interface ClassroomStudentsResponse {
  * Get all classrooms for current user
  */
 export const getClassrooms = async (): Promise<Classroom[]> => {
-  const { data } = await axiosInstance.get(API_CONFIG.ENDPOINTS.CLASSROOM.BASE);
+  const { data } = await api.get(API_CONFIG.ENDPOINTS.CLASSROOM.BASE);
   // API returns { classrooms: Classroom[] }
   return data.classrooms || data;
 };
@@ -106,7 +105,7 @@ export const getClassrooms = async (): Promise<Classroom[]> => {
  * Get single classroom by ID
  */
 export const getClassroom = async (classroomId: string): Promise<Classroom> => {
-  const { data } = await axiosInstance.get(
+  const { data } = await api.get(
     API_CONFIG.ENDPOINTS.CLASSROOM.DETAIL(classroomId)
   );
   return data;
@@ -118,11 +117,9 @@ export const getClassroom = async (classroomId: string): Promise<Classroom> => {
 export const createClassroom = async (
   payload: CreateClassroomPayload
 ): Promise<Classroom> => {
-  const { data } = await axiosInstance.post(
-    API_CONFIG.ENDPOINTS.CLASSROOM.BASE,
-    payload
-  );
-  return data;
+  const { data } = await api.post(API_CONFIG.ENDPOINTS.CLASSROOM.BASE, payload);
+  // API returns { message: string, classroom: Classroom }
+  return data.classroom || data;
 };
 
 /**
@@ -132,7 +129,7 @@ export const updateClassroom = async (
   classroomId: string,
   payload: UpdateClassroomPayload
 ): Promise<Classroom> => {
-  const { data } = await axiosInstance.put(
+  const { data } = await api.put(
     API_CONFIG.ENDPOINTS.CLASSROOM.DETAIL(classroomId),
     payload
   );
@@ -143,9 +140,7 @@ export const updateClassroom = async (
  * Delete classroom (Faculty only)
  */
 export const deleteClassroom = async (classroomId: string): Promise<void> => {
-  await axiosInstance.delete(
-    API_CONFIG.ENDPOINTS.CLASSROOM.DETAIL(classroomId)
-  );
+  await api.delete(API_CONFIG.ENDPOINTS.CLASSROOM.DETAIL(classroomId));
 };
 
 /**
@@ -154,10 +149,7 @@ export const deleteClassroom = async (classroomId: string): Promise<void> => {
 export const joinClassroom = async (
   payload: JoinClassroomPayload
 ): Promise<{ message: string; classroom: Classroom }> => {
-  const { data } = await axiosInstance.post(
-    API_CONFIG.ENDPOINTS.CLASSROOM.JOIN,
-    payload
-  );
+  const { data } = await api.post(API_CONFIG.ENDPOINTS.CLASSROOM.JOIN, payload);
   return data;
 };
 
@@ -167,7 +159,7 @@ export const joinClassroom = async (
 export const getClassroomUnits = async (
   classroomId: string
 ): Promise<Unit[]> => {
-  const { data } = await axiosInstance.get(
+  const { data } = await api.get(
     API_CONFIG.ENDPOINTS.CLASSROOM.UNITS(classroomId)
   );
   return data;
@@ -179,7 +171,7 @@ export const getClassroomUnits = async (
 export const getClassroomStudents = async (
   classroomId: string
 ): Promise<ClassroomStudentsResponse> => {
-  const { data } = await axiosInstance.get(
+  const { data } = await api.get(
     API_CONFIG.ENDPOINTS.CLASSROOM.STUDENTS(classroomId)
   );
   return data;
@@ -191,7 +183,7 @@ export const getClassroomStudents = async (
 export const getEnrolledStudents = async (
   classroomId: string
 ): Promise<Student[]> => {
-  const { data } = await axiosInstance.get(
+  const { data } = await api.get(
     API_CONFIG.ENDPOINTS.CLASSROOM.ENROLLED_STUDENTS(classroomId)
   );
   return data;
@@ -203,7 +195,7 @@ export const getEnrolledStudents = async (
 export const getEligibleStudents = async (
   classroomId: string
 ): Promise<Student[]> => {
-  const { data } = await axiosInstance.get(
+  const { data } = await api.get(
     API_CONFIG.ENDPOINTS.CLASSROOM.ELIGIBLE_STUDENTS(classroomId)
   );
   return data;
@@ -215,10 +207,7 @@ export const getEligibleStudents = async (
 export const addStudentToClassroom = async (
   payload: JoinClassroomPayload
 ): Promise<{ message: string }> => {
-  const { data } = await axiosInstance.post(
-    API_CONFIG.ENDPOINTS.CLASSROOM.JOIN,
-    payload
-  );
+  const { data } = await api.post(API_CONFIG.ENDPOINTS.CLASSROOM.JOIN, payload);
   return data;
 };
 
@@ -228,7 +217,7 @@ export const addStudentToClassroom = async (
 export const removeStudentFromClassroom = async (
   payload: LeaveClassroomPayload
 ): Promise<{ message: string }> => {
-  const { data } = await axiosInstance.post(
+  const { data } = await api.post(
     API_CONFIG.ENDPOINTS.CLASSROOM.LEAVE,
     payload
   );
@@ -241,7 +230,7 @@ export const removeStudentFromClassroom = async (
 export const bulkAddStudentsToClassroom = async (
   payload: BulkJoinClassroomPayload
 ): Promise<{ message: string; addedCount: number }> => {
-  const { data } = await axiosInstance.post(
+  const { data } = await api.post(
     API_CONFIG.ENDPOINTS.CLASSROOM.BULK_JOIN,
     payload
   );
@@ -254,7 +243,7 @@ export const bulkAddStudentsToClassroom = async (
 export const bulkRemoveStudentsFromClassroom = async (
   payload: BulkLeaveClassroomPayload
 ): Promise<{ message: string; removedCount: number }> => {
-  const { data } = await axiosInstance.post(
+  const { data } = await api.post(
     API_CONFIG.ENDPOINTS.CLASSROOM.BULK_LEAVE,
     payload
   );

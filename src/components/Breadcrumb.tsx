@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { useClassroomQuery } from "../hooks/classroom";
+import { useClassroomQuery, useClassroomUnitsQuery } from "../hooks/classroom";
 
 const Breadcrumb = () => {
   const location = useLocation();
@@ -25,6 +25,27 @@ const Breadcrumb = () => {
     isValidClassroomId ? classroomId : undefined
   );
 
+  // Extract unit ID from path if present (comes after classroom ID)
+  const unitsIdx = pathnames.findIndex((seg) => seg === "units");
+  const unitId =
+    unitsIdx !== -1 && pathnames[unitsIdx + 1]
+      ? pathnames[unitsIdx + 1]
+      : undefined;
+
+  // Check if it's a valid unit ID
+  const isValidUnitId = unitId && /^[a-f0-9\-]{24,}$/i.test(unitId);
+
+  // Fetch units for the classroom (only if we have a valid classroom ID)
+  const { data: units = [] } = useClassroomUnitsQuery(
+    isValidClassroomId ? classroomId! : ""
+  );
+
+  // Find the unit name if we have a valid unit ID
+  const unit = isValidUnitId
+    ? units.find((u: any) => u.id === unitId || u._id === unitId)
+    : null;
+  const unitName = unit?.name || null;
+
   const classroomName = classroom?.name || null;
 
   return (
@@ -32,28 +53,47 @@ const Breadcrumb = () => {
       <ol className="flex items-center space-x-2">
         {/* Dashboard link */}
         <li>
-          <Link to="/dashboard" className="hover:text-gray-300 font-medium">
+          <Link
+            to="/dashboard/overview"
+            className="hover:text-gray-300 font-medium"
+          >
             Dashboard
           </Link>
         </li>
 
         {/* Dynamic path segments */}
         {pathnames.map((segment, index) => {
-          const routeTo = "/" + pathnames.slice(0, index + 1).join("/");
+          const routeTo =
+            "/dashboard/" + pathnames.slice(0, index + 1).join("/");
           const isLast = index === pathnames.length - 1;
           let label = segment
             .replace(/-/g, " ")
             .replace(/\b\w/g, (c) => c.toUpperCase());
+
           // If this segment is a classroom id, show classroomName if available
-          const idx = pathnames.findIndex((seg) => seg === "classrooms");
+          const classroomIndex = pathnames.findIndex(
+            (seg) => seg === "classrooms"
+          );
           if (
-            idx !== -1 &&
-            index === idx + 1 &&
+            classroomIndex !== -1 &&
+            index === classroomIndex + 1 &&
             /^[a-f0-9\-]{24,}$/i.test(segment) &&
             classroomName
           ) {
             label = classroomName;
           }
+
+          // If this segment is a unit id, show unitName if available
+          const unitIndex = pathnames.findIndex((seg) => seg === "units");
+          if (
+            unitIndex !== -1 &&
+            index === unitIndex + 1 &&
+            /^[a-f0-9\-]{24,}$/i.test(segment) &&
+            unitName
+          ) {
+            label = unitName;
+          }
+
           return (
             <li key={routeTo} className="flex items-center space-x-2">
               <span className="mx-1 text-gray-500">/</span>

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { Classroom } from "../api/endpoints/classroom.api";
 import CreateClassroomForm from "../components/classroom/CreateClassroomForm";
@@ -83,10 +83,7 @@ const MyClassroomsPage = () => {
     }
   };
 
-  const handleEditClassroom = (event: React.MouseEvent, classroom: any) => {
-    event.preventDefault();
-    event.stopPropagation();
-
+  const handleEditClassroom = (classroom: any) => {
     if (userRole === "FACULTY") {
       setClassroomToEdit(classroom);
       setShowEditForm(true);
@@ -113,10 +110,7 @@ const MyClassroomsPage = () => {
     });
   };
 
-  const confirmDeleteClassroom = (event: React.MouseEvent, classroom: any) => {
-    event.preventDefault();
-    event.stopPropagation();
-
+  const confirmDeleteClassroom = (classroom: any) => {
     setClassroomToDelete(classroom);
     setDialogOpen(true);
   };
@@ -127,7 +121,7 @@ const MyClassroomsPage = () => {
     setDialogOpen(false);
 
     // Support both id formats
-    const classroomId = classroomToDelete.id || classroomToDelete._id;
+    const classroomId = classroomToDelete.id;
 
     if (!classroomId) {
       toast({
@@ -189,7 +183,7 @@ const MyClassroomsPage = () => {
           userRole={userRole || undefined}
           onEditClassroom={handleEditClassroom}
           onDeleteClassroom={confirmDeleteClassroom}
-          deletingClassroomId={classroomToDelete?.id || classroomToDelete?._id}
+          deletingClassroomId={classroomToDelete?.id}
           isDeleting={deleteClassroomMutation.isPending}
           renderValue={renderValue}
           emptyActionButton={{
