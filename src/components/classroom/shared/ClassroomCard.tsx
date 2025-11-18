@@ -4,7 +4,8 @@ import { Link } from "react-router-dom";
 
 interface ClassroomCardProps {
   classroom: {
-    _id: string;
+    _id?: string;
+    id?: string;
     name: string;
     description?: string;
     section?: any;
@@ -34,7 +35,9 @@ const ClassroomCard: React.FC<ClassroomCardProps> = ({
     return fallback;
   },
 }) => {
-  const link = linkTo || `/dashboard/classrooms/${classroom._id}`;
+  // Support both id formats (API returns 'id', but some places use '_id')
+  const classroomId = classroom.id || classroom._id;
+  const link = linkTo || `/dashboard/classrooms/${classroomId}`;
 
   const handleEdit = (event: React.MouseEvent) => {
     event.preventDefault();

@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from "react";
 import { useToast } from "../../hooks/use-toast";
 import { useThreadsQuery } from "../../hooks/threads/useThreadQueries";
-import { 
-  useCreateThreadMutation, 
-  useToggleThreadLikeMutation 
+import {
+  useCreateThreadMutation,
+  useToggleThreadLikeMutation,
 } from "../../hooks/threads/useThreadMutations";
 import EnhancedNewThreadModal from "./EnhancedNewThreadModal";
 import ThreadDetailView from "./ThreadDetailView";
@@ -12,7 +12,11 @@ import { Thread } from "./threadTypes";
 import { Thread as ApiThread } from "../../api/endpoints/threads.api";
 
 // Helper function to convert API threads to component threads
-const convertApiThreadToComponentThread = (apiThread: ApiThread, context: "global" | "classroom", classroomData?: any): Thread => {
+const convertApiThreadToComponentThread = (
+  apiThread: ApiThread,
+  context: "global" | "classroom",
+  classroomData?: any
+): Thread => {
   const baseThread = {
     id: apiThread.id,
     title: apiThread.title,
@@ -40,7 +44,10 @@ const convertApiThreadToComponentThread = (apiThread: ApiThread, context: "globa
       classroomId: apiThread.classroomId || classroomData.id,
       classroomName: classroomData.name,
       unitId: apiThread.unitId || "",
-      unitName: apiThread.unitId ? classroomData.units?.find((u: any) => u.id === apiThread.unitId)?.name || "" : "",
+      unitName: apiThread.unitId
+        ? classroomData.units?.find((u: any) => u.id === apiThread.unitId)
+            ?.name || ""
+        : "",
     };
   } else {
     return {
@@ -66,14 +73,16 @@ const ThreadsManager: React.FC<ThreadsManagerProps> = ({
   classroomData,
 }) => {
   const { toast } = useToast();
-  
+
   // UI State
   const [page, setPage] = useState<number>(1);
   const [selectedUnit, setSelectedUnit] = useState<string>("all");
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [createModalType, setCreateModalType] = useState<"classroom" | "generic">("generic");
+  const [createModalType, setCreateModalType] = useState<
+    "classroom" | "generic"
+  >("generic");
   const [selectedThread, setSelectedThread] = useState<Thread | null>(null);
-  
+
   // Filter state
   const [currentFilters, setCurrentFilters] = useState({
     sortBy: "recent" as "recent" | "popular" | "unanswered",
@@ -116,7 +125,7 @@ const ThreadsManager: React.FC<ThreadsManagerProps> = ({
   // Extract data from query response and convert to component format
   const threads: Thread[] = useMemo(() => {
     if (!threadsResponse?.threads) return [];
-    return threadsResponse.threads.map(apiThread => 
+    return threadsResponse.threads.map((apiThread) =>
       convertApiThreadToComponentThread(apiThread, context, classroomData)
     );
   }, [threadsResponse?.threads, context, classroomData]);
@@ -127,7 +136,7 @@ const ThreadsManager: React.FC<ThreadsManagerProps> = ({
 
   // Handle filter changes
   const handleFiltersChange = (filters: { sortBy: string }) => {
-    setCurrentFilters(prev => ({
+    setCurrentFilters((prev) => ({
       ...prev,
       sortBy: filters.sortBy as "recent" | "popular" | "unanswered",
     }));
@@ -165,7 +174,7 @@ const ThreadsManager: React.FC<ThreadsManagerProps> = ({
 
       setPage(1); // Reset to first page to see new thread
       setShowCreateModal(false);
-      
+
       // Scroll to top to see the new thread
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err: any) {
@@ -221,35 +230,25 @@ const ThreadsManager: React.FC<ThreadsManagerProps> = ({
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // Show thread detail view
-  if (selectedThread) {
-    return (
-      <ThreadDetailView
-        threadId={selectedThread.id}
-        onBack={handleBackToList}
-        onChangesOccurred={() => refetch()}
-      />
-    );
-  }
-
   // Show error from TanStack Query with better error messaging
+  // IMPORTANT: This useMemo must be called before any conditional returns
   const errorMessage = useMemo(() => {
     if (!error) return null;
-    
+
     // Handle different types of errors
     if ((error as any)?.response?.data?.message) {
       return (error as any).response.data.message;
     }
-    
+
     if (error.message) {
       return error.message;
     }
-    
+
     // Handle network errors
-    if ((error as any)?.code === 'NETWORK_ERROR') {
+    if ((error as any)?.code === "NETWORK_ERROR") {
       return "Unable to connect to the server. Please check your internet connection.";
     }
-    
+
     // Handle specific status codes
     const status = (error as any)?.response?.status;
     switch (status) {
@@ -265,6 +264,18 @@ const ThreadsManager: React.FC<ThreadsManagerProps> = ({
         return "An unexpected error occurred. Please try again.";
     }
   }, [error]);
+
+  // Show thread detail view
+  // This conditional return comes AFTER all hooks
+  if (selectedThread) {
+    return (
+      <ThreadDetailView
+        threadId={selectedThread.id}
+        onBack={handleBackToList}
+        onChangesOccurred={() => refetch()}
+      />
+    );
+  }
 
   return (
     <div>

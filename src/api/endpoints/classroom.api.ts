@@ -33,7 +33,8 @@ export interface Student {
 }
 
 export interface Classroom {
-  _id: string;
+  _id?: string;
+  id?: string; // API now returns 'id' instead of '_id'
   name: string;
   section: Section;
   faculty: Faculty;

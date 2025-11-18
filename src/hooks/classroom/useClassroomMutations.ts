@@ -43,8 +43,10 @@ export const useCreateClassroomMutation = () => {
       // Invalidate classrooms list to refetch
       queryClient.invalidateQueries({ queryKey: classroomKeys.lists() });
 
+      // Support both id formats (API may return 'id' or '_id')
+      const classroomId = newClassroom.id || newClassroom._id;
       // Optionally navigate to the new classroom
-      navigate(`/dashboard/classrooms/${newClassroom._id}`);
+      navigate(`/dashboard/classrooms/${classroomId}`);
     },
     onError: (error: any) => {
       console.error(
@@ -143,8 +145,10 @@ export const useJoinClassroomMutation = () => {
       // Invalidate classrooms list to show new classroom
       queryClient.invalidateQueries({ queryKey: classroomKeys.lists() });
 
+      // Support both id formats (API may return 'id' or '_id')
+      const classroomId = data.classroom.id || data.classroom._id;
       // Navigate to the joined classroom
-      navigate(`/dashboard/classrooms/${data.classroom._id}`);
+      navigate(`/dashboard/classrooms/${classroomId}`);
     },
     onError: (error: any) => {
       console.error(

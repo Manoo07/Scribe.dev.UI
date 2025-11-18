@@ -85,11 +85,8 @@ const StudentsTab = ({ classroomId }: { classroomId: string }) => {
   // Get user role from localStorage (or context if you prefer)
   const userRole = (localStorage.getItem("role") || "STUDENT").toUpperCase();
 
-  // Clear selections when data changes - use stable IDs to prevent infinite loop
-  useEffect(() => {
-    setSelectedEnrolledStudents(new Set());
-    setSelectedAvailableStudents(new Set());
-  }, [enrolledStudents, eligibleStudents]); // Use the actual data arrays
+  // Don't use useEffect with array dependencies - it causes infinite loops
+  // Selections will be cleared after successful mutations instead
 
   const handleAddStudent = async (userId: string) => {
     setProcessingStudentId(userId);

@@ -76,8 +76,17 @@ const AppRoutes = () => {
           />
         </Route>
 
-        {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" />} />
+        {/* Fallback - redirect to dashboard if logged in, otherwise landing page */}
+        <Route
+          path="*"
+          element={
+            localStorage.getItem("token") ? (
+              <Navigate to="/dashboard" replace />
+            ) : (
+              <Navigate to="/" replace />
+            )
+          }
+        />
       </Routes>
     </Router>
   );

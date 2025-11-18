@@ -126,7 +126,19 @@ const MyClassroomsPage = () => {
 
     setDialogOpen(false);
 
-    deleteClassroomMutation.mutate(classroomToDelete._id, {
+    // Support both id formats
+    const classroomId = classroomToDelete.id || classroomToDelete._id;
+
+    if (!classroomId) {
+      toast({
+        title: "Error",
+        description: "Invalid classroom ID",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    deleteClassroomMutation.mutate(classroomId, {
       onSuccess: () => {
         toast({
           title: "Classroom Deleted Successfully! 🗑️",
@@ -177,7 +189,7 @@ const MyClassroomsPage = () => {
           userRole={userRole || undefined}
           onEditClassroom={handleEditClassroom}
           onDeleteClassroom={confirmDeleteClassroom}
-          deletingClassroomId={classroomToDelete?._id}
+          deletingClassroomId={classroomToDelete?.id || classroomToDelete?._id}
           isDeleting={deleteClassroomMutation.isPending}
           renderValue={renderValue}
           emptyActionButton={{

@@ -93,25 +93,29 @@ const ClassroomGrid: React.FC<ClassroomGridProps> = ({
 
   return (
     <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 ${className}`}>
-      {classrooms.map((classroom) => (
-        <ClassroomCard
-          key={classroom._id}
-          classroom={classroom}
-          userRole={userRole}
-          onEdit={
-            onEditClassroom
-              ? (classroom) => onEditClassroom(classroom as any, classroom)
-              : undefined
-          }
-          onDelete={
-            onDeleteClassroom
-              ? (classroom) => onDeleteClassroom(classroom as any, classroom)
-              : undefined
-          }
-          isDeleting={isDeleting && deletingClassroomId === classroom._id}
-          renderValue={renderValue}
-        />
-      ))}
+      {classrooms.map((classroom) => {
+        // Support both id formats (API returns 'id', but some places use '_id')
+        const classroomId = classroom.id || classroom._id;
+        return (
+          <ClassroomCard
+            key={classroomId}
+            classroom={classroom}
+            userRole={userRole}
+            onEdit={
+              onEditClassroom
+                ? (classroom) => onEditClassroom(classroom as any, classroom)
+                : undefined
+            }
+            onDelete={
+              onDeleteClassroom
+                ? (classroom) => onDeleteClassroom(classroom as any, classroom)
+                : undefined
+            }
+            isDeleting={isDeleting && deletingClassroomId === classroomId}
+            renderValue={renderValue}
+          />
+        );
+      })}
     </div>
   );
 };
