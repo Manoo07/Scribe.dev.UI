@@ -22,19 +22,29 @@ import ThreadsTab from "../components/threads/ThreadsTab";
 import MainLayout from "../layouts/MainLayout";
 import Announcements from "../pages/Announcements";
 
+import { useEffect } from "react";
+
 const AppRoutes = () => {
+  // Check for token and redirect from landing page if present
+  useEffect(() => {
+    if (window.location.pathname === "/") {
+      const token = localStorage.getItem("token");
+      if (token) {
+        window.location.replace("/dashboard");
+      }
+    }
+  }, []);
+
   return (
     <Router>
       <Routes>
-        {/* Public landing page */}
+        {/* Public landing page (only for unauthenticated users) */}
         <Route
           path="/"
           element={
             <MainLayout>
-              <>
-                <Hero />
-                <Features />
-              </>
+              <Hero />
+              <Features />
             </MainLayout>
           }
         />
@@ -66,8 +76,17 @@ const AppRoutes = () => {
           />
         </Route>
 
-        {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" />} />
+        {/* Fallback - redirect to dashboard if logged in, otherwise landing page */}
+        <Route
+          path="*"
+          element={
+            localStorage.getItem("token") ? (
+              <Navigate to="/dashboard" replace />
+            ) : (
+              <Navigate to="/" replace />
+            )
+          }
+        />
       </Routes>
     </Router>
   );

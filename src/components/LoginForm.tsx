@@ -14,8 +14,17 @@ const LoginForm = () => {
         "http://localhost:3000/api/v1/auth/signin",
         { email, password }
       );
-      localStorage.setItem('token',response.data.token);
-      navigate("/");
+      localStorage.setItem("token", response.data.token);
+
+      // Check if there's a redirect path stored (from session expiry)
+      const redirectPath = sessionStorage.getItem("redirectAfterLogin");
+      if (redirectPath) {
+        sessionStorage.removeItem("redirectAfterLogin");
+        navigate(redirectPath);
+      } else {
+        navigate("/dashboard");
+      }
+
       console.log("Login successful", response.data);
     } catch (err: any) {
       console.error("Login failed", err);

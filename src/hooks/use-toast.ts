@@ -22,6 +22,7 @@ export const useToast = () => {
     // Add methods to the toast function
     toastFn.success = (message: string) => sonnerToast.success(message);
     toastFn.error = (message: string) => sonnerToast.error(message);
+    toastFn.info = (message: string) => sonnerToast.info(message);
     toastFn.dismiss = (id?: string | number) => sonnerToast.dismiss(id);
 
     return toastFn;

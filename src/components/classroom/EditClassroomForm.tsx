@@ -1,6 +1,6 @@
-import axios from "axios";
 import { X } from "lucide-react";
 import React, { forwardRef, useEffect, useState } from "react";
+import { useUpdateClassroomMutation } from "../../hooks/classroom";
 import { useToast } from "../../hooks/use-toast";
 
 interface EditClassroomFormProps {
@@ -16,9 +16,11 @@ const EditClassroomForm = forwardRef<HTMLDivElement, EditClassroomFormProps>(
       name: "",
       description: "",
     });
-    const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
     const { toast } = useToast();
+
+    // Update classroom mutation
+    const updateClassroomMutation = useUpdateClassroomMutation();
 
     // Update form data when classroom prop changes
     useEffect(() => {
@@ -75,84 +77,65 @@ const EditClassroomForm = forwardRef<HTMLDivElement, EditClassroomFormProps>(
         return;
       }
 
-      setLoading(true);
-
       // Show loading toast
       const loadingToast = toast({
         title: "Updating Classroom",
         description: "Please wait while we save your changes...",
       });
 
-      try {
-        const token = localStorage.getItem("token");
+      const updateData = {
+        name: formData.name.trim(),
+        description: formData.description.trim() || null,
+      };
 
-        const updateData = {
-          name: formData.name.trim(),
-          description: formData.description.trim() || null,
-        };
+      updateClassroomMutation.mutate(
+        {
+          classroomId: classroom.id || classroom._id,
+          payload: updateData,
+        },
+        {
+          onSuccess: (data) => {
+            console.log("Classroom updated successfully:", data);
 
-        console.log("Updating classroom with data:", updateData);
+            // Dismiss loading toast and show success
+            loadingToast.dismiss();
+            toast({
+              title: "Classroom Updated Successfully! ✨",
+              description: `"${formData.name.trim()}" has been updated.`,
+            });
 
-        const response = await axios.put(
-          `http://localhost:3000/api/v1/classroom/${classroom.id}`,
-          updateData,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
+            // Notify other parts of the app that classroom was updated
+            localStorage.setItem(
+              "classroom-updated",
+              classroom.id || classroom._id
+            );
 
-        console.log("Classroom updated successfully:", response.data);
+            // Call the callback with the updated classroom data
+            onClassroomUpdated(data || { ...classroom, ...updateData });
+          },
+          onError: (error: any) => {
+            console.error("Error updating classroom:", error);
 
-        // Dismiss loading toast and show success
-        loadingToast.dismiss();
-        toast({
-          title: "Classroom Updated Successfully! ✨",
-          description: `"${formData.name.trim()}" has been updated.`,
-        });
+            // Dismiss loading toast and show error
+            loadingToast.dismiss();
 
-        // Notify other parts of the app that classroom was updated
-        localStorage.setItem("classroom-updated", classroom.id);
+            const errorMessage =
+              error?.response?.data?.message ||
+              error?.response?.data?.error ||
+              "Failed to update classroom";
 
-        // Call the callback with the updated classroom data
-        onClassroomUpdated(
-          response.data.classroom || { ...classroom, ...updateData }
-        );
-        toast.success("Classroom updated successfully");
-      } catch (error) {
-        console.error("Error updating classroom:", error);
-
-        // Dismiss loading toast and show error
-        loadingToast.dismiss();
-
-        if (axios.isAxiosError(error)) {
-          const errorMessage =
-            error.response?.data?.message ||
-            error.response?.data?.error ||
-            "Failed to update classroom";
-          console.error("Server error:", error.response?.data);
-
-          toast({
-            title: "Failed to Update Classroom",
-            description: errorMessage,
-            variant: "destructive",
-          });
-        } else {
-          toast({
-            title: "Failed to Update Classroom",
-            description: "An unexpected error occurred. Please try again.",
-            variant: "destructive",
-          });
+            toast({
+              title: "Failed to Update Classroom",
+              description: errorMessage,
+              variant: "destructive",
+            });
+          },
         }
-      } finally {
-        setLoading(false);
-      }
+      );
     };
 
     const handleClose = () => {
-      if (!loading) {
+      if (!updateClassroomMutation.isPending) {
         setFormData({ name: "", description: "" });
         setErrors({});
         onClose();
@@ -172,7 +155,7 @@ const EditClassroomForm = forwardRef<HTMLDivElement, EditClassroomFormProps>(
             <h3 className="text-lg font-semibold text-white">Edit Classroom</h3>
             <button
               onClick={handleClose}
-              disabled={loading}
+              disabled={updateClassroomMutation.isPending}
               className="text-gray-400 hover:text-white transition-colors disabled:opacity-50"
             >
               <X className="w-5 h-5" />
@@ -199,7 +182,7 @@ const EditClassroomForm = forwardRef<HTMLDivElement, EditClassroomFormProps>(
                   errors.name ? "border-red-500" : "border-gray-600"
                 }`}
                 placeholder="Enter classroom name"
-                disabled={loading}
+                disabled={updateClassroomMutation.isPending}
                 maxLength={100}
               />
               {errors.name && (
@@ -225,7 +208,7 @@ const EditClassroomForm = forwardRef<HTMLDivElement, EditClassroomFormProps>(
                   errors.description ? "border-red-500" : "border-gray-600"
                 }`}
                 placeholder="Enter classroom description (optional)"
-                disabled={loading}
+                disabled={updateClassroomMutation.isPending}
                 maxLength={500}
               />
               {errors.description && (
@@ -243,17 +226,19 @@ const EditClassroomForm = forwardRef<HTMLDivElement, EditClassroomFormProps>(
               <button
                 type="button"
                 onClick={handleClose}
-                disabled={loading}
+                disabled={updateClassroomMutation.isPending}
                 className="flex-1 px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                disabled={loading || !formData.name.trim()}
+                disabled={
+                  updateClassroomMutation.isPending || !formData.name.trim()
+                }
                 className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
               >
-                {loading ? (
+                {updateClassroomMutation.isPending ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                     Updating...
