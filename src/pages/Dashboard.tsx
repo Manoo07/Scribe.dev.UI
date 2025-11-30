@@ -1,8 +1,23 @@
 import { Bell, BookOpen, Calendar, Clock, FileText, Users } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { useEffect } from "react";
 
 const OverviewPage = () => {
-  const { user } = useAuth();
+  const { user, fetchFreshUserData } = useAuth();
+  
+  useEffect(() => {
+    const refreshUserData = async () => {
+      try {
+        await fetchFreshUserData();
+      } catch (error) {
+        console.error("Dashboard: Failed to fetch fresh user data:", error);
+      }
+    };
+    
+    if (user?.name === "" || !user?.name) {
+      refreshUserData();
+    }
+  }, [user?.name, fetchFreshUserData]);
   const upcomingAssignments = [
     {
       id: 1,

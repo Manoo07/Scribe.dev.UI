@@ -51,15 +51,14 @@ const Breadcrumb = () => {
   return (
     <nav className="text-sm text-white">
       <ol className="flex items-center space-x-2">
-        {/* Dashboard link */}
-        <li>
-          <Link
-            to="/dashboard/overview"
-            className="hover:text-gray-300 font-medium"
-          >
-            Dashboard
-          </Link>
-        </li>
+        {/* Dashboard link - only show if not on dashboard */}
+        {pathnames.length > 0 && pathnames[0] !== "dashboard" && (
+          <li>
+            <Link to="/dashboard" className="hover:text-gray-300 font-medium">
+              Dashboard
+            </Link>
+          </li>
+        )}
 
         {/* Dynamic path segments */}
         {pathnames.map((segment, index) => {
@@ -82,21 +81,12 @@ const Breadcrumb = () => {
           ) {
             label = classroomName;
           }
-
-          // If this segment is a unit id, show unitName if available
-          const unitIndex = pathnames.findIndex((seg) => seg === "units");
-          if (
-            unitIndex !== -1 &&
-            index === unitIndex + 1 &&
-            /^[a-f0-9\-]{24,}$/i.test(segment) &&
-            unitName
-          ) {
-            label = unitName;
-          }
-
+  
+          const showSeparator = (pathnames.length > 0 && pathnames[0] !== "dashboard") || index > 0;
+          
           return (
             <li key={routeTo} className="flex items-center space-x-2">
-              <span className="mx-1 text-gray-500">/</span>
+              {showSeparator && <span className="mx-1 text-gray-500">/</span>}
               {isLast ? (
                 <span className="text-gray-300">{label}</span>
               ) : (
