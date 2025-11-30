@@ -34,10 +34,10 @@ const ThreadsList: React.FC<ThreadsListProps> = ({
   isLoading,
   onThreadClick,
   onCreateThread,
-  showFilters = true,
+  showFilters: _showFilters = true,
   classroomContext,
-  selectedUnit,
-  setSelectedUnit,
+  selectedUnit: _selectedUnit = "all",
+  setSelectedUnit: _setSelectedUnit = () => {},
   error,
   success,
   onRefresh,
@@ -99,20 +99,20 @@ const ThreadsList: React.FC<ThreadsListProps> = ({
   }, [isFilterOpen]);
 
   // Handle thread deletion
-  const handleThreadDelete = (deletedThreadId: string) => {
+  const handleThreadDelete = (_deletedThreadId: string) => {
     // If we have a refresh function, use it to get fresh data
     if (onRefresh) {
       onRefresh();
     }
   };
 
-  // Get unique categories from generic threads
-  const availableCategories = useMemo(() => {
-    const categories = threads
-      .filter((thread) => thread.threadType === "generic")
-      .map((thread) => thread.category);
-    return [...new Set(categories)];
-  }, [threads]);
+  // Get unique categories from generic threads (commented out as not used)
+  // const _availableCategories = useMemo(() => {
+  //   const categories = threads
+  //     .filter((thread) => thread.threadType === "generic")
+  //     .map((thread) => thread.category);
+  //   return [...new Set(categories)];
+  // }, [threads]);
 
   // Sort threads
   const sortedThreads = useMemo(() => {

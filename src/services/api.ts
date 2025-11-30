@@ -223,7 +223,6 @@ export const createThread = async (data: CreateThreadPayload): Promise<any> => {
     throw error;
   }
 };
-import axios from "axios";
 import {
   CreateReplyPayload,
   CreateThreadPayload,
@@ -232,82 +231,17 @@ import {
   LikeResponse,
   ThreadReply,
 } from "../components/threads/threadTypes";
+import api from "../lib/axiosInstance";
 import { ContentType, Unit } from "../types";
 import { ensureToken } from "../utils/authUtils";
 import { mockUnits } from "./mockData";
 
-// Base URL for API requests
-const API_BASE_URL = "http://localhost:3000/api/v1";
-
-// Get token from localStorage
-const getToken = () => localStorage.getItem("token");
-
-// Create axios instance with default headers
-const api = axios.create({
-  baseURL: API_BASE_URL,
-});
+// Use the centralized axios instance
 
 interface UpdateContentPayload {
   type: ContentType;
   content: string;
 }
-
-// Add token to all requests
-api.interceptors.request.use((config) => {
-  const token = getToken();
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-    // Debug logging for like endpoints
-    if (config.url?.includes("/like") || config.url?.includes("/likes")) {
-      console.log("🔐 Token being sent for like request:", {
-        url: config.url,
-        method: config.method,
-        hasToken: !!token,
-        tokenLength: token.length,
-      });
-    }
-  } else {
-    console.warn("⚠️ No token found for request:", config.url);
-  }
-  return config;
-});
-
-// Handle response errors (especially token expiry)
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401 || error.response?.status === 403) {
-      // Token expired or invalid
-      console.log("Authentication error detected:", error.response.status);
-
-      // Clear local storage
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      localStorage.removeItem("role");
-      localStorage.removeItem("userId");
-
-      // Use custom event to notify the app about authentication failure
-      // This will be handled by the AuthContext to show the proper session expiry modal
-      if (
-        window.location.pathname !== "/login" &&
-        window.location.pathname !== "/signup"
-      ) {
-        const authErrorEvent = new CustomEvent("auth-error", {
-          detail: {
-            status: error.response?.status,
-            message:
-              error.response?.status === 401
-                ? "Your session has expired. Please login again."
-                : "Access denied. Please login again.",
-          },
-        });
-        window.dispatchEvent(authErrorEvent);
-      }
-    }
-
-    return Promise.reject(error);
-  }
-);
 
 // API functions
 

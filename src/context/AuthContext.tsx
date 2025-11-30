@@ -92,7 +92,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             localStorage.setItem("user", JSON.stringify(user));
             localStorage.setItem("role", user.role);
             localStorage.setItem("userId", user.id);
-            localStorage.setItem("lastUserFetch", now.toString()); // Update last fetch time
+            localStorage.setItem("lastUserFetch", now.toString());
 
             setUser(user);
             console.log("✅ Fresh user data loaded from /auth/me:", user);
@@ -179,6 +179,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   // Handle login from session expiry modal
   const handleLoginFromExpiry = useCallback(() => {
     setShowSessionExpiry(false);
+
+    // Store current location to redirect back after login
+    const currentPath = window.location.pathname;
+    if (currentPath !== "/login" && currentPath !== "/signup") {
+      sessionStorage.setItem("redirectAfterLogin", currentPath);
+    }
+
     clearAuth();
     window.location.href = "/login";
   }, [clearAuth]);

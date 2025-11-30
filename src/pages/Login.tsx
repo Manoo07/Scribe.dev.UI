@@ -45,7 +45,15 @@ const Login: React.FC = () => {
       setUserRole(role as UserRole);
 
       console.log("Login successful");
-      navigate("/dashboard");
+
+      // Check if there's a redirect path stored (from session expiry)
+      const redirectPath = sessionStorage.getItem("redirectAfterLogin");
+      if (redirectPath) {
+        sessionStorage.removeItem("redirectAfterLogin");
+        navigate(redirectPath);
+      } else {
+        navigate("/dashboard");
+      }
     } catch (error: any) {
       console.error("Login failed", error);
       const errorMessage =

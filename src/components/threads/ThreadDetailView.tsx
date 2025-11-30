@@ -23,13 +23,10 @@ import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../hooks/use-toast";
 import { useOwnership } from "../../hooks/useOwnership";
 import {
-  acceptAnswer,
   createReply,
   deleteThread,
   fetchThreadDetail,
-  toggleReplyLike,
   toggleThreadLike,
-  unmarkAnswer,
   updateThread,
 } from "../../services/api";
 import ConfirmationDialog from "../ui/ConfirmationDialog";
@@ -393,7 +390,10 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
     }
 
     try {
-      console.log("🔄 Calling createReply API with:", { threadId: thread.id, content });
+      console.log("🔄 Calling createReply API with:", {
+        threadId: thread.id,
+        content,
+      });
       const newReply = await createReply({
         threadId: thread.id,
         content: content,

@@ -6,6 +6,7 @@ import AttendanceCalendar from "../attendanceTab/AttendanceCalander";
 import AttendanceForm from "../attendanceTab/AttendanceForm";
 import AttendanceStats from "../attendanceTab/AttendanceStats";
 import StudentAttendanceView from "../attendanceTab/StudentAttendanceView";
+import { TabContainer } from "../shared";
 
 interface AttendanceTabProps {
   classroomId: string;
@@ -46,23 +47,14 @@ const AttendanceTab = ({
 
   if (userRole === "student") {
     return (
-      <div className="py-4">
-        <h2 className="text-xl font-semibold text-white mb-6 flex items-center">
-          <Calendar className="mr-3 h-5 w-5 text-blue-400" />
-          Attendance Dashboard
-        </h2>
+      <TabContainer title="Attendance Dashboard">
         <StudentAttendanceView classroomId={classroomId} studentId={userId} />
-      </div>
+      </TabContainer>
     );
   }
 
   return (
-    <div className="py-4">
-      <h2 className="text-xl font-semibold text-white mb-6 flex items-center">
-        <Calendar className="mr-3 h-5 w-5 text-blue-400" />
-        Attendance Management
-      </h2>
-
+    <TabContainer title="Attendance Management">
       <Tabs defaultValue="mark" className="w-full">
         <TabsList className="grid w-full grid-cols-2 mb-6">
           <TabsTrigger value="mark" className="flex items-center space-x-2">
@@ -102,7 +94,7 @@ const AttendanceTab = ({
           <AttendanceStats classroomId={classroomId} />
         </TabsContent>
       </Tabs>
-    </div>
+    </TabContainer>
   );
 };
 

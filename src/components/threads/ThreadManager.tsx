@@ -1,15 +1,63 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useToast } from "../../hooks/use-toast";
+import { useThreadsQuery } from "../../hooks/threads/useThreadQueries";
 import {
-  createThread,
-  fetchClassroomThreads,
-  fetchThreads,
-  fetchUnitThreads,
-} from "../../services/api";
+  useCreateThreadMutation,
+  useToggleThreadLikeMutation,
+} from "../../hooks/threads/useThreadMutations";
 import EnhancedNewThreadModal from "./EnhancedNewThreadModal";
 import ThreadDetailView from "./ThreadDetailView";
 import ThreadsList from "./ThreadList";
 import { Thread } from "./threadTypes";
+import { Thread as ApiThread } from "../../api/endpoints/threads.api";
+
+// Helper function to convert API threads to component threads
+const convertApiThreadToComponentThread = (
+  apiThread: ApiThread,
+  context: "global" | "classroom",
+  classroomData?: any
+): Thread => {
+  const baseThread = {
+    id: apiThread.id,
+    title: apiThread.title,
+    content: apiThread.content,
+    user: {
+      id: apiThread.authorId || "",
+      name: apiThread.authorName || "",
+    },
+    threadStatus: "UNANSWERED" as const,
+    createdAt: apiThread.createdAt,
+    updatedAt: apiThread.updatedAt,
+    acceptedAnswerId: apiThread.acceptedReplyId,
+    likesCount: apiThread.likesCount,
+    isLikedByMe: apiThread.isLiked,
+    // Legacy fields
+    authorId: apiThread.authorId,
+    authorName: apiThread.authorName,
+    repliesCount: apiThread.repliesCount,
+  };
+
+  if (context === "classroom" && classroomData) {
+    return {
+      ...baseThread,
+      threadType: "classroom",
+      classroomId: apiThread.classroomId || classroomData.id,
+      classroomName: classroomData.name,
+      unitId: apiThread.unitId || "",
+      unitName: apiThread.unitId
+        ? classroomData.units?.find((u: any) => u.id === apiThread.unitId)
+            ?.name || ""
+        : "",
+    };
+  } else {
+    return {
+      ...baseThread,
+      threadType: "generic",
+      category: "general",
+      visibility: "public",
+    };
+  }
+};
 
 interface ThreadsManagerProps {
   context: "global" | "classroom";
@@ -25,257 +73,89 @@ const ThreadsManager: React.FC<ThreadsManagerProps> = ({
   classroomData,
 }) => {
   const { toast } = useToast();
-  const [threads, setThreads] = useState<Thread[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isCreating, setIsCreating] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+
+  // UI State
   const [page, setPage] = useState<number>(1);
-  const [hasNext, setHasNext] = useState<boolean>(false);
-  const [total, setTotal] = useState<number>(0);
   const [selectedUnit, setSelectedUnit] = useState<string>("all");
-  const pageSize = 10;
-
-  // Filter state with proper API mapping
-  const [currentFilters, setCurrentFilters] = useState({
-    sortBy: "mostRecent", // Default to mostRecent
-    limit: 20, // Default limit
-  });
-
-  // Use ref to store current filters to avoid dependency issues
-  const currentFiltersRef = useRef({
-    sortBy: "mostRecent",
-    limit: 20,
-  });
-
-  // Use ref to store classroom data to avoid dependency issues
-  const classroomDataRef = useRef(classroomData);
-
-  // Track if data needs refresh
-  const [lastRefreshTime, setLastRefreshTime] = useState<number>(Date.now());
-  const [hasChanges, setHasChanges] = useState<boolean>(false);
-
-  // Fetch threads from API
-  const fetchData = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      let data;
-
-      // Map current filters to API format inline to avoid dependency issues
-      const apiFilters = (() => {
-        const filters = { ...currentFiltersRef.current };
-        switch (filters.sortBy) {
-          case "mostRecent":
-            filters.sortBy = "mostRecent";
-            filters.limit = 20;
-            break;
-          case "mostReplied":
-            filters.sortBy = "mostReplied";
-            filters.limit = 15;
-            break;
-          case "mostLiked":
-            filters.sortBy = "mostLiked";
-            filters.limit = 10;
-            break;
-          case "alphabetical":
-            filters.sortBy = "alphabetical";
-            filters.limit = 25;
-            break;
-          default:
-            filters.sortBy = "mostRecent";
-            filters.limit = 20;
-            break;
-        }
-        return filters;
-      })();
-
-      if (context === "classroom" && classroomDataRef.current?.id) {
-        if (selectedUnit && selectedUnit !== "all") {
-          // Fetch threads for specific unit within classroom
-          data = await fetchUnitThreads(selectedUnit, page, pageSize);
-        } else {
-          // Fetch all threads for the classroom with current filters
-          data = await fetchClassroomThreads(
-            classroomDataRef.current.id,
-            page,
-            pageSize,
-            apiFilters
-          );
-        }
-      } else {
-        // Fetch global threads with current filters
-        data = await fetchThreads(page, pageSize, apiFilters);
-      }
-
-      setThreads(data.threads || []);
-      setHasNext(data.pagination?.hasNext || false);
-      setTotal(data.pagination?.total || 0);
-    } catch (err: any) {
-      const errorMessage =
-        err?.response?.data?.message ||
-        err?.message ||
-        "Failed to fetch threads";
-      setError(errorMessage);
-      setThreads([]);
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [context, page, selectedUnit, pageSize]);
-
-  // Fetch data with filters
-  const fetchDataWithFilters = useCallback(
-    async (filters: any) => {
-      console.log("🔄 fetchDataWithFilters called with:", filters);
-      setIsLoading(true);
-      setError(null);
-      try {
-        let data;
-
-        if (context === "classroom" && classroomData?.id) {
-          if (selectedUnit && selectedUnit !== "all") {
-            // Fetch threads for specific unit within classroom
-            console.log("🔄 Fetching unit threads for:", selectedUnit);
-            data = await fetchUnitThreads(selectedUnit, page, pageSize);
-          } else {
-            // Fetch all threads for the classroom with filters
-            console.log("🔄 Fetching classroom threads with filters:", {
-              classroomId: classroomData.id,
-              filters,
-              page,
-              pageSize,
-            });
-            data = await fetchClassroomThreads(
-              classroomData.id,
-              page,
-              pageSize,
-              filters
-            );
-          }
-        } else {
-          // Fetch global threads with filters
-          console.log("🔄 Fetching global threads with filters:", {
-            filters,
-            page,
-            pageSize,
-          });
-          data = await fetchThreads(page, pageSize, filters);
-        }
-
-        setThreads(data.threads || []);
-        setHasNext(data.pagination?.hasNext || false);
-        setTotal(data.pagination?.total || 0);
-      } catch (err: any) {
-        const errorMessage =
-          err?.response?.data?.message ||
-          err?.message ||
-          "Failed to fetch threads";
-        setError(errorMessage);
-        setThreads([]);
-        toast({
-          title: "Error",
-          description: errorMessage,
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [context, classroomData?.id, page, selectedUnit, pageSize, toast]
-  );
-
-  // Handle filter changes from ThreadList
-  const handleFiltersChange = useCallback(
-    (filters: { sortBy: string }) => {
-      console.log("🔄 Filter change received:", filters);
-
-      // Create the complete filter object
-      const newFilters = {
-        ...currentFilters,
-        ...filters,
-      };
-
-      console.log("🔄 Complete filters object:", newFilters);
-
-      // Update the current filters state and ref
-      setCurrentFilters(newFilters);
-      currentFiltersRef.current = newFilters;
-
-      // Reset to first page when filters change
-      setPage(1);
-
-      // Map UI filters to API filters inline and trigger data refresh
-      const apiFilters = (() => {
-        const mappedFilters = { ...newFilters };
-        switch (mappedFilters.sortBy) {
-          case "mostRecent":
-            mappedFilters.sortBy = "mostRecent";
-            mappedFilters.limit = 20;
-            break;
-          case "mostReplied":
-            mappedFilters.sortBy = "mostReplied";
-            mappedFilters.limit = 15;
-            break;
-          case "mostLiked":
-            mappedFilters.sortBy = "mostLiked";
-            mappedFilters.limit = 10;
-            break;
-          case "alphabetical":
-            mappedFilters.sortBy = "alphabetical";
-            mappedFilters.limit = 25;
-            break;
-          default:
-            mappedFilters.sortBy = "mostRecent";
-            mappedFilters.limit = 20;
-            break;
-        }
-        return mappedFilters;
-      })();
-
-      fetchDataWithFilters(apiFilters);
-    },
-    [fetchDataWithFilters]
-  );
-
-  // Sync ref with state
-  useEffect(() => {
-    currentFiltersRef.current = currentFilters;
-  }, [currentFilters]);
-
-  // Sync classroomData ref
-  useEffect(() => {
-    classroomDataRef.current = classroomData;
-  }, [classroomData]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createModalType, setCreateModalType] = useState<
     "classroom" | "generic"
   >("generic");
   const [selectedThread, setSelectedThread] = useState<Thread | null>(null);
 
+  // Filter state
+  const [currentFilters, setCurrentFilters] = useState({
+    sortBy: "recent" as "recent" | "popular" | "unanswered",
+    limit: 20,
+  });
+
+  // Memoize query parameters to prevent unnecessary re-renders
+  const queryParams = useMemo(() => {
+    const params: any = {
+      page,
+      limit: currentFilters.limit,
+      sortBy: currentFilters.sortBy,
+    };
+
+    if (context === "classroom" && classroomData?.id) {
+      if (selectedUnit && selectedUnit !== "all") {
+        params.unitId = selectedUnit;
+      } else {
+        params.classroomId = classroomData.id;
+      }
+    }
+
+    return params;
+  }, [context, classroomData?.id, selectedUnit, page, currentFilters]);
+
+  // TanStack Query for fetching threads with optimized settings
+  const {
+    data: threadsResponse,
+    isLoading,
+    isFetching,
+    error,
+    refetch,
+    isPlaceholderData,
+  } = useThreadsQuery(queryParams);
+
+  // TanStack Query mutations
+  const createThreadMutation = useCreateThreadMutation();
+  const toggleThreadLikeMutation = useToggleThreadLikeMutation();
+
+  // Extract data from query response and convert to component format
+  const threads: Thread[] = useMemo(() => {
+    if (!threadsResponse?.threads) return [];
+    return threadsResponse.threads.map((apiThread) =>
+      convertApiThreadToComponentThread(apiThread, context, classroomData)
+    );
+  }, [threadsResponse?.threads, context, classroomData]);
+
+  const hasNext = threadsResponse?.pagination?.hasMore || false;
+  const total = threadsResponse?.pagination?.totalThreads || 0;
+  const pageSize = queryParams.limit;
+
+  // Handle filter changes
+  const handleFiltersChange = (filters: { sortBy: string }) => {
+    setCurrentFilters((prev) => ({
+      ...prev,
+      sortBy: filters.sortBy as "recent" | "popular" | "unanswered",
+    }));
+    setPage(1); // Reset to first page when filters change
+  };
+
+  // Handle thread creation
   const handleCreateThread = (threadType: "classroom" | "generic") => {
     setCreateModalType(threadType);
     setShowCreateModal(true);
   };
 
-  // threadData: { title, content, unitId? }
+  // Handle thread submission with better error handling and success feedback
   const handleSubmitThread = async (threadData: {
     title: string;
     content: string;
     unitId?: string;
   }) => {
-    setIsCreating(true);
     try {
-      // Add classroomId if we're in classroom context
       const threadPayload = {
         ...threadData,
         classroomId:
@@ -284,25 +164,19 @@ const ThreadsManager: React.FC<ThreadsManagerProps> = ({
             : undefined,
       };
 
-      await createThread(threadPayload);
+      const newThread = await createThreadMutation.mutateAsync(threadPayload);
 
-      // Show success message
-      setSuccess("Thread created successfully!");
       toast({
         title: "Success!",
-        description: "Thread created successfully",
+        description: `Thread "${newThread.title}" created successfully`,
         variant: "default",
       });
 
-      // Reset to first page and refresh data
-      setPage(1);
-      await fetchData();
-
-      // Close modal
+      setPage(1); // Reset to first page to see new thread
       setShowCreateModal(false);
 
-      // Clear success message after 3 seconds
-      setTimeout(() => setSuccess(null), 3000);
+      // Scroll to top to see the new thread
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err: any) {
       const errorMessage =
         err?.response?.data?.message ||
@@ -313,78 +187,92 @@ const ThreadsManager: React.FC<ThreadsManagerProps> = ({
         description: errorMessage,
         variant: "destructive",
       });
-    } finally {
-      setIsCreating(false);
     }
   };
 
+  // Handle thread click
   const handleThreadClick = (thread: Thread) => {
     setSelectedThread(thread);
   };
 
+  // Handle back to list
   const handleBackToList = () => {
-    // Always refresh data when going back to ensure we have the latest information
-    // This handles cases where changes might not have been properly tracked
-    if (hasChanges) {
-      handleSmartRefresh();
-    } else {
-      fetchData();
-    }
-
     setSelectedThread(null);
+    refetch(); // Refresh data when returning to list
   };
 
+  // Handle refresh
   const handleRefresh = () => {
-    fetchData();
+    refetch();
   };
 
-  // Smart refresh that only fetches data when there are changes
-  const handleSmartRefresh = useCallback(async () => {
-    // If no changes detected, don't make API call
-    if (!hasChanges) {
-      return;
+  // Handle thread like toggle with optimistic updates
+  const handleThreadLikeToggle = async (
+    threadId: string,
+    _newLikeCount: number,
+    _isLiked: boolean
+  ) => {
+    try {
+      await toggleThreadLikeMutation.mutateAsync(threadId);
+      // The mutation hook will automatically update the cache
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to toggle thread like",
+        variant: "destructive",
+      });
     }
+  };
 
-    setHasChanges(false);
-
-    await fetchData();
-  }, [hasChanges, fetchData]);
-
-  // Mark that changes have occurred (called by child components)
-  const markChangesOccurred = useCallback(() => {
-    setHasChanges(true);
-  }, []);
-
-  // Handle thread like toggle updates
-  const handleThreadLikeToggle = useCallback(
-    (threadId: string, newLikeCount: number, isLiked: boolean) => {
-      // Update the thread in the local threads array
-      setThreads((prevThreads) =>
-        prevThreads.map((thread) =>
-          thread.id === threadId
-            ? { ...thread, likesCount: newLikeCount, isLikedByMe: isLiked }
-            : thread
-        )
-      );
-
-      // Mark that changes occurred
-      markChangesOccurred();
-    },
-    [markChangesOccurred]
-  );
-
+  // Handle page change
   const handlePageChange = (newPage: number) => {
     setPage(newPage);
-    // Scroll to top when changing pages
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  // Show error from TanStack Query with better error messaging
+  // IMPORTANT: This useMemo must be called before any conditional returns
+  const errorMessage = useMemo(() => {
+    if (!error) return null;
+
+    // Handle different types of errors
+    if ((error as any)?.response?.data?.message) {
+      return (error as any).response.data.message;
+    }
+
+    if (error.message) {
+      return error.message;
+    }
+
+    // Handle network errors
+    if ((error as any)?.code === "NETWORK_ERROR") {
+      return "Unable to connect to the server. Please check your internet connection.";
+    }
+
+    // Handle specific status codes
+    const status = (error as any)?.response?.status;
+    switch (status) {
+      case 401:
+        return "You are not authorized to view this content.";
+      case 403:
+        return "You don't have permission to access this resource.";
+      case 404:
+        return "The requested content was not found.";
+      case 500:
+        return "A server error occurred. Please try again later.";
+      default:
+        return "An unexpected error occurred. Please try again.";
+    }
+  }, [error]);
+
+  // Show thread detail view
+  // This conditional return comes AFTER all hooks
   if (selectedThread) {
     return (
       <ThreadDetailView
         threadId={selectedThread.id}
         onBack={handleBackToList}
-        onChangesOccurred={markChangesOccurred}
+        onChangesOccurred={() => refetch()}
       />
     );
   }
@@ -400,20 +288,20 @@ const ThreadsManager: React.FC<ThreadsManagerProps> = ({
         classroomContext={context === "classroom" ? classroomData : undefined}
         selectedUnit={selectedUnit}
         setSelectedUnit={setSelectedUnit}
-        error={error}
-        success={success}
+        error={errorMessage}
+        success={null} // Remove manual success state as TanStack Query handles this
         onRefresh={handleRefresh}
-        isCreating={isCreating}
-        onChangesOccurred={markChangesOccurred}
-        onFiltersChange={handleFiltersChange} // Pass the new handler
+        isCreating={createThreadMutation.isPending}
+        onChangesOccurred={() => refetch()}
+        onFiltersChange={handleFiltersChange}
         onThreadLikeToggle={handleThreadLikeToggle}
       />
 
-      {/* Pagination Controls */}
+      {/* Pagination Controls with improved loading states */}
       <div className="flex justify-center items-center mt-6 gap-4">
         <button
           className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          disabled={page === 1 || isLoading}
+          disabled={page === 1 || isLoading || isFetching}
           onClick={() => handlePageChange(Math.max(1, page - 1))}
         >
           Previous
@@ -426,23 +314,27 @@ const ThreadsManager: React.FC<ThreadsManagerProps> = ({
               of {Math.ceil(total / pageSize)}
             </span>
           )}
+          {/* Show loading indicator for pagination */}
+          {isFetching && !isLoading && (
+            <span className="text-blue-500 text-sm ml-2">Updating...</span>
+          )}
         </div>
 
         <button
           className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          disabled={!hasNext || isLoading}
+          disabled={!hasNext || isLoading || isFetching || isPlaceholderData}
           onClick={() => handlePageChange(page + 1)}
         >
           Next
         </button>
 
-        {/* Refresh Button */}
+        {/* Enhanced Refresh Button */}
         <button
           onClick={handleRefresh}
-          disabled={isLoading}
+          disabled={isLoading || isFetching}
           className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors ml-4"
         >
-          {isLoading ? "Refreshing..." : "Refresh"}
+          {isFetching ? "Refreshing..." : "Refresh"}
         </button>
       </div>
 
@@ -455,7 +347,7 @@ const ThreadsManager: React.FC<ThreadsManagerProps> = ({
           }
           onClose={() => setShowCreateModal(false)}
           onSubmit={handleSubmitThread}
-          isCreating={isCreating}
+          isCreating={createThreadMutation.isPending}
         />
       )}
     </div>

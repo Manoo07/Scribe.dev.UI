@@ -30,11 +30,17 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   handleRefresh = () => {
+    // Reset error state and reload
+    this.setState({ hasError: false, error: null, errorInfo: null });
     window.location.reload();
   };
 
   handleGoHome = () => {
-    window.location.href = "/";
+    // Reset error state before navigating
+    this.setState({ hasError: false, error: null, errorInfo: null });
+    // Use router navigation instead of hard redirect
+    window.history.pushState({}, "", "/dashboard");
+    window.location.reload();
   };
 
   render() {
