@@ -52,7 +52,7 @@ const Login: React.FC = () => {
         sessionStorage.removeItem("redirectAfterLogin");
         navigate(redirectPath);
       } else {
-        navigate("/dashboard");
+        navigate("/");
       }
     } catch (error: any) {
       console.error("Login failed", error);

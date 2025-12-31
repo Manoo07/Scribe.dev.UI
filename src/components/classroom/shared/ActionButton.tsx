@@ -56,7 +56,7 @@ const ActionButton: React.FC<ActionButtonProps> = ({
         </>
       ) : (
         <>
-          {Icon && <Icon className="h-4 w-4 mr-2" />}
+          {Icon && <Icon className={`${size === 'sm' ? 'h-4 w-4' : 'h-4 w-4'} mr-2`} />}
           {text}
         </>
       )}

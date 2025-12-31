@@ -37,8 +37,8 @@ const ClassroomGrid: React.FC<ClassroomGridProps> = ({
 }) => {
   // Custom loading component for classroom grid
   const ClassroomLoadingState = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {Array(4)
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {Array(6)
         .fill(0)
         .map((_, idx) => (
           <div
@@ -92,7 +92,7 @@ const ClassroomGrid: React.FC<ClassroomGridProps> = ({
   }
 
   return (
-    <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 ${className}`}>
+    <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 ${className}`}>
       {classrooms.map((classroom) => {
         // Support both id formats (API returns 'id', but some places use '_id')
         const classroomId = classroom.id || classroom._id;

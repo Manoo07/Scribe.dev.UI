@@ -23,6 +23,7 @@ interface UnitsListProps {
   onUnitSelect: (unitId: string) => void;
   onUnitEdit: (unitId: string) => void;
   onRefresh: () => void;
+  userRole?: string;
 }
 
 const UnitsList: React.FC<UnitsListProps> = ({
@@ -31,6 +32,7 @@ const UnitsList: React.FC<UnitsListProps> = ({
   onUnitSelect,
   onUnitEdit,
   onRefresh,
+  userRole,
 }) => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [deletingUnitId, setDeletingUnitId] = useState<string | null>(null);
@@ -151,23 +153,21 @@ const UnitsList: React.FC<UnitsListProps> = ({
 
   return (
     <div>
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-        <h2 className="text-2xl font-semibold text-white">Course Units</h2>
-
-        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-          <div className="relative flex-grow">
+      <div className="flex flex-col sm:flex-row justify-end items-start sm:items-center mb-4 gap-2">
+        <div className="flex flex-col sm:flex-row gap-2 w-full">
+          <div className="relative flex-grow sm:min-w-[280px]">
             <input
               type="text"
               placeholder="Search units..."
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 sm:flex-shrink-0">
             <select
-              className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all min-w-[130px]"
               value={filterType}
               onChange={(e) =>
                 setFilterType(e.target.value as ContentType | "ALL")
@@ -182,9 +182,9 @@ const UnitsList: React.FC<UnitsListProps> = ({
 
             <button
               onClick={() => setIsCreateModalOpen(true)}
-              className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+              className="bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium px-3 py-2 rounded-lg flex items-center gap-1.5 transition-colors whitespace-nowrap"
             >
-              <Plus size={18} />
+              <Plus size={16} />
               <span>New Unit</span>
             </button>
           </div>
@@ -207,7 +207,7 @@ const UnitsList: React.FC<UnitsListProps> = ({
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredUnits.map((unit) => (
             <UnitCard
               key={unit.id}
@@ -220,6 +220,7 @@ const UnitsList: React.FC<UnitsListProps> = ({
               onView={() => onUnitSelect(unit.id)}
               onDelete={() => handleDeleteUnit(unit.id)}
               isDeleting={deletingUnitId === unit.id}
+              userRole={userRole}
             />
           ))}
 

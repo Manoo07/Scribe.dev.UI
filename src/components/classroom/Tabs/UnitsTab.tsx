@@ -3,7 +3,7 @@ import { Unit } from "../../../types/index";
 import ContentUploader from "../../EditContentModal";
 import UnitDetail from "../../UnitDetails";
 import UnitsList from "../../UnitList";
-import { LoadingState, TabContainer } from "../shared";
+import { LoadingState } from "../shared";
 
 interface UnitsTabProps {
   classroomId: string;
@@ -11,6 +11,7 @@ interface UnitsTabProps {
   setUnits: (units: Unit[]) => void;
   loading: boolean;
   onUnitsRefresh?: () => void;
+  userRole?: string;
 }
 
 const UnitsTab: React.FC<UnitsTabProps> = ({
@@ -19,6 +20,7 @@ const UnitsTab: React.FC<UnitsTabProps> = ({
   setUnits,
   loading,
   onUnitsRefresh,
+  userRole,
 }) => {
   const [activeUnitId, setActiveUnitId] = useState<string | null>(null);
   const [isUploaderOpen, setIsUploaderOpen] = useState(false);
@@ -52,35 +54,20 @@ const UnitsTab: React.FC<UnitsTabProps> = ({
   const activeUnit = units.find((unit) => unit.id === activeUnitId);
 
   if (loading) {
-    return (
-      <TabContainer
-        title="Units"
-        subtitle="Manage your units and educational materials"
-      >
-        <LoadingState cardCount={6} />
-      </TabContainer>
-    );
+    return <LoadingState cardCount={6} />;
   }
 
   if (error) {
     return (
-      <TabContainer
-        title="Units"
-        subtitle="Manage your units and educational materials"
-      >
-        <div className="bg-red-900/20 border border-red-500 p-6 rounded-lg max-w-md mx-auto">
-          <h2 className="text-red-400 text-xl font-bold mb-2">Error</h2>
-          <p className="text-white mb-4">{error}</p>
-        </div>
-      </TabContainer>
+      <div className="bg-red-900/20 border border-red-500 p-6 rounded-lg max-w-md mx-auto">
+        <h2 className="text-red-400 text-xl font-bold mb-2">Error</h2>
+        <p className="text-white mb-4">{error}</p>
+      </div>
     );
   }
 
   return (
-    <TabContainer
-      title="Units"
-      subtitle="Manage your units and educational materials"
-    >
+    <>
       {activeUnit && !isUploaderOpen ? (
         <UnitDetail
           unit={activeUnit}
@@ -103,9 +90,10 @@ const UnitsTab: React.FC<UnitsTabProps> = ({
           onUnitSelect={handleUnitSelect}
           onUnitEdit={handleOpenUploader}
           onRefresh={() => handleRefresh(units)}
+          userRole={userRole}
         />
       )}
-    </TabContainer>
+    </>
   );
 };
 

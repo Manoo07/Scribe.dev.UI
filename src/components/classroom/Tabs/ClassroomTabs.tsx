@@ -37,7 +37,7 @@ const ClassroomTabs = ({
                 className={cn(
                   "block w-full text-left px-4 py-2 hover:bg-gray-700",
                   tab === activeTab
-                    ? "bg-gray-700 text-indigo-400"
+                    ? "bg-gray-700 text-blue-400"
                     : "text-gray-300"
                 )}
               >
@@ -57,7 +57,7 @@ const ClassroomTabs = ({
             className={cn(
               "pb-2 px-3 whitespace-nowrap transition-colors",
               tab === activeTab
-                ? "border-b-2 border-indigo-500 text-white font-medium"
+                ? "border-b-2 border-blue-500 text-white font-medium"
                 : "text-gray-400 hover:text-white"
             )}
           >

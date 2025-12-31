@@ -40,9 +40,6 @@ export const DashboardThreadsSection: React.FC = () => {
   return (
     <div className="bg-gray-900 p-6">
       <div className="max-w-4xl mx-auto">
-        <h2 className="text-2xl font-bold text-white mb-6">
-          Recent Discussions
-        </h2>
         <ThreadsManager context="global" />
       </div>
     </div>

@@ -3,11 +3,7 @@ import { useClassroomQuery, useClassroomUnitsQuery } from "../hooks/classroom";
 
 const Breadcrumb = () => {
   const location = useLocation();
-  // Filter out 'dashboard' from pathnames since we always show it as the home
-  const pathnames = location.pathname
-    .split("/")
-    .filter(Boolean)
-    .filter((segment) => segment.toLowerCase() !== "dashboard");
+  const pathnames = location.pathname.split("/").filter(Boolean);
 
   // Extract classroom ID from path if present
   const classroomIdx = pathnames.findIndex((seg) => seg === "classrooms");
@@ -51,19 +47,11 @@ const Breadcrumb = () => {
   return (
     <nav className="text-sm text-white">
       <ol className="flex items-center space-x-2">
-        {/* Dashboard link - only show if not on dashboard */}
-        {pathnames.length > 0 && pathnames[0] !== "dashboard" && (
-          <li>
-            <Link to="/dashboard" className="hover:text-gray-300 font-medium">
-              Dashboard
-            </Link>
-          </li>
-        )}
+        {/* No top-level 'Dashboard' breadcrumb — start from first path segment */}
 
         {/* Dynamic path segments */}
         {pathnames.map((segment, index) => {
-          const routeTo =
-            "/dashboard/" + pathnames.slice(0, index + 1).join("/");
+          const routeTo = "/" + pathnames.slice(0, index + 1).join("/");
           const isLast = index === pathnames.length - 1;
           let label = segment
             .replace(/-/g, " ")
@@ -82,7 +70,7 @@ const Breadcrumb = () => {
             label = classroomName;
           }
   
-          const showSeparator = (pathnames.length > 0 && pathnames[0] !== "dashboard") || index > 0;
+          const showSeparator = index > 0;
           
           return (
             <li key={routeTo} className="flex items-center space-x-2">

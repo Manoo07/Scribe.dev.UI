@@ -39,7 +39,7 @@ class ErrorBoundary extends Component<Props, State> {
     // Reset error state before navigating
     this.setState({ hasError: false, error: null, errorInfo: null });
     // Use router navigation instead of hard redirect
-    window.history.pushState({}, "", "/dashboard");
+    window.history.pushState({}, "", "/");
     window.location.reload();
   };
 

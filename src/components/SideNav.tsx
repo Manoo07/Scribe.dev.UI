@@ -65,37 +65,37 @@ const SideNav = ({
       {/* Navigation links */}
       <nav className="flex-grow py-4 px-3 space-y-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700">
         <NavItem
-          to="/dashboard/overview"
+          to="/overview"
           label="Dashboard"
           icon={<LayoutDashboard size={collapsed ? 20 : 18} />}
           collapsed={collapsed}
         />
         <NavItem
-          to="/dashboard/classrooms"
+          to="/classrooms"
           label="Classrooms"
           icon={<Layers size={collapsed ? 20 : 18} />}
           collapsed={collapsed}
         />
         <NavItem
-          to="/dashboard/announcements"
+          to="/announcements"
           label="Announcements"
           icon={<Bell size={collapsed ? 20 : 18} />}
           collapsed={collapsed}
         />
         <NavItem
-          to="/dashboard/threads"
+          to="/threads"
           label="Threads"
           icon={<MessageSquare size={collapsed ? 20 : 18} />}
           collapsed={collapsed}
         />
         <NavItem
-          to="/dashboard/assignments"
+          to="/assignments"
           label="Assignments"
           icon={<FileText size={collapsed ? 20 : 18} />}
           collapsed={collapsed}
         />
         <NavItem
-          to="/dashboard/attendance"
+          to="/attendance"
           label="Attendance"
           icon={<Users size={collapsed ? 20 : 18} />}
           collapsed={collapsed}
@@ -112,13 +112,13 @@ const SideNav = ({
             {collapsed && <div className="my-4 border-b border-gray-800"></div>}
 
             <NavItem
-              to="/dashboard/create-classroom"
+              to="/create-classroom"
               label="Create Class"
               icon={<PlusCircle size={collapsed ? 20 : 18} />}
               collapsed={collapsed}
             />
             <NavItem
-              to="/dashboard/manage-units"
+              to="/manage-units"
               label="Manage Units"
               icon={<Book size={collapsed ? 20 : 18} />}
               collapsed={collapsed}
@@ -137,13 +137,13 @@ const SideNav = ({
             {collapsed && <div className="my-4 border-b border-gray-800"></div>}
 
             <NavItem
-              to="/dashboard/admin"
+              to="/admin"
               label="Admin Panel"
               icon={<Shield size={collapsed ? 20 : 18} />}
               collapsed={collapsed}
             />
             <NavItem
-              to="/dashboard/settings"
+              to="/settings"
               label="Settings"
               icon={<Settings size={collapsed ? 20 : 18} />}
               collapsed={collapsed}
@@ -185,7 +185,7 @@ const NavItem = ({ to, label, icon, collapsed }: NavItemProps) => (
       ${collapsed ? "mx-auto rounded-full w-12 h-12" : ""}
     `}
     title={label}
-    end={to === "/dashboard"}
+    end={to === "/"}
   >
     <span className={`${collapsed ? "" : "mr-3"}`}>{icon}</span>
     {!collapsed && <span className="whitespace-nowrap">{label}</span>}

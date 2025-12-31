@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 
 import AssignmentsTab from "../components/classroom/Tabs/AssignmentsTab";
+import { useUserContext } from "../context/UserContext";
 import AttendanceTab from "../components/classroom/Tabs/AttendanceTab";
 import ClassroomTabs from "../components/classroom/Tabs/ClassroomTabs";
 import StudentsTab from "../components/classroom/Tabs/StudentsTab";
@@ -15,6 +16,7 @@ import {
 const ClassroomDetailPage = () => {
   const { id } = useParams();
   const [activeTab, setActiveTab] = useState("Units");
+  const { userRole } = useUserContext();
 
   // TanStack Query hooks - automatic fetching, caching, and loading states
   const { data: classroom, isLoading: loading } = useClassroomQuery(id);
@@ -54,6 +56,7 @@ const ClassroomDetailPage = () => {
             setUnits={() => {}} // No-op since TanStack Query manages state
             loading={unitsLoading}
             onUnitsRefresh={handleUnitsRefresh}
+            userRole={userRole}
           />
         );
       case "Threads":
@@ -100,8 +103,8 @@ const ClassroomDetailPage = () => {
   }
 
   return (
-    <div className="px-3 py-4 sm:px-4 md:px-6 lg:px-8 max-w-6xl mx-auto">
-      <div className="mb-4 sm:mb-6">
+    <div className="px-4 py-3 sm:px-4 md:px-5 lg:px-6 max-w-7xl mx-auto">
+      <div className="mb-4">
         <h1 className="text-lg sm:text-xl md:text-2xl font-semibold text-white break-words">
           {classroom.name}{" "}
           {renderValue(classroom.section, "name") &&
@@ -118,7 +121,7 @@ const ClassroomDetailPage = () => {
 
       <ClassroomTabs activeTab={activeTab} setActiveTab={setActiveTab} />
 
-      <div className="mt-4 sm:mt-6">{renderTab()}</div>
+      <div className="mt-4">{renderTab()}</div>
     </div>
   );
 };

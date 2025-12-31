@@ -1,6 +1,6 @@
 import React from "react";
 import { ContentType } from "../types";
-import { FileText, Link2, Video, File, Edit3, Eye, Trash2 } from "lucide-react";
+import { FileText, Link2, Video, File, Eye, Edit3 } from "lucide-react";
 
 interface UnitCardProps {
   id: string;
@@ -12,6 +12,7 @@ interface UnitCardProps {
   onView: () => void;
   onDelete: () => void;
   isDeleting?: boolean;
+  userRole?: string;
 }
 
 const UnitCard: React.FC<UnitCardProps> = ({
@@ -21,118 +22,98 @@ const UnitCard: React.FC<UnitCardProps> = ({
   contentsCount,
   onEdit,
   onView,
-  onDelete,
   isDeleting,
+  userRole,
 }) => {
-  const totalContents = Object.values(contentsCount).reduce(
-    (sum, count) => sum + count,
-    0
-  );
+  const notesCount = contentsCount[ContentType.NOTE] ?? 0;
+  const linksCount = contentsCount[ContentType.LINK] ?? 0;
+  const videosCount = contentsCount[ContentType.VIDEO] ?? 0;
+  const documentsCount = contentsCount[ContentType.DOCUMENT] ?? 0;
+
+  const handleEdit = (event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    onEdit();
+  };
+
+  const handleView = (event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    onView();
+  };
 
   return (
-    <div className="bg-gray-800 rounded-lg overflow-hidden shadow-md border border-gray-700 transition-all hover:shadow-lg hover:shadow-blue-900/10 hover:border-gray-600 group">
-      <div className="p-5">
-        <div className="flex items-start justify-between mb-2 gap-2">
-          <h3 className="text-xl font-semibold text-white line-clamp-1 pr-2 flex-1">
-            {name}
-          </h3>
-          <div className="flex gap-1">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit();
-              }}
-              className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 text-gray-400 hover:text-blue-400 hover:bg-gray-700 rounded-md"
-              title="Edit unit"
-            >
-              <Edit3 size={16} />
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete();
-              }}
-              className="relative opacity-0 group-hover:opacity-100 transition-opacity p-1.5 text-gray-400 hover:text-red-400 hover:bg-gray-700 rounded-md disabled:opacity-50"
-              title="Delete unit"
-              disabled={isDeleting}
-            >
-              <Trash2 size={16} />
-              {isDeleting && (
-                <span className="absolute inset-0 flex items-center justify-center">
-                  <span className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-400"></span>
-                </span>
-              )}
-            </button>
-          </div>
+    <div className="bg-gray-800 rounded-lg p-4 border border-gray-700/50 hover:border-gray-600 transition-all duration-200">
+      {/* Title */}
+      <h3 className="text-lg font-bold text-white mb-1.5">{name}</h3>
+
+      {/* Updated date */}
+      <div className="mb-3">
+        <p className="text-gray-400 text-xs">Updated {lastUpdated}</p>
+      </div>
+
+      {/* Description - Fixed 2 lines */}
+      <p className="text-gray-300 text-xs leading-relaxed mb-3 line-clamp-2 min-h-[2.5rem]">
+        {description || "No description"}
+      </p>
+
+      {/* Divider */}
+      <div className="border-t border-gray-700 mb-3"></div>
+
+      {/* Stats Row */}
+      <div className="flex items-center gap-4 mb-3">
+        <div className="flex items-center gap-1.5">
+          <FileText className="w-3.5 h-3.5 text-emerald-400" />
+          <span className="text-gray-300 text-xs font-semibold">
+            {notesCount}
+          </span>
+          <span className="text-gray-400 text-xs">Notes</span>
         </div>
-
-        <p className="text-gray-400 text-sm mb-4 line-clamp-2 min-h-[2.5rem]">
-          {description}
-        </p>
-
-        <div className="mb-4 flex items-center gap-1.5 text-gray-500 text-xs">
-          <span>Updated</span>
-          <span className="text-gray-400">{lastUpdated}</span>
+        <div className="flex items-center gap-1.5">
+          <Link2 className="w-3.5 h-3.5 text-purple-400" />
+          <span className="text-gray-300 text-xs font-semibold">
+            {linksCount}
+          </span>
+          <span className="text-gray-400 text-xs">Links</span>
         </div>
-
-        <div className="flex flex-wrap gap-2 mb-4 min-h-[1.75rem]">
-          {contentsCount[ContentType.NOTE] > 0 && (
-            <div className="bg-emerald-900/30 text-emerald-400 px-2 py-1 rounded text-xs flex items-center gap-1">
-              <FileText size={12} />
-              <span>{contentsCount[ContentType.NOTE]}</span>
-            </div>
-          )}
-
-          {contentsCount[ContentType.LINK] > 0 && (
-            <div className="bg-purple-900/30 text-purple-400 px-2 py-1 rounded text-xs flex items-center gap-1">
-              <Link2 size={12} />
-              <span>{contentsCount[ContentType.LINK]}</span>
-            </div>
-          )}
-
-          {contentsCount[ContentType.VIDEO] > 0 && (
-            <div className="bg-red-900/30 text-red-400 px-2 py-1 rounded text-xs flex items-center gap-1">
-              <Video size={12} />
-              <span>{contentsCount[ContentType.VIDEO]}</span>
-            </div>
-          )}
-
-          {contentsCount[ContentType.DOCUMENT] > 0 && (
-            <div className="bg-blue-900/30 text-blue-400 px-2 py-1 rounded text-xs flex items-center gap-1">
-              <File size={12} />
-              <span>{contentsCount[ContentType.DOCUMENT]}</span>
-            </div>
-          )}
-
-          {totalContents === 0 && (
-            <div className="bg-gray-700/30 text-gray-400 px-2 py-1 rounded text-xs">
-              No content
-            </div>
-          )}
+        <div className="flex items-center gap-1.5">
+          <Video className="w-3.5 h-3.5 text-red-400" />
+          <span className="text-gray-300 text-xs font-semibold">
+            {videosCount}
+          </span>
+          <span className="text-gray-400 text-xs">Videos</span>
         </div>
+        <div className="flex items-center gap-1.5">
+          <File className="w-3.5 h-3.5 text-blue-400" />
+          <span className="text-gray-300 text-xs font-semibold">
+            {documentsCount}
+          </span>
+          <span className="text-gray-400 text-xs">Docs</span>
+        </div>
+      </div>
 
-        <div className="flex gap-2">
+      {/* Action Buttons */}
+      <div className="flex items-center gap-2">
+        {userRole === "FACULTY" && (
           <button
-            className="flex-1 text-sm px-3 py-2 border border-gray-600 rounded-md text-gray-300 hover:bg-gray-700 hover:border-gray-500 transition-all flex items-center justify-center gap-2"
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit();
-            }}
+            onClick={handleEdit}
+            disabled={isDeleting}
+            className="flex-1 bg-gray-700 hover:bg-gray-600 text-white text-xs font-medium py-2 px-3 rounded-md transition-colors duration-200 flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Edit3 size={14} />
+            <Edit3 className="w-3.5 h-3.5" />
             <span>Edit</span>
           </button>
-          <button
-            className="flex-1 bg-blue-600 hover:bg-blue-500 text-white text-sm px-4 py-2 rounded-md transition-colors flex items-center justify-center gap-2"
-            onClick={(e) => {
-              e.stopPropagation();
-              onView();
-            }}
-          >
-            <Eye size={14} />
-            <span>View</span>
-          </button>
-        </div>
+        )}
+
+        <button
+          onClick={handleView}
+          className={`bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium py-2 px-3 rounded-md transition-colors duration-200 flex items-center justify-center gap-1.5 ${
+            userRole === "FACULTY" ? "flex-1" : "w-full"
+          }`}
+        >
+          <Eye className="w-3.5 h-3.5" />
+          <span>View</span>
+        </button>
       </div>
     </div>
   );

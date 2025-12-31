@@ -1,4 +1,4 @@
-import { Edit3, Trash2 } from "lucide-react";
+import { FileText, Users, MessageSquare, Eye, Edit3 } from "lucide-react";
 import React from "react";
 import { Link } from "react-router-dom";
 
@@ -10,34 +10,40 @@ interface ClassroomCardProps {
     description?: string;
     section?: any;
     faculty?: any;
+    unitsCount?: number;
+    studentsCount?: number;
+    threadsCount?: number;
   };
   userRole?: string;
   onEdit?: (classroom: any) => void;
-  onDelete?: (classroom: any) => void;
-  isDeleting?: boolean;
   linkTo?: string;
-  renderValue?: (value: any, fallback?: string) => string;
 }
 
 const ClassroomCard: React.FC<ClassroomCardProps> = ({
   classroom,
   userRole,
   onEdit,
-  onDelete,
-  isDeleting = false,
   linkTo,
-  renderValue = (value: any, fallback = "N/A") => {
-    if (!value) return fallback;
-    if (typeof value === "string") return value;
-    if (typeof value === "object") {
-      return value.name || value.specialization || fallback;
-    }
-    return fallback;
-  },
 }) => {
-  // Support both id formats (API returns 'id', but some places use '_id')
   const classroomId = classroom.id || classroom._id;
-  const link = linkTo || `/dashboard/classrooms/${classroomId}`;
+  const link = linkTo || `/classrooms/${classroomId}`;
+
+  // Temporary: use 0 for counts until backend provides data
+  const unitsCount = classroom.unitsCount ?? 0;
+  const studentsCount = classroom.studentsCount ?? 0;
+  const threadsCount = classroom.threadsCount ?? 0;
+
+  const getSectionValue = () => {
+    if (!classroom.section) return "N/A";
+    if (typeof classroom.section === "string") return classroom.section;
+    return classroom.section.name || "N/A";
+  };
+
+  const getFacultyValue = () => {
+    if (!classroom.faculty) return "N/A";
+    if (typeof classroom.faculty === "string") return classroom.faculty;
+    return classroom.faculty.name || "N/A";
+  };
 
   const handleEdit = (event: React.MouseEvent) => {
     event.preventDefault();
@@ -45,59 +51,72 @@ const ClassroomCard: React.FC<ClassroomCardProps> = ({
     onEdit?.(classroom);
   };
 
-  const handleDelete = (event: React.MouseEvent) => {
-    event.preventDefault();
-    event.stopPropagation();
-    onDelete?.(classroom);
-  };
-
   return (
-    <div className="bg-gray-800 hover:bg-gray-700 transition p-5 rounded-xl shadow-md relative group">
-      <Link to={link} className="block">
-        <h3 className="text-xl font-semibold text-white mb-1 pr-16">
-          {classroom.name}
-        </h3>
-        {classroom.description && (
-          <p className="text-gray-300 text-sm mb-2 pr-16">
-            {classroom.description}
-          </p>
-        )}
-        <p className="text-gray-400 text-sm">
-          Section: {renderValue(classroom.section)}
-        </p>
-        <p className="text-gray-400 text-sm">
-          Faculty: {renderValue(classroom.faculty)}
-        </p>
-      </Link>
+    <div className="bg-gray-800 rounded-lg p-4 border border-gray-700/50 hover:border-gray-600 transition-all duration-200">
+      {/* Title */}
+      <h3 className="text-lg font-bold text-white mb-1.5">
+        {classroom.name || "Untitled Classroom"}
+      </h3>
 
-      {userRole === "FACULTY" && (onEdit || onDelete) && (
-        <div className="absolute top-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          {onEdit && (
-            <button
-              onClick={handleEdit}
-              className="p-2 text-gray-400 hover:text-blue-400 hover:bg-gray-700 rounded-lg transition"
-              title="Edit classroom"
-            >
-              <Edit3 className="w-4 h-4" />
-            </button>
-          )}
-          {onDelete && (
-            <button
-              onClick={handleDelete}
-              disabled={isDeleting}
-              className="p-2 text-gray-400 hover:text-red-400 hover:bg-gray-700 rounded-lg transition disabled:opacity-50"
-              title="Delete classroom"
-            >
-              <Trash2 className="w-4 h-4" />
-              {isDeleting && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-400"></div>
-                </div>
-              )}
-            </button>
-          )}
+      {/* Section and Faculty */}
+      <div className="space-y-0 mb-3">
+        <p className="text-gray-400 text-xs">
+          Section: {getSectionValue()}
+        </p>
+        <p className="text-gray-400 text-xs">
+          Faculty: {getFacultyValue()}
+        </p>
+      </div>
+
+      {/* Description */}
+      <p className="text-gray-300 text-xs leading-relaxed mb-3">
+        {classroom.description || "No description"}
+      </p>
+
+      {/* Divider */}
+      <div className="border-t border-gray-700 mb-3"></div>
+
+      {/* Stats Row */}
+      <div className="flex items-center gap-4 mb-3">
+        <div className="flex items-center gap-1.5">
+          <FileText className="w-3.5 h-3.5 text-gray-400" />
+          <span className="text-gray-300 text-xs font-semibold">{unitsCount}</span>
+          <span className="text-gray-400 text-xs">Units</span>
         </div>
-      )}
+        <div className="flex items-center gap-1.5">
+          <Users className="w-3.5 h-3.5 text-gray-400" />
+          <span className="text-gray-300 text-xs font-semibold">{studentsCount}</span>
+          <span className="text-gray-400 text-xs">Students</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <MessageSquare className="w-3.5 h-3.5 text-gray-400" />
+          <span className="text-gray-300 text-xs font-semibold">{threadsCount}</span>
+          <span className="text-gray-400 text-xs">Threads</span>
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex items-center gap-2">
+        {userRole === "FACULTY" && onEdit && (
+          <button
+            onClick={handleEdit}
+            className="flex-1 bg-gray-700 hover:bg-gray-600 text-white text-xs font-medium py-2 px-3 rounded-md transition-colors duration-200 flex items-center justify-center gap-1.5"
+          >
+            <Edit3 className="w-3.5 h-3.5" />
+            <span>Edit</span>
+          </button>
+        )}
+
+        <Link
+          to={link}
+          className={`bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium py-2 px-3 rounded-md transition-colors duration-200 flex items-center justify-center gap-1.5 ${
+            userRole === "FACULTY" && onEdit ? "flex-1" : "w-full"
+          }`}
+        >
+          <Eye className="w-3.5 h-3.5" />
+          <span>View</span>
+        </Link>
+      </div>
     </div>
   );
 };

@@ -164,7 +164,7 @@ const MyClassroomsPage = () => {
     <>
       <Toaster position="top-right" richColors />
       <div
-        className={`p-6 md:p-8 transition-opacity duration-300 ${
+        className={`p-2 md:p-4 transition-opacity duration-300 ${
           showCreateForm || showEditForm ? "opacity-70" : "opacity-100"
         }`}
       >
