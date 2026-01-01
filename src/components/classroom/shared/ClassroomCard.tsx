@@ -26,7 +26,7 @@ const ClassroomCard: React.FC<ClassroomCardProps> = ({
   linkTo,
 }) => {
   const classroomId = classroom.id || classroom._id;
-  const link = linkTo || `/dashboard/classrooms/${classroomId}`;
+  const link = linkTo || `/classrooms/${classroomId}`;
 
   // Temporary: use 0 for counts until backend provides data
   const unitsCount = classroom.unitsCount ?? 0;

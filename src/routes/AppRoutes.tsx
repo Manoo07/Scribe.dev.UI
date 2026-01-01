@@ -68,7 +68,7 @@ const AppRoutes = () => {
           {dashboardChildren.map((r) => (
             <Route
               key={r.path}
-              path={`/dashboard/${r.path}`}
+            path={`/${r.path}`}
               element={
                 <RequireAuth>
                   <DashboardLayout />

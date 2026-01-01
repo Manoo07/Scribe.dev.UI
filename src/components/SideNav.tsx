@@ -65,37 +65,37 @@ const SideNav = ({
       {/* Navigation links */}
       <nav className="flex-grow py-4 px-3 space-y-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700">
         <NavItem
-          to="/dashboard/overview"
+          to="/dashboard"
           label="Dashboard"
           icon={<LayoutDashboard size={collapsed ? 20 : 18} />}
           collapsed={collapsed}
         />
         <NavItem
-          to="/dashboard/classrooms"
+          to="/classrooms"
           label="Classrooms"
           icon={<Layers size={collapsed ? 20 : 18} />}
           collapsed={collapsed}
         />
         <NavItem
-          to="/dashboard/announcements"
+          to="/announcements"
           label="Announcements"
           icon={<Bell size={collapsed ? 20 : 18} />}
           collapsed={collapsed}
         />
         <NavItem
-          to="/dashboard/threads"
+          to="/threads"
           label="Threads"
           icon={<MessageSquare size={collapsed ? 20 : 18} />}
           collapsed={collapsed}
         />
         <NavItem
-          to="/dashboard/assignments"
+          to="/assignments"
           label="Assignments"
           icon={<FileText size={collapsed ? 20 : 18} />}
           collapsed={collapsed}
         />
         <NavItem
-          to="/dashboard/attendance"
+          to="/attendance"
           label="Attendance"
           icon={<Users size={collapsed ? 20 : 18} />}
           collapsed={collapsed}
