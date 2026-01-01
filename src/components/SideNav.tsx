@@ -65,7 +65,7 @@ const SideNav = ({
       {/* Navigation links */}
       <nav className="flex-grow py-4 px-3 space-y-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700">
         <NavItem
-          to="/overview"
+          to="/dashboard"
           label="Dashboard"
           icon={<LayoutDashboard size={collapsed ? 20 : 18} />}
           collapsed={collapsed}

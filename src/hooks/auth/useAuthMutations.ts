@@ -45,7 +45,7 @@ export const useLoginMutation = () => {
       queryClient.invalidateQueries({ queryKey: authKeys.currentUser() });
 
       // Navigate to dashboard root
-      navigate("/");
+      navigate("/dashboard");
     },
     onError: (error: any) => {
       console.error("Login failed:", error?.response?.data || error.message);

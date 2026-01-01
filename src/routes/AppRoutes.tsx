@@ -23,11 +23,11 @@ const AppRoutes = () => {
   // Check for token and redirect from landing page if present
   useEffect(() => {
     // If a user visits the public landing page and already has a token,
-    // send them to the app root (`/`) which functions as the dashboard.
-    if (window.location.pathname === "/landing") {
+    // send them to the dashboard.
+      if (window.location.pathname === "/") {
       const token = localStorage.getItem("token");
       if (token) {
-        window.location.replace("/");
+        window.location.replace("/dashboard");
       }
     }
   }, []);
@@ -35,9 +35,9 @@ const AppRoutes = () => {
   return (
     <Router>
       <Routes>
-        {/* Public landing page (moved to /landing). `/` now serves as the dashboard root. */}
+        {/* Public landing page at root `/` */}
         <Route
-          path="/landing"
+          path="/"
           element={
             <MainLayout>
               <Hero />
@@ -46,9 +46,9 @@ const AppRoutes = () => {
           }
         />
 
-        {/* Dashboard root: `/` is the app's protected dashboard landing (overview) */}
+        {/* Dashboard root: `/dashboard` is the app's protected dashboard landing (overview) */}
         <Route
-          path="/"
+          path="/dashboard"
           element={
             <RequireAuth>
               <DashboardLayout />
@@ -65,12 +65,10 @@ const AppRoutes = () => {
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/logout" element={<LogoutPage />} />
 
-          {/* Redirect /dashboard to /overview (overview is now top-level) */}
-          {/* Protected routes: each dashboard child is a top-level route (no /dashboard prefix) */}
           {dashboardChildren.map((r) => (
             <Route
               key={r.path}
-              path={`/${r.path}`}
+            path={`/${r.path}`}
               element={
                 <RequireAuth>
                   <DashboardLayout />
@@ -86,9 +84,9 @@ const AppRoutes = () => {
           path="*"
           element={
             localStorage.getItem("token") ? (
-              <Navigate to="/" replace />
+              <Navigate to="/dashboard" replace />
             ) : (
-              <Navigate to="/landing" replace />
+              <Navigate to="/" replace />
             )
           }
         />
