@@ -22,7 +22,7 @@ const LoginForm = () => {
         sessionStorage.removeItem("redirectAfterLogin");
         navigate(redirectPath);
       } else {
-        navigate("/");
+        navigate("/dashboard");
       }
 
       console.log("Login successful", response.data);
