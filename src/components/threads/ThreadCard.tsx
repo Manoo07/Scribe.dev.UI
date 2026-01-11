@@ -1,16 +1,11 @@
 import {
   MessageCircle,
   ArrowUp,
-  ArrowDown,
-  Clock,
   User,
-  MoreHorizontal,
-  Share2,
-  Bookmark,
-  Award,
 } from "lucide-react";
 import React, { useState } from "react";
 import { Thread } from "./threadTypes";
+import { useToast } from "../../hooks/use-toast";
 
 interface ThreadCardProps {
   thread: Thread;
@@ -19,6 +14,7 @@ interface ThreadCardProps {
 
 const ThreadCard: React.FC<ThreadCardProps> = ({ thread, onClick }) => {
   const [showMenu, setShowMenu] = useState(false);
+  const [localLikesCount] = useState(thread.likesCount || 0);
   
   const formatTimeAgo = (dateString: string) => {
     const date = new Date(dateString);
@@ -39,7 +35,7 @@ const ThreadCard: React.FC<ThreadCardProps> = ({ thread, onClick }) => {
 
   return (
     <div
-      className="border-t border-gray-700 py-4 hover:bg-gray-800/50 transition-colors cursor-pointer"
+      className="p-4 bg-gray-900 border border-gray-700 rounded-lg hover:bg-gray-800/50 transition-colors cursor-pointer"
       onClick={onClick}
     >
       {/* Main Content */}
@@ -48,7 +44,7 @@ const ThreadCard: React.FC<ThreadCardProps> = ({ thread, onClick }) => {
         <div className="flex items-center gap-2 text-xs text-gray-400 mb-2">
           <div className="flex items-center gap-1">
             <User className="w-3 h-3" />
-            <span className="font-medium">{thread.authorName || "Unknown"}</span>
+            <span className="font-medium">{thread.user.name || "Anonymous"}</span>
           </div>
           <span>•</span>
           <span>{formatTimeAgo(thread.createdAt)}</span>
@@ -76,90 +72,11 @@ const ThreadCard: React.FC<ThreadCardProps> = ({ thread, onClick }) => {
 
         {/* Footer Actions */}
         <div className="flex items-center gap-1">
-          {/* Vote Buttons */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              // Handle upvote
-            }}
-            className="flex items-center gap-1 px-2 py-1 text-gray-400 hover:bg-gray-700 hover:text-orange-500 text-xs font-medium rounded transition-colors"
-          >
+          {/* Like Count Display - Read Only */}
+          <div className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-400">
             <ArrowUp className="w-4 h-4" />
-            <span>{thread.likesCount || 0}</span>
-          </button>
-
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              // Handle downvote
-            }}
-            className="flex items-center gap-1 px-2 py-1 text-gray-400 hover:bg-gray-700 hover:text-blue-500 text-xs font-medium rounded transition-colors"
-          >
-            <ArrowDown className="w-4 h-4" />
-          </button>
-
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              // Handle reply
-            }}
-            className="flex items-center gap-1 px-2 py-1 text-gray-400 hover:bg-gray-700 hover:text-white text-xs font-medium rounded transition-colors"
-          >
-            <MessageCircle className="w-4 h-4" />
-            <span>Reply</span>
-          </button>
-
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              // Handle award
-            }}
-            className="flex items-center gap-1 px-2 py-1 text-gray-400 hover:bg-gray-700 hover:text-white text-xs font-medium rounded transition-colors"
-          >
-            <Award className="w-4 h-4" />
-            <span>Award</span>
-          </button>
-
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              // Handle share
-            }}
-            className="flex items-center gap-1 px-2 py-1 text-gray-400 hover:bg-gray-700 hover:text-white text-xs font-medium rounded transition-colors"
-          >
-            <Share2 className="w-4 h-4" />
-            <span>Share</span>
-          </button>
-
-          <div className="relative ml-auto">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowMenu(!showMenu);
-              }}
-              className="flex items-center gap-1.5 px-2 py-1 text-gray-400 hover:bg-gray-700 hover:text-white text-xs font-medium rounded transition-colors"
-            >
-              <MoreHorizontal className="w-4 h-4" />
-            </button>
-
-            {showMenu && (
-              <div className="absolute right-0 top-full mt-1 w-48 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-10">
-                <button className="w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 first:rounded-t-lg transition-colors">
-                  Follow post
-                </button>
-                <button className="w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors">
-                  Show fewer posts like this
-                </button>
-                <button className="w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors">
-                  Hide
-                </button>
-                <button className="w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 last:rounded-b-lg transition-colors">
-                  Report
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
+            <span>{localLikesCount}</span>
+          </div>        </div>
       </div>
     </div>
   );

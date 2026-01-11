@@ -12,8 +12,10 @@ export interface Thread {
   id: string;
   title: string;
   content: string;
-  authorId: string;
-  authorName: string;
+  user: {
+    id: string;
+    name: string;
+  };
   classroomId?: string;
   unitId?: string;
   likesCount: number;
@@ -28,8 +30,10 @@ export interface ThreadReply {
   id: string;
   threadId: string;
   content: string;
-  authorId: string;
-  authorName: string;
+  user: {
+    id: string;
+    name: string;
+  };
   likesCount: number;
   isLiked: boolean;
   isAccepted: boolean;

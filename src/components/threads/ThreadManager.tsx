@@ -22,8 +22,8 @@ const convertApiThreadToComponentThread = (
     title: apiThread.title,
     content: apiThread.content,
     user: {
-      id: apiThread.authorId || "",
-      name: apiThread.authorName || "",
+      id: apiThread.user?.id || "",
+      name: apiThread.user?.name || "",
     },
     threadStatus: "UNANSWERED" as const,
     createdAt: apiThread.createdAt,
@@ -32,8 +32,8 @@ const convertApiThreadToComponentThread = (
     likesCount: apiThread.likesCount,
     isLikedByMe: apiThread.isLiked,
     // Legacy fields
-    authorId: apiThread.authorId,
-    authorName: apiThread.authorName,
+    authorId: apiThread.user?.id,
+    authorName: apiThread.user?.name,
     repliesCount: apiThread.repliesCount,
   };
 

@@ -280,7 +280,7 @@ const StudentsTab = ({ classroomId }: { classroomId: string }) => {
               size="sm"
               onClick={() => refreshStudentsData()}
               disabled={loading}
-              className="border-[#2d3748] hover:bg-[#1a2235] text-white"
+              className="border-[#2d3748] hower-[#2d3748]"
             >
               <RefreshCw
                 className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`}
@@ -404,8 +404,8 @@ const StudentsTab = ({ classroomId }: { classroomId: string }) => {
                       <div className="text-gray-400 text-sm">
                         {student.email}
                       </div>
-                      <div className="text-xs text-gray-500">
-                        <span className="bg-[#2d3748] px-2 py-1 rounded font-mono">
+                      <div className="text-xs text-gray-400">
+                        <span className="bg-[#1f2937] px-3 py-1.5 rounded font-mono text-white">
                           {student.enrollmentNo}
                         </span>
                       </div>
@@ -537,8 +537,8 @@ const StudentsTab = ({ classroomId }: { classroomId: string }) => {
                         <div className="text-gray-400 text-sm">
                           {student.email}
                         </div>
-                        <div className="text-xs text-gray-500">
-                          <span className="bg-[#2d3748] px-2 py-1 rounded font-mono">
+                        <div className="text-xs text-gray-400">
+                          <span className="bg-[#1f2937] px-3 py-1.5 rounded font-mono text-white">
                             {student.enrollmentNo}
                           </span>
                         </div>

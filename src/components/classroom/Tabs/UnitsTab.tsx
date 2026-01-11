@@ -72,7 +72,6 @@ const UnitsTab: React.FC<UnitsTabProps> = ({
         <UnitDetail
           unit={activeUnit}
           onBack={handleBackToUnits}
-          onAddContent={() => setIsUploaderOpen(true)}
           onRefresh={() => handleRefresh(units)}
         />
       ) : activeUnit && isUploaderOpen ? (

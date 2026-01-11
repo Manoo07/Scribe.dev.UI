@@ -54,8 +54,8 @@ const AddContentModal: React.FC<AddContentModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-800 rounded-lg shadow-lg w-full max-w-2xl border border-gray-700 animate-fadeIn max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 overflow-y-auto">
+      <div className="bg-gray-800 rounded-lg shadow-lg w-full max-w-2xl border border-gray-700 animate-fadeIn my-auto">
         <div className="flex items-center justify-between border-b border-gray-700 p-4">
           <h3 className="text-xl font-semibold text-white">Add Content to "{unit.name}"</h3>
           <button
@@ -112,19 +112,18 @@ const AddContentModal: React.FC<AddContentModalProps> = ({
                   <div>
                     <textarea
                       id="noteContent"
-                      rows={8}
-                      className="w-full bg-gray-700 border border-gray-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="# Title\nYour note content here..."
+                      className="w-full bg-gray-700 border border-gray-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[400px] resize-vertical"
+                      placeholder="# Title&#10;Your note content here..."
                       value={noteContent}
                       onChange={(e) => setNoteContent(e.target.value)}
                     />
                   </div>
                   {showPreview && (
-                    <div className="bg-gray-700 border border-gray-600 rounded-lg p-3">
+                    <div className="bg-gray-700 border border-gray-600 rounded-lg p-3 overflow-y-auto max-h-[400px]">
                       <div
-                        className="prose prose-invert max-w-none"
+                        className="prose prose-invert max-w-none whitespace-pre-wrap"
                         dangerouslySetInnerHTML={{
-                          __html: marked(noteContent || "*Preview will appear here*")
+                          __html: marked(noteContent || "*Preview will appear here*", { breaks: true })
                         }}
                       />
                     </div>

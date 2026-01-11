@@ -1,7 +1,9 @@
 import { ChevronDown, MessageSquare, Plus } from "lucide-react";
 import React, { useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import ThreadCard from "./ThreadCard";
 import { Thread } from "./threadTypes";
+import { threadKeys } from "../../hooks/threads/useThreadQueries";
 
 interface ThreadsListProps {
   threads: Thread[];
@@ -23,6 +25,12 @@ const ThreadsList: React.FC<ThreadsListProps> = ({
 }) => {
   const [sortBy, setSortBy] = useState<string>("new");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const queryClient = useQueryClient();
+
+  const handleThreadLikeToggle = () => {
+    // Invalidate the threads list to refetch with updated like counts
+    queryClient.invalidateQueries({ queryKey: threadKeys.lists() });
+  };
 
   const sortOptions = [
     { value: "new", label: "New" },
@@ -150,6 +158,7 @@ const ThreadsList: React.FC<ThreadsListProps> = ({
               key={thread.id}
               thread={thread}
               onClick={() => onThreadClick(thread)}
+              onLikeToggle={handleThreadLikeToggle}
             />
           ))
         )}
