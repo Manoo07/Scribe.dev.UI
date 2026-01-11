@@ -1,18 +1,24 @@
-// Toggle like for a thread (POST /threads/like/:threadId)
-export const toggleThreadLike = async (threadId: string): Promise<any> => {
+// Toggle like for a thread or reply (POST /threads/like/:threadId)
+export const toggleThreadLike = async (threadId: string, replyId?: string): Promise<any> => {
   try {
-    console.log("🔄 Toggling thread like for threadId:", threadId);
+    console.log("🔄 Toggling like for:", { threadId, replyId });
 
     // Ensure token is valid and available
     ensureToken();
 
-    const response = await api.post(`/threads/like/${threadId}`);
-    console.log("✅ Thread like toggled successfully:", response.data);
+    const payload = replyId ? { replyId } : {};
+    const response = await api.post(`/threads/like/${threadId}`, payload);
+    console.log("✅ Like toggled successfully:", response.data);
     return response.data;
   } catch (error) {
-    console.error("❌ Error toggling thread like:", error);
+    console.error("❌ Error toggling like:", error);
     throw error;
   }
+};
+
+// Toggle like for a reply (convenience function)
+export const toggleReplyLike = async (threadId: string, replyId: string): Promise<any> => {
+  return toggleThreadLike(threadId, replyId);
 };
 // Accept answer for a thread
 export const acceptAnswer = async (
@@ -515,29 +521,6 @@ export const checkLikePermission = (): {
       canLike: false,
       reason: error.message || "Authentication required",
     };
-  }
-};
-
-// Toggle like for a reply
-export const toggleReplyLike = async (
-  replyId: string
-): Promise<{ liked: boolean; likesCount: number; likeId?: string }> => {
-  try {
-    console.log("🔄 Toggling like for reply:", replyId);
-
-    // Ensure token is valid and available
-    ensureToken();
-
-    // Use the correct endpoint: /threads/like/:replyId with replyId in body
-    const response = await api.post(`/threads/like/${replyId}`, {
-      replyId: replyId,
-      threadId: undefined, // Ensure only reply like
-    });
-    console.log("✅ Reply like toggled successfully:", response.data);
-    return response.data;
-  } catch (error) {
-    console.error("❌ Error toggling reply like:", error);
-    throw error;
   }
 };
 

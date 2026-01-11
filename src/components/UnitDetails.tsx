@@ -3,21 +3,21 @@ import React, { useState } from "react";
 import { ContentType, Unit } from "../types";
 import { formatDate } from "../utils/dateUtils";
 import ContentItem from "./ContentItem";
+import AddContentModal from "./AddContentModal";
 
 interface UnitDetailProps {
   unit: Unit;
   onBack: () => void;
-  onAddContent: () => void;
   onRefresh: () => void;
 }
 
 const UnitDetail: React.FC<UnitDetailProps> = ({
   unit,
   onBack,
-  onAddContent,
   onRefresh,
 }) => {
   const [activeTab, setActiveTab] = useState<ContentType | "ALL">("ALL");
+  const [showAddContentModal, setShowAddContentModal] = useState(false);
 
   const tabs = [
     { id: "ALL", label: "All", icon: null },
@@ -117,7 +117,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({
         </div>
 
         <button
-          onClick={onAddContent}
+          onClick={() => setShowAddContentModal(true)}
           className="w-full bg-blue-600 hover:bg-blue-500 text-white rounded-lg py-2 flex items-center justify-center gap-2 transition-colors"
         >
           <Plus size={18} />
@@ -155,7 +155,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({
                 No content available in this category
               </p>
               <button
-                onClick={onAddContent}
+                onClick={() => setShowAddContentModal(true)}
                 className="text-blue-400 hover:text-blue-300 underline"
               >
                 Add your first content
@@ -174,6 +174,21 @@ const UnitDetail: React.FC<UnitDetailProps> = ({
           )}
         </div>
       </div>
+
+      {showAddContentModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="w-full max-w-2xl mx-4">
+            <AddContentModal
+              unit={unit}
+              onClose={() => setShowAddContentModal(false)}
+              onSuccess={() => {
+                setShowAddContentModal(false);
+                onRefresh();
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

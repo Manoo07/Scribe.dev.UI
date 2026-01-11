@@ -42,6 +42,10 @@ export interface ClassroomThread extends BaseThread {
   classroomName: string;
   unitId: string;
   unitName: string;
+  user: {
+    id: string;
+    name: string;
+  }; 
 }
 
 // Generic thread visible to all
@@ -50,6 +54,10 @@ export interface GenericThread extends BaseThread {
   category: string; // e.g., 'general', 'announcements', 'help', 'discussion'
   visibility: "public" | "restricted"; // public for all users, restricted for certain roles
   allowedRoles?: string[]; // if visibility is restricted
+  user: {
+    id: string;
+    name: string;
+  };
 }
 
 export type Thread = ClassroomThread | GenericThread;
