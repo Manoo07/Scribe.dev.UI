@@ -1,17 +1,17 @@
 // Toggle like for a thread or reply (POST /threads/like/:threadId)
 export const toggleThreadLike = async (threadId: string, replyId?: string): Promise<any> => {
   try {
-    console.log("🔄 Toggling like for:", { threadId, replyId });
+    console.log("Toggling like for:", { threadId, replyId });
 
     // Ensure token is valid and available
     ensureToken();
 
     const payload = replyId ? { replyId } : {};
     const response = await api.post(`/threads/like/${threadId}`, payload);
-    console.log("✅ Like toggled successfully:", response.data);
+    console.log("Like toggled successfully:", response.data);
     return response.data;
   } catch (error) {
-    console.error("❌ Error toggling like:", error);
+    console.error("Error toggling like:", error);
     throw error;
   }
 };
@@ -26,7 +26,7 @@ export const acceptAnswer = async (
   replyId: string
 ): Promise<any> => {
   try {
-    console.log("🔄 Accepting answer:", { threadId, replyId });
+    console.log("Accepting answer:", { threadId, replyId });
 
     // Ensure token is valid and available
     ensureToken();
@@ -35,10 +35,10 @@ export const acceptAnswer = async (
     const response = await api.patch(
       `/threads/${threadId}/accept-answer/${replyId}`
     );
-    console.log("✅ Answer accepted successfully:", response.data);
+    console.log("Answer accepted successfully:", response.data);
     return response.data;
   } catch (error) {
-    console.error("❌ Error accepting answer:", error);
+    console.error("Error accepting answer:", error);
     throw error;
   }
 };
@@ -49,7 +49,7 @@ export const unmarkAnswer = async (
   replyId: string
 ): Promise<any> => {
   try {
-    console.log("🔄 Unmarking answer:", { threadId, replyId });
+    console.log("Unmarking answer:", { threadId, replyId });
 
     // Ensure token is valid and available
     ensureToken();
@@ -58,26 +58,26 @@ export const unmarkAnswer = async (
     const response = await api.patch(
       `/threads/${threadId}/accept-answer/${replyId}`
     );
-    console.log("✅ Answer unmarked successfully:", response.data);
+    console.log("Answer unmarked successfully:", response.data);
     return response.data;
   } catch (error) {
-    console.error("❌ Error unmarking answer:", error);
+    console.error(" Error unmarking answer:", error);
     throw error;
   }
 };
 // Delete a thread
 export const deleteThread = async (threadId: string): Promise<any> => {
   try {
-    console.log("🔄 Deleting thread:", { threadId });
+    console.log("Deleting thread:", { threadId });
 
     // Ensure token is valid and available
     ensureToken();
 
     const response = await api.delete(`/threads/${threadId}`);
-    console.log("✅ Thread deleted successfully:", response.data);
+    console.log("Thread deleted successfully:", response.data);
     return response.data;
   } catch (error: any) {
-    console.error("❌ Error deleting thread:", error);
+    console.error("Error deleting thread:", error);
     console.error("Error details:", {
       status: error.response?.status,
       data: error.response?.data,
@@ -104,7 +104,7 @@ export const fetchThreadDetail = async (
       params.append("sortBy", filters.sortBy);
     }
 
-    console.log("🔄 API Call - fetchThreadDetail:", {
+    console.log("API Call - fetchThreadDetail:", {
       url: `/threads/${threadId}?${params.toString()}`,
       threadId,
       page,
@@ -141,7 +141,7 @@ export const fetchThreads = async (
       params.append("limit", limit.toString());
     }
 
-    console.log("🔄 API Call - fetchThreads:", {
+    console.log("API Call - fetchThreads:", {
       url: `/threads?${params.toString()}`,
       filters,
       params: Object.fromEntries(params.entries()),
@@ -196,7 +196,7 @@ export const fetchClassroomThreads = async (
       params.append("limit", limit.toString());
     }
 
-    console.log("🔄 API Call - fetchClassroomThreads:", {
+    console.log("API Call - fetchClassroomThreads:", {
       url: `/threads?${params.toString()}`,
       filters,
       params: Object.fromEntries(params.entries()),
@@ -254,16 +254,16 @@ interface UpdateContentPayload {
 // Get current user info
 export const getCurrentUser = async () => {
   try {
-    console.log("🔐 Getting current user info...");
+    console.log("Getting current user info...");
 
     // Ensure token is valid and available
     ensureToken();
 
     const response = await api.get("/auth/me");
-    console.log("✅ Current user info retrieved:", response.data);
+    console.log("Current user info retrieved:", response.data);
     return response.data;
   } catch (error: any) {
-    console.error("❌ Error getting current user:", error);
+    console.error("Error getting current user:", error);
     throw error;
   }
 };
@@ -274,16 +274,16 @@ export const updateThread = async (
   updateData: { title?: string; content?: string }
 ) => {
   try {
-    console.log("🔄 Updating thread:", { threadId, updateData });
+    console.log("Updating thread:", { threadId, updateData });
 
     // Ensure token is valid and available
     ensureToken();
 
     const response = await api.patch(`/threads/${threadId}`, updateData);
-    console.log("✅ Thread updated successfully:", response.data);
+    console.log("Thread updated successfully:", response.data);
     return response.data;
   } catch (error) {
-    console.error("❌ Error updating thread:", error);
+    console.error("Error updating thread:", error);
     throw error;
   }
 };
@@ -295,7 +295,7 @@ export const updateReply = async (
   content: string
 ) => {
   try {
-    console.log("🔄 Updating reply:", { threadId, replyId, content });
+    console.log("Updating reply:", { threadId, replyId, content });
 
     // Ensure token is valid and available
     ensureToken();
@@ -306,10 +306,10 @@ export const updateReply = async (
       replyId, // Include replyId in payload if backend needs it
     });
 
-    console.log("✅ Reply updated successfully:", response.data);
+    console.log(" Reply updated successfully:", response.data);
     return response.data;
   } catch (error: any) {
-    console.error("❌ Error updating reply:", error);
+    console.error(" Error updating reply:", error);
     console.error("Error details:", {
       status: error.response?.status,
       data: error.response?.data,
@@ -462,16 +462,16 @@ export const createLike = async (
   likeData: LikeRequest
 ): Promise<LikeResponse> => {
   try {
-    console.log("🔄 Creating like for:", likeData);
+    console.log(" Creating like for:", likeData);
 
     // Ensure token is valid and available
     ensureToken();
 
     const response = await api.post("/likes", likeData);
-    console.log("✅ Like created successfully:", response.data);
+    console.log(" Like created successfully:", response.data);
     return response.data;
   } catch (error) {
-    console.error("❌ Error creating like:", error);
+    console.error(" Error creating like:", error);
     throw error;
   }
 };
@@ -531,7 +531,7 @@ export const createReply = async (
   replyData: CreateReplyPayload
 ): Promise<ThreadReply> => {
   try {
-    console.log("🔄 Creating reply:", replyData);
+    console.log("Creating reply:", replyData);
 
     // Ensure token is valid and available
     ensureToken();
@@ -540,10 +540,10 @@ export const createReply = async (
     const response = await api.post(`/threads/${replyData.threadId}/reply`, {
       content: replyData.content,
     });
-    console.log("✅ Reply created successfully:", response.data);
+    console.log("Reply created successfully:", response.data);
     return response.data;
   } catch (error) {
-    console.error("❌ Error creating reply:", error);
+    console.error("Error creating reply:", error);
     throw error;
   }
 };
@@ -554,7 +554,7 @@ export const deleteReply = async (
   replyId: string
 ): Promise<void> => {
   try {
-    console.log("🔄 Deleting reply:", { threadId, replyId });
+    console.log("Deleting reply:", { threadId, replyId });
 
     // Ensure token is valid and available
     ensureToken();
@@ -564,10 +564,10 @@ export const deleteReply = async (
     const response = await api.delete(
       `/threads/${threadId}?replyId=${replyId}`
     );
-    console.log("✅ Reply deleted successfully:", response.data);
+    console.log("Reply deleted successfully:", response.data);
     return response.data;
   } catch (error: any) {
-    console.error("❌ Error deleting reply:", error);
+    console.error("Error deleting reply:", error);
     console.error("Error details:", {
       status: error.response?.status,
       data: error.response?.data,
