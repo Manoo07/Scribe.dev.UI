@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { marked } from "marked";
 import React, { useState } from "react";
+import { createPortal } from "react-dom";
 import { deleteContent, updateContent } from "../services/api";
 import { ContentType, EducationalContent } from "../types";
 import { formatDate } from "../utils/dateUtils";
@@ -363,41 +364,82 @@ const ContentItem: React.FC<ContentItemProps> = ({ content, onRefresh }) => {
         className="p-4 flex items-start gap-3 cursor-pointer hover:bg-gray-700/30 transition-colors duration-200"
         onClick={() => !isDeleting && !isEditing && setIsExpanded(!isExpanded)}
       >
-        <div className="mt-1">{getIcon()}</div>
+        {!isEditing ? (
+          <>
+            <div className="mt-1">{getIcon()}</div>
 
-        <div className="flex-grow min-w-0">
-          <div className="flex items-center gap-2 mb-1.5">
-            <span
-              className={`px-2 py-0.5 rounded text-xs font-medium ${getBadgeColor()}`}
-            >
-              {content.type}
-            </span>
-            <span className="text-xs text-gray-400">
-              v{content.version} • {formatDate(new Date(content.createdAt))}
-            </span>
-            {isEditing && (
-              <span className="px-2 py-0.5 bg-blue-900/30 text-blue-400 rounded text-xs font-medium">
-                EDITING
-              </span>
-            )}
-          </div>
+            <div className="flex-grow min-w-0">
+              <div className="flex items-center gap-2 mb-1.5">
+                <span
+                  className={`px-2 py-0.5 rounded text-xs font-medium ${getBadgeColor()}`}
+                >
+                  {content.type}
+                </span>
+                <span className="text-xs text-gray-400">
+                  v{content.version} • {formatDate(new Date(content.createdAt))}
+                </span>
+              </div>
 
-          {content.type === ContentType.NOTE ? (
-            <p className="text-gray-300 text-sm line-clamp-1">
-              {content.content.split("\n")[0]}
-            </p>
-          ) : content.type === ContentType.LINK ? (
-            <p className="text-gray-300 text-sm line-clamp-1 break-all">
-              {content.content}
-            </p>
-          ) : (
-            <p className="text-gray-300 text-sm">
-              {content.type === ContentType.VIDEO
-                ? "Video content"
-                : "Document file"}
-            </p>
-          )}
-        </div>
+              {content.type === ContentType.NOTE ? (
+                <p className="text-gray-300 text-sm line-clamp-1">
+                  {content.content.split("\n")[0]}
+                </p>
+              ) : content.type === ContentType.LINK ? (
+                <p className="text-gray-300 text-sm line-clamp-1 break-all">
+                  {content.content}
+                </p>
+              ) : (
+                <p className="text-gray-300 text-sm">
+                  {content.type === ContentType.VIDEO
+                    ? "Video content"
+                    : "Document file"}
+                </p>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 ml-2">
+              {canEdit() && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEdit();
+                  }}
+                  className="text-blue-400 hover:text-blue-300 hover:bg-blue-900/20 p-1.5 rounded transition-all duration-200"
+                  disabled={isDeleting}
+                  title="Edit content"
+                >
+                  <Edit3 size={16} />
+                </button>
+              )}
+
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowDeleteConfirm(true);
+                }}
+                className="text-red-400 hover:text-red-300 hover:bg-red-900/20 p-1.5 rounded transition-all duration-200"
+                disabled={isDeleting}
+                title="Delete content"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="mt-1">{getIcon()}</div>
+            <div className="flex-grow min-w-0">
+              <div className="mb-3">
+                <span
+                  className={`px-2 py-0.5 rounded text-xs font-medium ${getBadgeColor()}`}
+                >
+                  {content.type} (EDITING)
+                </span>
+              </div>
+              {renderEditForm()}
+            </div>
+          </>
+        )}
       </div>
 
       <div
@@ -412,127 +454,145 @@ const ContentItem: React.FC<ContentItemProps> = ({ content, onRefresh }) => {
             </div>
           )}
 
-          <div className="mb-4">{renderPreview()}</div>
+          <div className="mb-4">
+            {content.type === ContentType.NOTE && (
+              <div className="space-y-3">
+                <div className="text-sm text-gray-400 mb-2">Preview:</div>
+                <div
+                  className="prose prose-invert max-w-none text-sm bg-gray-800/50 rounded p-3"
+                  dangerouslySetInnerHTML={{
+                    __html: marked(content.content),
+                  }}
+                />
+              </div>
+            )}
+            {content.type === ContentType.LINK && (
+              <div className="flex items-center">
+                <a
+                  href={content.content}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-400 hover:text-blue-300 flex items-center gap-2 break-all"
+                >
+                  {content.content}
+                  <ExternalLink size={14} />
+                </a>
+              </div>
+            )}
+            {content.type === ContentType.VIDEO && (
+              <>
+                {content.content.includes("youtube.com") ||
+                content.content.includes("youtu.be") ? (
+                  <div className="aspect-video">
+                    {(() => {
+                      const videoId = content.content.includes("youtu.be")
+                        ? content.content.split("/").pop()
+                        : new URL(content.content).searchParams.get("v");
+                      return (
+                        <iframe
+                          width="100%"
+                          height="100%"
+                          src={`https://www.youtube.com/embed/${videoId}`}
+                          title="YouTube video player"
+                          frameBorder="0"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        ></iframe>
+                      );
+                    })()}
+                  </div>
+                ) : (
+                  <div className="flex items-center">
+                    <a
+                      href={content.content}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-400 hover:text-blue-300 flex items-center gap-2"
+                    >
+                      Watch Video
+                      <ExternalLink size={14} />
+                    </a>
+                  </div>
+                )}
+              </>
+            )}
+            {content.type === ContentType.DOCUMENT && (
+              <div className="flex items-center justify-between">
+                <a
+                  href={`http://localhost:3000/files/${content.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded flex items-center gap-2 transition-colors"
+                >
+                  <Download size={14} />
+                  Download Document
+                </a>
+                <div className="text-xs text-gray-400">
+                  Documents cannot be edited inline
+                </div>
+              </div>
+            )}
+          </div>
 
           <div className="pt-2 border-t border-gray-600 flex justify-between items-center">
             <div className="text-xs text-gray-400">
               Added on {formatDate(new Date(content.createdAt))}
             </div>
-
-            <div className="flex items-center gap-2">
-              {!isEditing ? (
-                <>
-                  {canEdit() && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEdit();
-                      }}
-                      className="text-blue-400 hover:text-blue-300 flex items-center gap-1.5 text-sm px-2 py-1 rounded hover:bg-blue-900/20 transition-all duration-200"
-                      disabled={isDeleting}
-                    >
-                      <Edit3 size={14} />
-                      Edit
-                    </button>
-                  )}
-
-                  {!showDeleteConfirm ? (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowDeleteConfirm(true);
-                      }}
-                      className="text-red-400 hover:text-red-300 flex items-center gap-1.5 text-sm px-2 py-1 rounded hover:bg-red-900/20 transition-all duration-200"
-                      disabled={isDeleting}
-                    >
-                      <Trash2 size={14} />
-                      Delete
-                    </button>
-                  ) : (
-                    <div className="flex items-center gap-2 animate-fadeIn">
-                      <span className="text-xs text-gray-400 mr-2">
-                        Are you sure?
-                      </span>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleCancelDelete();
-                        }}
-                        className="text-gray-400 hover:text-gray-300 text-sm px-2 py-1 rounded hover:bg-gray-700 transition-all duration-200"
-                        disabled={isDeleting}
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete();
-                        }}
-                        className={`text-white text-sm px-3 py-1 rounded flex items-center gap-1.5 transition-all duration-200 ${
-                          isDeleting
-                            ? "bg-red-500 cursor-not-allowed"
-                            : "bg-red-600 hover:bg-red-500 hover:shadow-lg"
-                        }`}
-                        disabled={isDeleting}
-                      >
-                        {isDeleting ? (
-                          <>
-                            <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin"></div>
-                            Deleting...
-                          </>
-                        ) : (
-                          <>
-                            <Trash2 size={12} />
-                            Delete
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleCancelEdit();
-                    }}
-                    className="text-gray-400 hover:text-gray-300 flex items-center gap-1.5 text-sm px-2 py-1 rounded hover:bg-gray-700 transition-all duration-200"
-                    disabled={isSaving}
-                  >
-                    <X size={14} />
-                    Cancel
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleSave();
-                    }}
-                    className={`text-white text-sm px-3 py-1 rounded flex items-center gap-1.5 transition-all duration-200 ${
-                      isSaving
-                        ? "bg-green-500 cursor-not-allowed"
-                        : "bg-green-600 hover:bg-green-500 hover:shadow-lg"
-                    }`}
-                    disabled={isSaving}
-                  >
-                    {isSaving ? (
-                      <>
-                        <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin"></div>
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <Save size={12} />
-                        Save
-                      </>
-                    )}
-                  </button>
-                </div>
-              )}
-            </div>
           </div>
         </div>
       </div>
+
+      {isEditing && (
+        <div className="border-t border-gray-600 p-4 bg-gray-700/20">
+          <div className="flex justify-between items-end gap-4">
+            <div className="flex-grow">
+              {editError && (
+                <div className="mb-4 p-3 bg-red-900/30 border border-red-500 rounded-lg text-red-400 text-sm">
+                  {editError}
+                </div>
+              )}
+              {renderEditForm()}
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleCancelEdit();
+                }}
+                className="text-gray-400 hover:text-gray-300 flex items-center gap-1.5 text-sm px-3 py-2 rounded hover:bg-gray-700 transition-all duration-200"
+                disabled={isSaving}
+              >
+                <X size={14} />
+                Cancel
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSave();
+                }}
+                className={`text-white text-sm px-4 py-2 rounded flex items-center gap-1.5 transition-all duration-200 ${
+                  isSaving
+                    ? "bg-green-500 cursor-not-allowed"
+                    : "bg-green-600 hover:bg-green-500 hover:shadow-lg"
+                }`}
+                disabled={isSaving}
+              >
+                {isSaving ? (
+                  <>
+                    <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin"></div>
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save size={14} />
+                    Save
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Loading overlay during deletion */}
       {isDeleting && (
@@ -543,6 +603,82 @@ const ContentItem: React.FC<ContentItemProps> = ({ content, onRefresh }) => {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal - Rendered as Portal */}
+      {showDeleteConfirm &&
+        createPortal(
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 overflow-y-auto">
+            <div className="bg-gray-800 rounded-lg border border-gray-700 shadow-2xl max-w-lg w-full my-auto animate-fadeIn">
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-gray-700 p-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-red-900/30 flex items-center justify-center flex-shrink-0">
+                    <Trash2 size={20} className="text-red-400" />
+                  </div>
+                  <h3 className="text-lg font-bold text-white">
+                    Delete {content.type.charAt(0) + content.type.slice(1).toLowerCase()}
+                  </h3>
+                </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCancelDelete();
+                  }}
+                  className="text-gray-400 hover:text-white transition-colors flex-shrink-0"
+                  disabled={isDeleting}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="p-6">
+                <p className="text-gray-300 text-sm leading-relaxed">
+                  Are you sure you want to delete this {content.type.toLowerCase()}? This action cannot be undone and the content will be permanently removed.
+                </p>
+              </div>
+
+              {/* Footer */}
+              <div className="border-t border-gray-700 p-6 flex items-center justify-between gap-3">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCancelDelete();
+                  }}
+                  className="px-6 py-2.5 rounded-lg text-gray-300 hover:bg-gray-700 transition-colors font-medium"
+                  disabled={isDeleting}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete();
+                  }}
+                  className={`px-6 py-2.5 rounded-lg text-white flex items-center gap-2 transition-all duration-200 font-medium flex-shrink-0 ${
+                    isDeleting
+                      ? "bg-red-500 cursor-not-allowed"
+                      : "bg-red-600 hover:bg-red-500"
+                  }`}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 size={16} />
+                      Delete {content.type.charAt(0) + content.type.slice(1).toLowerCase()}
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 };

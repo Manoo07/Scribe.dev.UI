@@ -43,7 +43,7 @@ const UnitCard: React.FC<UnitCardProps> = ({
   };
 
   return (
-    <div className="bg-gray-800 rounded-lg p-4 border border-gray-700/50 hover:border-gray-600 transition-all duration-200">
+    <div className="bg-gray-800 rounded-lg p-4 border border-gray-700/50 hover:border-gray-600 transition-all duration-200 overflow-hidden">
       {/* Title */}
       <h3 className="text-lg font-bold text-white mb-1.5">{name}</h3>
 
@@ -61,7 +61,7 @@ const UnitCard: React.FC<UnitCardProps> = ({
       <div className="border-t border-gray-700 mb-3"></div>
 
       {/* Stats Row */}
-      <div className="flex items-center gap-4 mb-3">
+      <div className="flex items-center gap-2 mb-3 flex-wrap">
         <div className="flex items-center gap-1.5">
           <FileText className="w-3.5 h-3.5 text-emerald-400" />
           <span className="text-gray-300 text-xs font-semibold">

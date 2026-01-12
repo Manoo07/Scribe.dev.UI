@@ -297,6 +297,11 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
           : null
       );
 
+      // Notify parent to refetch threads list with updated like count
+      if (onChangesOccurred) {
+        onChangesOccurred();
+      }
+
       toast({
         title: "Success",
         description: response.liked ? "Thread liked!" : "Thread unliked!",
@@ -1096,11 +1101,6 @@ const ThreadDetailView: React.FC<ThreadDetailViewProps> = ({
               />
               <span className="font-medium">{thread.likesCount}</span>
               {isLiking && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-            </button>
-
-            <button className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-slate-700/50 to-slate-600/50 text-slate-200 rounded-lg hover:from-slate-600/50 hover:to-slate-500/50 transition-all duration-200 font-medium border border-slate-500/30 text-sm shadow-sm">
-              <Share2 className="w-3.5 h-3.5" />
-              <span>Share</span>
             </button>
           </div>
 
